@@ -28,7 +28,7 @@ Authorization: Bearer sk_your_api_key
 ?key=sk_your_api_key
 ```
 
-Keys are created at `https://shaver.trustednutraproduct.com/api.html`. The full key is shown **once** at creation time — store it securely.
+Keys are created at `https://shaver.trustednutraproduct.com/api.html`. The full key can be copied at any time from the admin page — click the **Copy** button or the masked prefix in the table.
 
 ---
 
@@ -281,4 +281,4 @@ curl -s "https://shaver.trustednutraproduct.com/api-v1.php?r=sessions" \
 - Rotate keys from the admin page (`api.html`) if one is leaked — revoke the old key first, then create a new one.
 - Prefer **domain-scoped** keys when sharing with third parties so a leak only exposes one brand's data.
 - All requests go over HTTPS; the key is never sent in plaintext.
-- Keys are hashed (SHA-256) in the database — the full key cannot be recovered after creation.
+- Keys are stored in the database so they can be copied from the admin UI at any time. If a key is exposed, revoke it immediately from `api.html` and create a new one.

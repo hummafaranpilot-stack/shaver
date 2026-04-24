@@ -8012,10 +8012,10 @@ function createApiKey($pdo) {
     $hash    = hash('sha256', $fullKey);
 
     $stmt = $pdo->prepare("
-        INSERT INTO api_keys (label, domain_id, key_prefix, key_hash, status)
-        VALUES (?, ?, ?, ?, 'active')
+        INSERT INTO api_keys (label, domain_id, key_prefix, key_hash, full_key, status)
+        VALUES (?, ?, ?, ?, ?, 'active')
     ");
-    $stmt->execute([$label, $domainId, $prefix, $hash]);
+    $stmt->execute([$label, $domainId, $prefix, $hash, $fullKey]);
     $id = (int)$pdo->lastInsertId();
 
     // Return the full key ONCE — it is never retrievable again
@@ -8037,7 +8037,7 @@ function listApiKeys($pdo) {
     if (!empty($domainId)) {
         $stmt = $pdo->prepare("
             SELECT k.id, k.label, k.domain_id, d.label AS domain_label,
-                k.key_prefix, k.status, k.created_at, k.last_used_at
+                k.key_prefix, k.full_key, k.status, k.created_at, k.last_used_at
             FROM api_keys k
             LEFT JOIN domains d ON d.id = k.domain_id
             WHERE k.domain_id = ?
@@ -8047,7 +8047,7 @@ function listApiKeys($pdo) {
     } else {
         $stmt = $pdo->query("
             SELECT k.id, k.label, k.domain_id, d.label AS domain_label,
-                k.key_prefix, k.status, k.created_at, k.last_used_at
+                k.key_prefix, k.full_key, k.status, k.created_at, k.last_used_at
             FROM api_keys k
             LEFT JOIN domains d ON d.id = k.domain_id
             ORDER BY k.created_at DESC
