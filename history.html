@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session History - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 240px;
+            background: #fff;
+            color: #1a1a2e;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: width 0.3s ease;
+            border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04);
+            padding: 4px 0;
+        }
+
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px; flex-shrink: 0;
+        }
+        .sidebar-header p { font-size: 0.85rem; color: #999; margin-left: 48px; }
+
+        .sidebar-toggle {
+            position: absolute; top: 18px; right: 12px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 6px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 14px; transition: background 0.2s, transform 0.3s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e8e8f0; }
+
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title { padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; color: #b0b0c0; transition: opacity 0.2s; }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s; font-size: 0.84rem; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; box-shadow: 0 4px 15px rgba(108,99,255,0.3); border-left: none; }
+        .nav-item i { width: 22px; margin-right: 12px; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 20px; transition: margin-left 0.3s ease; }
+
+        /* Sidebar collapsed state */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 16px 10px 10px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 8px 0; margin: 1px 6px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: white; padding: 25px 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left h1 { font-size: 1.8rem; color: #1a1a2e; margin-bottom: 5px; }
+        .header-left p { color: #7f8c8d; font-size: 0.95rem; }
+
+        /* domain-selector styled via css/custom.css */
+
+        .card {
+            background: white; padding: 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; margin-bottom: 25px;
+        }
+        .card h2 { font-size: 1.2rem; color: #1a1a2e; margin-bottom: 20px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px 15px; background: #f5f5ff;
+            color: #666; font-size: 0.8rem; font-weight: 600;
+            text-transform: uppercase; border-bottom: 2px solid #eeeeff;
+        }
+        td { padding: 14px 15px; border-bottom: 1px solid #f0f0ff; font-size: 0.9rem; }
+        tr:hover td { background: #f5f5ff; }
+
+        .aff-id { font-weight: 700; color: #1a1a2e; font-family: 'Courier New', monospace; font-size: 1rem; }
+
+        .mode-replace { background: #eeeeff; color: #6c63ff; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .mode-remove { background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+
+        .btn-sm {
+            padding: 6px 12px; border: none; border-radius: 6px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .btn-red { background: #e74c3c; color: white; }
+        .btn-red:hover { background: #c0392b; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #95a5a6; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        .date-text { font-size: 0.82rem; color: #555; line-height: 1.5; }
+
+        .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+        select, input { font-family: 'Poppins', sans-serif; }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 8px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+        }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; flex-direction: column; gap: 15px; align-items: flex-start; }
+            .header-left h1 { font-size: 1.4rem; }
+            .ds-dropdown { width: 100%; max-width: 100%; }
+            .card { padding: 20px 15px; }
+            table { font-size: 0.8rem; min-width: 700px; }
+            th, td { padding: 10px 8px; }
+        }
+
+        @media (max-width: 480px) {
+            .header-left h1 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item active"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-history"></i> Session History</h1>
+                <p>Archive of past shaving sessions</p>
+            </div>
+            <select class="domain-selector" id="domainSelector"></select>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div class="card">
+            <h2><i class="fas fa-archive" style="color:#6c63ff;"></i> Past Sessions</h2>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                <div id="historyBody">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=2.7.0"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initDomainSelector(loadHistory);
+        });
+
+        async function deleteHistoryItem(sessionId) {
+            if (!confirm('Delete this history entry?')) return;
+            const result = await apiRequest(API_URL, 'delete_history', { session_id: sessionId });
+            if (result.success) {
+                showAlert('History entry deleted', 'success');
+                loadHistory();
+            }
+        }
+
+        async function loadHistory() {
+            const result = await apiRequest(API_URL, 'get_history', { domain_id: currentDomainId });
+            const body = document.getElementById('historyBody');
+
+            if (!result.success || !result.data || !result.data.length) {
+                body.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i>No session history</div>';
+                return;
+            }
+
+            var affHeader = currentDomainPlatform === 'digistore24' ? 'Affiliate' : 'Aff ID';
+            var subHeader = currentDomainPlatform === 'digistore24' ? 'Campaign' : 'Sub ID';
+            var html = '<table><thead><tr><th>Date Range</th><th>' + affHeader + '</th><th>' + subHeader + '</th><th>Mode</th><th>Replacement</th><th>Visits</th><th>Clicks</th><th>Duration</th><th>Notes</th><th></th></tr></thead><tbody>';
+
+            result.data.forEach(function(h) {
+                const modeBadge = h.mode === 'replace'
+                    ? '<span class="mode-replace">REPLACE</span>'
+                    : '<span class="mode-remove">REMOVE</span>';
+                const replacement = h.mode === 'replace'
+                    ? escapeHtml(h.replaceAffId || '-') + (h.replaceSubId ? ' / ' + escapeHtml(h.replaceSubId) : '')
+                    : '-';
+                const startDate = formatDate(h.startTime);
+                const stopDate = formatDate(h.stopTime);
+
+                html += '<tr>';
+                html += '<td><span class="date-text">' + startDate + '<br>to ' + stopDate + '</span></td>';
+                html += '<td><span class="aff-id">' + formatAffDisplay(h.affId) + '</span></td>';
+                html += '<td>' + escapeHtml(h.subId || '-') + '</td>';
+                html += '<td>' + modeBadge + '</td>';
+                html += '<td>' + replacement + '</td>';
+                html += '<td><strong>' + formatNumber(h.visits) + '</strong></td>';
+                html += '<td><strong>' + formatNumber(h.clicks) + '</strong></td>';
+                html += '<td>' + formatDuration(h.duration) + '</td>';
+                html += '<td>' + escapeHtml(h.notes || '-') + '</td>';
+                html += '<td><button class="btn-sm btn-red" onclick="deleteHistoryItem(\'' + escapeHtml(h.id) + '\')"><i class="fas fa-trash"></i></button></td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            body.innerHTML = html;
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = '<div class="alert alert-' + (type || 'success') + '"><i class="fas fa-check-circle"></i> ' + message + '</div>';
+            setTimeout(function() { container.innerHTML = ''; }, 4000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+    </script>
+</body>
+</html>

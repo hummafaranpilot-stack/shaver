@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSL Shuffle - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header {
+            padding: 16px 20px 10px; position: relative;
+        }
+        .sidebar-header h2 {
+            font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+
+        .sidebar-toggle {
+            position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title {
+            padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s;
+        }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s ease;
+            font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); border-left: none;
+        }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 24px; transition: margin-left 0.3s ease; }
+
+        /* Sidebar collapsed */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        /* ── Header ── */
+        .header {
+            background: #fff; padding: 22px 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: none;
+        }
+        .header-left h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 3px; font-weight: 700; }
+        .header-left h1 i { color: #6c63ff; }
+        .header-left p { color: #999; font-size: 0.85rem; }
+
+        /* Card */
+        .card {
+            background: white; padding: 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px;
+            border: none;
+        }
+        .card h2 { font-size: 1.2rem; color: #1a1a2e; margin-bottom: 20px; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #95a5a6; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        select, input { font-family: 'Poppins', sans-serif; }
+
+        /* Add VSL button */
+        .btn-add-vsl {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 24px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; border: none; border-radius: 12px; font-size: 0.92rem;
+            font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: all 0.3s; box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+        }
+        .btn-add-vsl:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4); }
+        .btn-add-vsl i { font-size: 0.85rem; }
+
+        /* VSL list area */
+        .vsl-list { margin-top: 20px; }
+
+        /* ── Modal / Overlay ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 2000; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: #fff; border-radius: 20px; padding: 32px; width: 100%; max-width: 540px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.2); animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-box h3 {
+            font-size: 1.15rem; font-weight: 700; color: #1a1a2e; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .modal-box h3 i { color: #6c63ff; }
+        .modal-box .modal-sub { font-size: 0.82rem; color: #999; margin-bottom: 22px; }
+        .modal-box label {
+            display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 6px;
+        }
+        .modal-box select {
+            width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+            font-size: 0.92rem; outline: none; transition: border 0.2s; background: #fff;
+            font-family: 'Poppins', sans-serif; color: #1a1a2e;
+        }
+        .modal-box select:focus { border-color: #6c63ff; }
+        .modal-actions {
+            display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;
+        }
+        .btn-modal-cancel {
+            padding: 10px 22px; background: #f1f5f9; color: #64748b; border: none;
+            border-radius: 10px; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+            font-family: 'Poppins', sans-serif; transition: background 0.2s;
+        }
+        .btn-modal-cancel:hover { background: #e2e8f0; }
+        .btn-modal-confirm {
+            padding: 10px 22px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; border: none; border-radius: 10px; font-size: 0.88rem;
+            font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: all 0.2s; box-shadow: 0 4px 12px rgba(108, 99, 255, 0.25);
+        }
+        .btn-modal-confirm:hover { box-shadow: 0 6px 18px rgba(108, 99, 255, 0.35); }
+        .btn-modal-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* URL input rows */
+        .url-input-row {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+        }
+        .url-input-row input[type="text"] {
+            flex: 1; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+            font-size: 0.88rem; outline: none; transition: border 0.2s; background: #fff;
+            font-family: 'Poppins', sans-serif; color: #1a1a2e;
+        }
+        .url-input-row input[type="text"]:focus { border-color: #6c63ff; }
+        .url-input-row input[type="text"]::placeholder { color: #b0b8c8; }
+        .btn-remove-url {
+            width: 36px; height: 36px; border: none; background: #fee2e2; color: #dc2626;
+            border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; transition: background 0.2s; flex-shrink: 0;
+        }
+        .btn-remove-url:hover { background: #fecaca; }
+        .btn-add-url {
+            display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+            background: #f0f0ff; color: #6c63ff; border: 2px dashed #c4c0ff; border-radius: 10px;
+            font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: all 0.2s; width: 100%;  justify-content: center;
+        }
+        .btn-add-url:hover { background: #e8e6ff; border-color: #6c63ff; }
+
+        /* VSL config card */
+        .vsl-config-card {
+            background: #fff; border-radius: 16px; padding: 24px 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 20px;
+            border-left: 4px solid #6c63ff;
+        }
+        .vsl-config-header {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+        }
+        .vsl-config-header h3 { font-size: 1.05rem; font-weight: 700; color: #1a1a2e; display: flex; align-items: center; gap: 8px; }
+        .vsl-config-header h3 i { color: #6c63ff; font-size: 0.9rem; }
+        .vsl-domain-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+            background: #f0f0ff; border-radius: 8px; font-size: 0.78rem; font-weight: 600; color: #6c63ff;
+        }
+        .vsl-page-list { display: flex; flex-direction: column; gap: 8px; }
+        .vsl-page-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+            background: #f8fafc; border-radius: 10px; font-size: 0.88rem; transition: background 0.15s;
+        }
+        .vsl-page-item:hover { background: #f0f0ff; }
+        .vsl-page-num {
+            width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .vsl-page-url { flex: 1; color: #334155; word-break: break-all; font-size: 0.82rem; }
+        .vsl-page-config {
+            display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+            margin-top: 10px; padding: 12px 16px; background: #f0f0ff; border-radius: 10px;
+        }
+        .vsl-page-config input[type="text"] {
+            padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.84rem;
+            font-family: 'Poppins', sans-serif; outline: none; transition: border 0.2s; width: 100%;
+        }
+        .vsl-page-config input[type="text"]:focus { border-color: #6c63ff; }
+        .vsl-page-config input[type="text"]::placeholder { color: #b0b8c8; }
+        .vsl-page-config select {
+            padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.84rem;
+            font-family: 'Poppins', sans-serif; outline: none; background: #fff; color: #1a1a2e;
+        }
+        .vsl-page-config select:focus { border-color: #6c63ff; }
+        .vsl-video-check {
+            display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.84rem;
+            font-weight: 500; color: #555; white-space: nowrap; user-select: none;
+        }
+        .vsl-video-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: #6c63ff; cursor: pointer; }
+        .vsl-saved-badge {
+            display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+            background: #d1fae5; color: #059669; border-radius: 6px; font-size: 0.72rem;
+            font-weight: 600; opacity: 0; transition: opacity 0.3s;
+        }
+        .vsl-saved-badge.show { opacity: 1; }
+
+        /* Step sections */
+        .step-section {
+            background: #fff; border-radius: 16px; padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px; border: none;
+        }
+        .step-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+        }
+        .step-badge {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; font-size: 0.82rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .step-header {
+            cursor: pointer; user-select: none;
+        }
+        .step-header h2 { font-size: 1.1rem; color: #1a1a2e; margin: 0; }
+        .step-header p { font-size: 0.8rem; color: #999; margin: 0; }
+        .step-toggle {
+            margin-left: auto; width: 28px; height: 28px; border-radius: 8px;
+            background: #f0f0ff; display: flex; align-items: center; justify-content: center;
+            color: #6c63ff; font-size: 13px; transition: transform 0.3s; flex-shrink: 0;
+        }
+        .step-section.collapsed .step-toggle { transform: rotate(-90deg); }
+        .step-body { transition: all 0.3s ease; overflow: hidden; }
+        .step-section.collapsed .step-body { display: none; }
+        .step-locked {
+            opacity: 0.45; pointer-events: none; position: relative;
+        }
+        .step-locked::after {
+            content: ''; position: absolute; inset: 0; border-radius: 16px;
+            background: rgba(255,255,255,0.3); z-index: 1;
+        }
+        .step-lock-msg {
+            text-align: center; padding: 20px; color: #94a3b8; font-size: 0.88rem;
+        }
+        .step-lock-msg i { margin-right: 6px; }
+
+        /* Step 2 embed type cards */
+        .embed-type-card {
+            background: #f8fafc; border-radius: 12px; padding: 18px 20px;
+            margin-bottom: 12px; border: 2px solid #f0f0f5;
+        }
+        .embed-type-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+        }
+        .embed-type-header .page-num {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; font-size: 0.72rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .embed-type-header .page-title { font-weight: 600; font-size: 0.92rem; color: #1a1a2e; }
+        .embed-type-header .page-source-badge {
+            padding: 3px 10px; background: #ede9fe; color: #7c3aed; border-radius: 6px;
+            font-size: 0.72rem; font-weight: 600;
+        }
+        .embed-type-options {
+            display: flex; gap: 10px;
+        }
+        .embed-type-opt {
+            flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer;
+            transition: all 0.2s; background: #fff;
+        }
+        .embed-type-opt:hover { border-color: #c4c0ff; }
+        .embed-type-opt.selected { border-color: #6c63ff; background: #f0f0ff; }
+        .embed-type-opt input[type="radio"] { display: none; }
+        .embed-type-radio {
+            width: 20px; height: 20px; border-radius: 50%; border: 2px solid #d0d0e0;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
+        }
+        .embed-type-opt.selected .embed-type-radio {
+            border-color: #6c63ff; background: #6c63ff;
+        }
+        .embed-type-opt.selected .embed-type-radio::after {
+            content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff;
+        }
+        .embed-type-label { font-size: 0.86rem; font-weight: 600; color: #334155; }
+        .embed-type-desc { font-size: 0.74rem; color: #94a3b8; }
+        .required-star { color: #ef4444; font-weight: 700; }
+
+        /* Embed code paste area */
+        .embed-code-wrap {
+            margin-top: 14px; padding: 16px 18px; background: #fafaff; border: 2px solid #e2e8f0;
+            border-radius: 12px; animation: slideDown 0.25s ease;
+        }
+        @keyframes slideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+        .embed-code-wrap label {
+            display: block; font-size: 0.82rem; font-weight: 600; color: #1a1a2e; margin-bottom: 8px;
+        }
+        .embed-code-wrap textarea {
+            width: 100%; min-height: 120px; padding: 12px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+            font-family: 'Courier New', monospace; font-size: 0.82rem; color: #334155; background: #fff;
+            outline: none; transition: border 0.2s; resize: vertical; box-sizing: border-box;
+        }
+        .embed-code-wrap textarea:focus { border-color: #6c63ff; }
+        .embed-code-wrap textarea::placeholder { color: #b0b8c8; }
+        .embed-code-help {
+            margin-top: 10px; padding: 10px 14px; background: #fffbeb; border: 1px solid #fde68a;
+            border-radius: 8px; font-size: 0.78rem; color: #92400e; line-height: 1.6;
+        }
+        .embed-code-help i { margin-right: 4px; }
+        .embed-code-help a {
+            color: #6c63ff; text-decoration: none; font-weight: 600; transition: all 0.15s;
+        }
+        .embed-code-help a:hover { text-decoration: underline; }
+
+        /* Parsed embed details card */
+        .embed-details {
+            margin-top: 14px; border-radius: 12px; overflow: hidden;
+            background: #1e1b2e; color: #e2e0f0; animation: slideDown 0.25s ease;
+        }
+        .embed-details-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+        }
+        .embed-detail-item {
+            padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+        .embed-detail-item:nth-child(2n) { border-right: none; }
+        .embed-detail-item:nth-last-child(-n+2) { border-bottom: none; }
+        .embed-detail-label {
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: #d97706; margin-bottom: 6px;
+        }
+        .embed-detail-value {
+            font-size: 0.85rem; font-weight: 600; color: #f1f0ff;
+            word-break: break-all; font-family: 'Poppins', sans-serif;
+        }
+        .embed-detail-value.mono {
+            font-family: 'Courier New', monospace; font-size: 0.82rem;
+        }
+
+        /* Step 3 snippet cards */
+        .snippet-card {
+            background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px;
+            padding: 20px; margin-bottom: 16px;
+        }
+        .snippet-card-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+        }
+        .snippet-card-header .sn-num {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; font-size: 0.75rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .snippet-card-header .sn-title { font-weight: 700; font-size: 0.92rem; color: #1a1a2e; }
+        .snippet-card-header .sn-url { font-size: 0.75rem; color: #94a3b8; margin-left: auto; }
+        .snippet-instruction {
+            font-size: 0.82rem; color: #64748b; margin-bottom: 12px; line-height: 1.6;
+        }
+        .snippet-instruction strong { color: #1a1a2e; }
+        .snippet-instruction code {
+            background: #e0e0ff; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem;
+            color: #6c63ff; font-family: 'Courier New', monospace;
+        }
+        .snippet-code-box {
+            position: relative; background: #1e1b2e; border-radius: 10px; padding: 16px 18px;
+            font-family: 'Courier New', monospace; font-size: 0.82rem; color: #a5f3fc;
+            line-height: 1.6; word-break: break-all; overflow-x: auto;
+        }
+        .snippet-copy-btn {
+            position: absolute; top: 10px; right: 10px; padding: 5px 14px;
+            background: #6c63ff; color: #fff; border: none; border-radius: 6px;
+            font-size: 0.72rem; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: background 0.2s;
+        }
+        .snippet-copy-btn:hover { background: #5a52e0; }
+        .snippet-done-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+            background: #d1fae5; color: #059669; border-radius: 8px;
+            font-size: 0.82rem; font-weight: 600; margin-top: 10px;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex; gap: 0; margin-bottom: 22px; background: #fff;
+            border-radius: 14px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .tab-btn {
+            flex: 1; padding: 12px 20px; border: none; background: transparent;
+            font-family: 'Poppins', sans-serif; font-size: 0.88rem; font-weight: 600;
+            color: #94a3b8; cursor: pointer; border-radius: 10px; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .tab-btn:hover { color: #6c63ff; background: #f8f8ff; }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 12px rgba(108, 99, 255, 0.25);
+        }
+        .tab-btn .tab-count {
+            background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px;
+            font-size: 0.72rem; font-weight: 700;
+        }
+        .tab-btn.active .tab-count { background: rgba(255,255,255,0.3); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Step 4 confirm */
+        .btn-confirm-page {
+            padding: 8px 18px; background: #d1fae5; color: #059669; border: 2px solid #a7f3d0;
+            border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+            font-family: 'Poppins', sans-serif; transition: all 0.2s;
+        }
+        .btn-confirm-page:hover { background: #a7f3d0; border-color: #6ee7b7; }
+        .confirmed-badge {
+            display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px;
+            background: #d1fae5; color: #059669; border-radius: 8px;
+            font-size: 0.78rem; font-weight: 700;
+        }
+
+        /* Confirmed cards (Tab 2) */
+        .confirmed-card {
+            background: #fff; border-radius: 16px; padding: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 16px;
+            border: 2px solid #e2e8f0; overflow: hidden;
+        }
+        .confirmed-card-header {
+            display: flex; align-items: center; gap: 12px; padding: 18px 22px;
+            cursor: pointer; transition: background 0.15s; user-select: none;
+        }
+        .confirmed-card-header:hover { background: #f8fafc; }
+        .confirmed-card-header h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin: 0; flex: 1; }
+        .confirmed-card-header .cc-toggle {
+            width: 28px; height: 28px; border-radius: 8px; background: #f0f0ff;
+            display: flex; align-items: center; justify-content: center;
+            color: #6c63ff; font-size: 13px; transition: transform 0.3s;
+        }
+        .confirmed-card.collapsed .cc-toggle { transform: rotate(-90deg); }
+        .confirmed-card.collapsed .confirmed-card-body { display: none; }
+        .confirmed-card-body { padding: 0 22px 22px; border-top: 1px solid #f0f0f5; }
+
+        /* Current code display in tab 2 */
+        .current-embed-block {
+            background: #1e1b2e; border-radius: 10px; padding: 16px 18px; margin-top: 14px;
+            position: relative; overflow-x: auto;
+        }
+        .current-embed-block pre {
+            font-family: 'Courier New', monospace; font-size: 0.78rem; color: #a5f3fc;
+            line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin: 0;
+        }
+        .current-embed-label {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px;
+            color: #94a3b8; font-weight: 700; margin-top: 16px; margin-bottom: 6px;
+        }
+        .update-embed-area { margin-top: 16px; }
+        .update-embed-area label {
+            display: block; font-size: 0.82rem; font-weight: 600; color: #1a1a2e; margin-bottom: 6px;
+        }
+        .update-embed-area textarea {
+            width: 100%; min-height: 120px; padding: 12px 14px; border: 2px solid #e2e8f0;
+            border-radius: 10px; font-family: 'Courier New', monospace; font-size: 0.82rem;
+            color: #334155; background: #fff; outline: none; transition: border 0.2s;
+            resize: vertical; box-sizing: border-box;
+        }
+        .update-embed-area textarea:focus { border-color: #6c63ff; }
+        .btn-update-embed {
+            margin-top: 10px; padding: 10px 22px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: #fff; border: none; border-radius: 10px; font-size: 0.86rem;
+            font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: all 0.2s; box-shadow: 0 4px 12px rgba(108, 99, 255, 0.25);
+        }
+        .btn-update-embed:hover { box-shadow: 0 6px 18px rgba(108, 99, 255, 0.35); }
+        .btn-update-embed:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-remove-config {
+            padding: 6px 14px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px;
+            font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; transition: background 0.2s;
+        }
+        .btn-remove-config:hover { background: #fecaca; }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(108,99,255,0.3);
+        }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; flex-direction: column; gap: 15px; align-items: flex-start; }
+            .header-left h1 { font-size: 1.4rem; }
+            .card { padding: 20px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item active"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <!-- Add VSL Modal -->
+    <div class="modal-overlay" id="addVslModal" onclick="if(event.target===this)closeAddVslModal()">
+        <div class="modal-box">
+            <h3><i class="fas fa-random"></i> Add VSL</h3>
+            <p class="modal-sub">Select a domain to create a new VSL shuffle configuration</p>
+            <label for="vslDomainSelect">Domain</label>
+            <select id="vslDomainSelect">
+                <option value="">-- Select a domain --</option>
+            </select>
+            <div id="pageInputWrap" style="display:none; margin-top:18px;">
+                <label style="margin-bottom:10px;">VSL Page URLs</label>
+                <div id="urlInputList"></div>
+                <button type="button" class="btn-add-url" onclick="addUrlInput()">
+                    <i class="fas fa-plus"></i> Add another URL
+                </button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" onclick="closeAddVslModal()">Cancel</button>
+                <button class="btn-modal-confirm" id="btnConfirmVsl" onclick="confirmAddVsl()" disabled>Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-random"></i> VSL Shuffle</h1>
+                <p>Manage video sales letter rotations per domain</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('add')" id="tabBtnAdd">
+                <i class="fas fa-plus-circle"></i> Add VSL
+            </button>
+            <button class="tab-btn" onclick="switchTab('confirmed')" id="tabBtnConfirmed">
+                <i class="fas fa-check-circle"></i> VSL Shuffler Added <span class="tab-count" id="confirmedCount">0</span>
+            </button>
+        </div>
+
+        <!-- Tab 1: Add VSL -->
+        <div class="tab-content active" id="tabAdd">
+
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+            <button class="btn-add-vsl" onclick="openAddVslModal()">
+                <i class="fas fa-plus"></i> Add VSL
+            </button>
+        </div>
+
+        <!-- Step 1: Configuration -->
+        <div class="step-section" id="step1Section">
+            <div class="step-header" onclick="toggleStep('step1Section')">
+                <span class="step-badge">1</span>
+                <div>
+                    <h2>VSL Configuration</h2>
+                    <p>Add domains, pages, and configure video sources</p>
+                </div>
+                <span class="step-toggle"><i class="fas fa-chevron-down"></i></span>
+            </div>
+            <div class="step-body">
+                <div class="vsl-list" id="vslList">
+                    <div class="empty-state">
+                        <i class="fas fa-film"></i>
+                        No VSL configurations yet. Click "Add VSL" to get started.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Embed Type -->
+        <div class="step-section" id="step2Section">
+            <div class="step-header" onclick="toggleStep('step2Section')">
+                <span class="step-badge">2</span>
+                <div>
+                    <h2>Embed Type <span class="required-star">*</span></h2>
+                    <p>For each page, choose how the video is currently embedded</p>
+                </div>
+                <span class="step-toggle"><i class="fas fa-chevron-down"></i></span>
+            </div>
+            <div class="step-body">
+                <div id="step2Content">
+                    <div class="step-lock-msg">
+                        <i class="fas fa-lock"></i> Complete Step 1 first — add pages and fill in all page titles.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Replacement Snippets -->
+        <div class="step-section" id="step3Section">
+            <div class="step-header" onclick="toggleStep('step3Section')">
+                <span class="step-badge">3</span>
+                <div>
+                    <h2>Replace Embed Code</h2>
+                    <p>Copy the snippet below and replace the Vidalytics code in your landing page</p>
+                </div>
+                <span class="step-toggle"><i class="fas fa-chevron-down"></i></span>
+            </div>
+            <div class="step-body">
+                <div id="step3Content">
+                    <div class="step-lock-msg">
+                        <i class="fas fa-lock"></i> Complete Step 2 first — paste embed codes for all pages.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Confirm -->
+        <div class="step-section" id="step4Section">
+            <div class="step-header" onclick="toggleStep('step4Section')">
+                <span class="step-badge">4</span>
+                <div>
+                    <h2>Confirm & Finish</h2>
+                    <p>Visit each page to verify the video loads, then confirm</p>
+                </div>
+                <span class="step-toggle"><i class="fas fa-chevron-down"></i></span>
+            </div>
+            <div class="step-body">
+                <div id="step4Content">
+                    <div class="step-lock-msg">
+                        <i class="fas fa-lock"></i> Complete Step 3 first — replace embed codes in your pages.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        </div><!-- end Tab 1 -->
+
+        <!-- Tab 2: VSL Shuffler Added -->
+        <div class="tab-content" id="tabConfirmed">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+                <select id="confirmedDomainFilter" class="domain-selector" onchange="renderConfirmedTab()" style="max-width:300px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Poppins',sans-serif;font-size:0.88rem;">
+                    <option value="">All Domains</option>
+                </select>
+            </div>
+            <div id="confirmedList">
+                <div class="empty-state">
+                    <i class="fas fa-check-double"></i>
+                    No confirmed VSL configurations yet.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/config.js?v=2.7.0"></script>
+    <script>
+        var domainsList = [];
+        var vslConfigs = [];
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load domains for the modal dropdown
+            var result = await apiRequest(API_URL, 'get_domains');
+            if (result.success && result.domains && result.domains.length) {
+                domainsList = result.domains;
+                var sel = document.getElementById('vslDomainSelect');
+                result.domains.forEach(function(d) {
+                    var platformBadge = '';
+                    if (d.platform === 'buygoods') platformBadge = '[BG] ';
+                    else if (d.platform === 'digistore24') platformBadge = '[DS] ';
+                    else if (d.platform === 'clickbank') platformBadge = '[CB] ';
+                    var opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = platformBadge + d.label;
+                    sel.appendChild(opt);
+                });
+            }
+
+            // Load saved configs from DB
+            await loadVslConfigs();
+        });
+
+        async function loadVslConfigs() {
+            var result = await apiRequest(API_URL, 'get_vsl_configs');
+            if (result.success && result.configs) {
+                vslConfigs = result.configs;
+            } else {
+                vslConfigs = [];
+            }
+            renderVslConfigs();
+            updateConfirmedCount();
+            renderConfirmedTab();
+        }
+
+        // When domain changes → show URL inputs
+        document.getElementById('vslDomainSelect').addEventListener('change', function() {
+            var domainId = this.value;
+            var wrap = document.getElementById('pageInputWrap');
+            var list = document.getElementById('urlInputList');
+
+            document.getElementById('btnConfirmVsl').disabled = true;
+
+            if (!domainId) {
+                wrap.style.display = 'none';
+                return;
+            }
+
+            wrap.style.display = 'block';
+            list.innerHTML = '';
+            addUrlInput(); // start with one empty input
+        });
+
+        function addUrlInput() {
+            var list = document.getElementById('urlInputList');
+            var row = document.createElement('div');
+            row.className = 'url-input-row';
+            row.innerHTML =
+                '<input type="text" placeholder="https://example.com/vsl-page/" oninput="checkUrlInputs()">' +
+                '<button type="button" class="btn-remove-url" onclick="removeUrlInput(this)" title="Remove"><i class="fas fa-trash-alt"></i></button>';
+            list.appendChild(row);
+            row.querySelector('input').focus();
+            checkUrlInputs();
+        }
+
+        function removeUrlInput(btn) {
+            var row = btn.closest('.url-input-row');
+            row.remove();
+            // Always keep at least one input
+            if (document.querySelectorAll('#urlInputList .url-input-row').length === 0) {
+                addUrlInput();
+            }
+            checkUrlInputs();
+        }
+
+        function checkUrlInputs() {
+            var inputs = document.querySelectorAll('#urlInputList input[type="text"]');
+            var hasValue = false;
+            inputs.forEach(function(inp) {
+                if (inp.value.trim()) hasValue = true;
+            });
+            document.getElementById('btnConfirmVsl').disabled = !hasValue;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function openAddVslModal() {
+            document.getElementById('vslDomainSelect').value = '';
+            document.getElementById('urlInputList').innerHTML = '';
+            document.getElementById('pageInputWrap').style.display = 'none';
+            document.getElementById('btnConfirmVsl').disabled = true;
+            document.getElementById('addVslModal').classList.add('active');
+        }
+
+        function closeAddVslModal() {
+            document.getElementById('addVslModal').classList.remove('active');
+        }
+
+        async function confirmAddVsl() {
+            var domainId = document.getElementById('vslDomainSelect').value;
+            if (!domainId) return;
+
+            var inputs = document.querySelectorAll('#urlInputList input[type="text"]');
+            var pages = [];
+            inputs.forEach(function(inp) {
+                var v = inp.value.trim();
+                if (v) pages.push(v);
+            });
+            if (pages.length === 0) return;
+
+            var btn = document.getElementById('btnConfirmVsl');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            var result = await apiRequest(API_URL, 'save_vsl_config', { domain_id: domainId, pages: pages });
+            if (!result.success) {
+                alert('Error saving: ' + (result.error || 'Unknown'));
+                btn.disabled = false;
+                btn.textContent = 'Continue';
+                return;
+            }
+
+            closeAddVslModal();
+            btn.textContent = 'Continue';
+            await loadVslConfigs();
+        }
+
+        async function removeVslConfig(domainId) {
+            var result = await apiRequest(API_URL, 'delete_vsl_config', { domain_id: domainId });
+            if (result.success) {
+                await loadVslConfigs();
+            }
+        }
+
+        function renderVslConfigs() {
+            var container = document.getElementById('vslList');
+
+            // Only show configs that are NOT fully confirmed (in-progress)
+            var pendingConfigs = vslConfigs.filter(function(cfg) {
+                var allConfirmed = cfg.pages.length > 0 && cfg.pages.every(function(pg) { return pg.confirmed; });
+                return !allConfirmed;
+            });
+
+            if (pendingConfigs.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-film"></i>No VSL configurations in progress. Click "Add VSL" to get started.</div>';
+                return;
+            }
+
+            var html = '';
+            pendingConfigs.forEach(function(cfg) {
+                var badge = 'BG';
+                if (cfg.platform === 'digistore24') badge = 'DS';
+                else if (cfg.platform === 'clickbank') badge = 'CB';
+
+                html += '<div class="vsl-config-card">';
+                html += '<div class="vsl-config-header">';
+                html += '<h3><i class="fas fa-globe"></i> ' + escapeHtml(cfg.label) + '</h3>';
+                html += '<div style="display:flex;align-items:center;gap:10px;">';
+                html += '<span class="vsl-domain-badge"><i class="fas fa-tag"></i> ' + badge + '</span>';
+                html += '<button class="btn-remove-config" onclick="removeVslConfig(' + cfg.domainId + ')"><i class="fas fa-trash"></i> Remove</button>';
+                html += '</div></div>';
+                html += '<div class="vsl-page-list">';
+                cfg.pages.forEach(function(pg, pi) {
+                    var pgId = pg.id;
+                    html += '<div class="vsl-page-item" style="flex-direction:column;align-items:stretch;">';
+                    html += '<div style="display:flex;align-items:center;gap:12px;">';
+                    html += '<span class="vsl-page-num">' + (pi + 1) + '</span>';
+                    html += '<span class="vsl-page-url">' + escapeHtml(pg.url) + '</span>';
+                    html += '<span class="vsl-saved-badge" id="saved-' + pgId + '"><i class="fas fa-check"></i> Saved</span>';
+                    html += '</div>';
+                    html += '<div class="vsl-page-config">';
+                    html += '<input type="text" placeholder="Page title" value="' + escapeHtml(pg.title) + '" onchange="autoSavePage(' + pgId + ', \'page_title\', this.value)">';
+                    html += '<label class="vsl-video-check"><input type="checkbox" ' + (pg.has_video ? 'checked' : '') + ' onchange="toggleVideo(' + pgId + ', this)"> Has Video</label>';
+                    html += '<div id="vsrc-wrap-' + pgId + '" style="display:' + (pg.has_video ? 'flex' : 'none') + ';align-items:center;gap:8px;">';
+                    html += '<select onchange="autoSavePage(' + pgId + ', \'video_source\', this.value)">';
+                    html += '<option value="">-- Source --</option>';
+                    html += '<option value="vidalytics"' + (pg.video_source === 'vidalytics' ? ' selected' : '') + '>Vidalytics</option>';
+                    html += '</select>';
+                    // Vidalytics email input (shown when vidalytics selected)
+                    var showEmail = pg.video_source === 'vidalytics';
+                    html += '<input type="text" id="vemail-' + pgId + '" placeholder="Vidalytics account email (optional)" style="display:' + (showEmail ? 'block' : 'none') + ';min-width:220px;" value="' + escapeHtml(pg.vidalytics_email || '') + '" onchange="autoSavePage(' + pgId + ', \'vidalytics_email\', this.value)">';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div></div>';
+            });
+            container.innerHTML = html;
+            renderStep2();
+            renderStep3();
+            renderStep4();
+        }
+
+        function renderStep2() {
+            var container = document.getElementById('step2Content');
+            var section = document.getElementById('step2Section');
+
+            // Collect all video pages that have title + video source filled
+            var videoPages = [];
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) {
+                    if (pg.has_video && pg.title && pg.video_source && !pg.confirmed) {
+                        videoPages.push(pg);
+                    }
+                });
+            });
+
+            if (videoPages.length === 0) {
+                section.classList.add('step-locked');
+                container.innerHTML = '<div class="step-lock-msg"><i class="fas fa-lock"></i> Complete Step 1 first — add pages with video, fill titles and select a video source.</div>';
+                return;
+            }
+
+            section.classList.remove('step-locked');
+
+            var html = '';
+            videoPages.forEach(function(pg, i) {
+                var sourceName = pg.video_source.charAt(0).toUpperCase() + pg.video_source.slice(1);
+                var isDirectSel = pg.embed_type === 'direct' ? ' selected' : '';
+                var isShufflerSel = pg.embed_type === 'shuffler' ? ' selected' : '';
+
+                html += '<div class="embed-type-card">';
+                html += '<div class="embed-type-header">';
+                html += '<span class="page-num">' + (i + 1) + '</span>';
+                html += '<span class="page-title">' + escapeHtml(pg.title) + '</span>';
+                html += '<span class="page-source-badge"><i class="fas fa-play-circle" style="margin-right:4px;"></i>' + sourceName + '</span>';
+                html += '</div>';
+                html += '<div style="font-size:0.82rem;color:#64748b;margin-bottom:10px;">Which embed code does this page currently use? <span class="required-star">*</span></div>';
+                html += '<div class="embed-type-options">';
+
+                html += '<label class="embed-type-opt' + isDirectSel + '" onclick="selectEmbedType(this, ' + pg.id + ', \'direct\')">';
+                html += '<input type="radio" name="embed-' + pg.id + '" value="direct"' + (isDirectSel ? ' checked' : '') + '>';
+                html += '<span class="embed-type-radio"></span>';
+                html += '<div><div class="embed-type-label">Direct ' + sourceName + ' Code</div>';
+                html += '<div class="embed-type-desc">Original embed from ' + sourceName + '</div></div>';
+                html += '</label>';
+
+                html += '<label class="embed-type-opt' + isShufflerSel + '" onclick="selectEmbedType(this, ' + pg.id + ', \'shuffler\')">';
+                html += '<input type="radio" name="embed-' + pg.id + '" value="shuffler"' + (isShufflerSel ? ' checked' : '') + '>';
+                html += '<span class="embed-type-radio"></span>';
+                html += '<div><div class="embed-type-label">Shuffler Code</div>';
+                html += '<div class="embed-type-desc">Managed by VSL Shuffle system</div></div>';
+                html += '</label>';
+
+                html += '</div>';
+
+                // Direct code paste area
+                html += '<div class="embed-code-wrap" id="embed-code-wrap-' + pg.id + '" style="display:' + (pg.embed_type === 'direct' ? 'block' : 'none') + ';">';
+                html += '<label>Paste your ' + sourceName + ' embed code here <span class="required-star">*</span></label>';
+                html += '<textarea id="embed-code-' + pg.id + '" placeholder="Paste your ' + sourceName + ' embed code here..." oninput="parseEmbedCode(' + pg.id + ')" onchange="autoSavePage(' + pg.id + ', \'embed_code\', this.value)"></textarea>';
+                html += '<div class="embed-code-help">';
+                html += '<i class="fas fa-lightbulb"></i> <strong>How to find it:</strong> Open the page below, press <strong>Ctrl+U</strong> to view source, then search for "' + sourceName + '"<br>';
+                html += '<i class="fas fa-external-link-alt"></i> <a href="' + escapeHtml(pg.url) + '" target="_blank">' + escapeHtml(pg.url) + '</a>';
+                html += '</div>';
+                html += '<div id="embed-details-' + pg.id + '"></div>';
+                html += '</div>';
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+
+            // Set textarea values via DOM (avoids script tag parsing issues)
+            videoPages.forEach(function(pg) {
+                if (pg.embed_type === 'direct') {
+                    var ta = document.getElementById('embed-code-' + pg.id);
+                    if (ta && pg.embed_code) {
+                        ta.value = pg.embed_code;
+                        parseEmbedCode(pg.id);
+                    }
+                }
+            });
+        }
+
+        function parseEmbedCode(pageId) {
+            var textarea = document.getElementById('embed-code-' + pageId);
+            var container = document.getElementById('embed-details-' + pageId);
+            if (!textarea || !container) return;
+
+            var code = textarea.value || '';
+            if (!code.trim()) { container.innerHTML = ''; return; }
+
+            // Parse Vidalytics embed
+            var embedId = '', accountId = '', videoId = '', cdnBase = '';
+
+            // Extract embed ID from div id: vidalytics_embed_XXXXX
+            var embedMatch = code.match(/id=["']?(vidalytics_embed_[a-zA-Z0-9_]+)/);
+            if (embedMatch) embedId = embedMatch[1];
+
+            // Extract from the URL: https://fast.vidalytics.com/embeds/ACCOUNT/VIDEO/
+            var urlMatch = code.match(/fast\.vidalytics\.com\/embeds\/([a-zA-Z0-9]+)\/([a-zA-Z0-9_]+)/);
+            if (urlMatch) {
+                accountId = urlMatch[1];
+                videoId = urlMatch[2];
+                cdnBase = 'fast.vidalytics.com/embeds/' + accountId + '/' + videoId + '/';
+            }
+
+            if (!embedId && !accountId) { container.innerHTML = ''; return; }
+
+            // Get page info from config
+            var pgData = null;
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) { if (pg.id === pageId) pgData = pg; });
+            });
+
+            var livePageShort = '';
+            if (pgData && pgData.url) {
+                try { var u = new URL(pgData.url); livePageShort = u.hostname.replace(/\.trustednutraproduct\.com$/, '...') + u.pathname; } catch(e) { livePageShort = pgData.url; }
+            }
+
+            var niche = pgData ? pgData.title : '';
+            var email = pgData ? (pgData.vidalytics_email || '') : '';
+
+            var html = '<div class="embed-details"><div class="embed-details-grid">';
+            html += '<div class="embed-detail-item"><div class="embed-detail-label">Embed ID</div><div class="embed-detail-value mono">' + escapeHtml(embedId) + '</div></div>';
+            html += '<div class="embed-detail-item"><div class="embed-detail-label">Account ID</div><div class="embed-detail-value mono">' + escapeHtml(accountId) + '</div></div>';
+            html += '<div class="embed-detail-item"><div class="embed-detail-label">Video ID</div><div class="embed-detail-value mono">' + escapeHtml(videoId) + '</div></div>';
+            html += '<div class="embed-detail-item"><div class="embed-detail-label">CDN Base</div><div class="embed-detail-value mono">' + escapeHtml(cdnBase) + '</div></div>';
+            html += '<div class="embed-detail-item"><div class="embed-detail-label">Live Page</div><div class="embed-detail-value">' + escapeHtml(livePageShort) + '</div></div>';
+            html += '<div class="embed-detail-item"><div class="embed-detail-label">Niche</div><div class="embed-detail-value">' + escapeHtml(niche) + '</div></div>';
+            if (email) {
+                html += '<div class="embed-detail-item" style="grid-column:1/-1;border-right:none;"><div class="embed-detail-label">Account Email</div><div class="embed-detail-value">' + escapeHtml(email) + '</div></div>';
+            }
+            html += '</div></div>';
+
+            container.innerHTML = html;
+        }
+
+        function renderStep3() {
+            var container = document.getElementById('step3Content');
+            var section = document.getElementById('step3Section');
+
+            // Collect pages that have direct embed code filled
+            var readyPages = [];
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) {
+                    if (pg.has_video && pg.embed_type === 'direct' && pg.embed_code && !pg.confirmed) {
+                        readyPages.push({ pg: pg, domain: cfg.label });
+                    }
+                });
+            });
+
+            if (readyPages.length === 0) {
+                container.innerHTML = '<div class="step-lock-msg"><i class="fas fa-lock"></i> Complete Step 2 first — paste embed codes for all pages.</div>';
+                return;
+            }
+
+            var html = '';
+            html += '<div style="padding:12px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:18px;font-size:0.84rem;color:#92400e;line-height:1.6;">';
+            html += '<i class="fas fa-info-circle" style="margin-right:6px;"></i>';
+            html += '<strong>Instructions:</strong> For each page below, copy the snippet and replace the existing Vidalytics embed block in your landing page. ';
+            html += 'Find the <code style="background:#fef3c7;padding:1px 4px;border-radius:3px;">&lt;!-- VSL Video --&gt;</code> section and replace everything between it and <code style="background:#fef3c7;padding:1px 4px;border-radius:3px;">&lt;!-- MAGICAL SECTIONS</code> with this snippet.';
+            html += '</div>';
+
+            readyPages.forEach(function(item, i) {
+                var pg = item.pg;
+                var shortUrl = pg.url;
+                try { var u = new URL(pg.url); shortUrl = u.pathname; } catch(e) {}
+
+                var snippetCode = '<!-- VSL Video -->\n<div style="width:100%; padding:0; position:relative;">\n\t<script src="https://cdn.trustednutraproduct.com/vsl.js.php?id=' + pg.id + '"><\/script>\n</div>';
+
+                html += '<div class="snippet-card">';
+                html += '<div class="snippet-card-header">';
+                html += '<span class="sn-num">' + (i + 1) + '</span>';
+                html += '<span class="sn-title">' + escapeHtml(pg.title || 'Untitled') + '</span>';
+                html += '<span class="sn-url">' + escapeHtml(shortUrl) + '</span>';
+                html += '</div>';
+                html += '<div class="snippet-instruction">';
+                html += 'Replace the Vidalytics code in <strong>' + escapeHtml(pg.title) + '</strong> with this snippet:';
+                html += '</div>';
+                html += '<div class="snippet-code-box" id="snippet-code-' + pg.id + '">';
+                html += '<button class="snippet-copy-btn" onclick="copySnippet(' + pg.id + ')"><i class="fas fa-copy"></i> Copy</button>';
+                html += escapeHtml(snippetCode);
+                html += '</div>';
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function copySnippet(pageId) {
+            var el = document.getElementById('snippet-code-' + pageId);
+            var text = el.textContent.replace('Copy', '').trim();
+            navigator.clipboard.writeText(text).then(function() {
+                var btn = el.querySelector('.snippet-copy-btn');
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.style.background = '#059669';
+                setTimeout(function() {
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+
+        function selectEmbedType(label, pageId, value) {
+            // Update UI
+            var parent = label.closest('.embed-type-options');
+            parent.querySelectorAll('.embed-type-opt').forEach(function(el) { el.classList.remove('selected'); });
+            label.classList.add('selected');
+            // Show/hide code paste area
+            var codeWrap = document.getElementById('embed-code-wrap-' + pageId);
+            if (codeWrap) {
+                codeWrap.style.display = value === 'direct' ? 'block' : 'none';
+            }
+            // Auto-save
+            autoSavePage(pageId, 'embed_type', value);
+        }
+
+        async function autoSavePage(id, field, value) {
+            await apiRequest(API_URL, 'update_vsl_page', { id: id, [field]: value });
+            // Refresh step2 if step1 field changed
+            // Update local config data
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) {
+                    if (pg.id === id) {
+                        if (field === 'page_title') pg.title = value;
+                        if (field === 'has_video') pg.has_video = parseInt(value);
+                        if (field === 'video_source') pg.video_source = value;
+                        if (field === 'embed_type') pg.embed_type = value;
+                        if (field === 'embed_code') pg.embed_code = value;
+                    }
+                });
+            });
+            if (field === 'page_title' || field === 'has_video' || field === 'video_source') {
+                renderStep2();
+                renderStep3();
+            }
+            if (field === 'embed_code' || field === 'embed_type') {
+                renderStep3();
+            }
+            // Show saved badge
+            var badge = document.getElementById('saved-' + id);
+            if (badge) {
+                badge.classList.add('show');
+                setTimeout(function() { badge.classList.remove('show'); }, 1500);
+            }
+            // If video_source changed, toggle email input
+            if (field === 'video_source') {
+                var emailInput = document.getElementById('vemail-' + id);
+                if (emailInput) {
+                    emailInput.style.display = value === 'vidalytics' ? 'block' : 'none';
+                    if (value !== 'vidalytics') {
+                        emailInput.value = '';
+                        autoSavePage(id, 'vidalytics_email', '');
+                    }
+                }
+            }
+        }
+
+        function toggleVideo(id, checkbox) {
+            var checked = checkbox.checked;
+            autoSavePage(id, 'has_video', checked ? 1 : 0);
+            var wrap = document.getElementById('vsrc-wrap-' + id);
+            if (wrap) wrap.style.display = checked ? 'flex' : 'none';
+            if (!checked) {
+                // Clear video source & email when unchecked
+                var sel = wrap ? wrap.querySelector('select') : null;
+                if (sel) { sel.value = ''; autoSavePage(id, 'video_source', ''); }
+                var emailInput = document.getElementById('vemail-' + id);
+                if (emailInput) { emailInput.value = ''; emailInput.style.display = 'none'; autoSavePage(id, 'vidalytics_email', ''); }
+            }
+        }
+
+        // ── Tabs ──
+        function switchTab(tab) {
+            document.getElementById('tabAdd').classList.toggle('active', tab === 'add');
+            document.getElementById('tabConfirmed').classList.toggle('active', tab === 'confirmed');
+            document.getElementById('tabBtnAdd').classList.toggle('active', tab === 'add');
+            document.getElementById('tabBtnConfirmed').classList.toggle('active', tab === 'confirmed');
+            if (tab === 'confirmed') renderConfirmedTab();
+        }
+
+        function updateConfirmedCount() {
+            var count = 0;
+            vslConfigs.forEach(function(cfg) {
+                var allConfirmed = cfg.pages.length > 0 && cfg.pages.every(function(pg) { return pg.confirmed; });
+                if (allConfirmed) count++;
+            });
+            document.getElementById('confirmedCount').textContent = count;
+        }
+
+        // ── Step 4: Confirm ──
+        function renderStep4() {
+            var container = document.getElementById('step4Content');
+
+            // Collect pages that have embed code and are in step 3
+            var readyPages = [];
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) {
+                    if (pg.has_video && pg.embed_type === 'direct' && pg.embed_code && !pg.confirmed) {
+                        readyPages.push({ pg: pg, domain: cfg.label });
+                    }
+                });
+            });
+
+            if (readyPages.length === 0) {
+                container.innerHTML = '<div class="step-lock-msg"><i class="fas fa-lock"></i> Complete Step 3 first — replace embed codes in your pages.</div>';
+                return;
+            }
+
+            var html = '<div style="padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:18px;font-size:0.84rem;color:#166534;line-height:1.6;">';
+            html += '<i class="fas fa-info-circle" style="margin-right:6px;"></i>';
+            html += '<strong>Final step:</strong> Visit each page to verify the video loads correctly, then click "Confirm" for each page.';
+            html += '</div>';
+
+            readyPages.forEach(function(item, i) {
+                var pg = item.pg;
+                html += '<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:#f8fafc;border-radius:10px;margin-bottom:10px;border:2px solid ' + (pg.confirmed ? '#a7f3d0' : '#e2e8f0') + ';">';
+                html += '<span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48c6ef);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (i + 1) + '</span>';
+                html += '<div style="flex:1;min-width:0;">';
+                html += '<div style="font-weight:600;font-size:0.9rem;color:#1a1a2e;">' + escapeHtml(pg.title) + '</div>';
+                html += '<div style="font-size:0.78rem;color:#94a3b8;">' + escapeHtml(item.domain) + '</div>';
+                html += '</div>';
+                html += '<a href="' + escapeHtml(pg.url) + '" target="_blank" style="padding:6px 14px;background:#f0f0ff;color:#6c63ff;border-radius:8px;font-size:0.78rem;font-weight:600;text-decoration:none;">Visit Page <i class="fas fa-external-link-alt"></i></a>';
+                if (pg.confirmed) {
+                    html += '<span class="confirmed-badge"><i class="fas fa-check-circle"></i> Confirmed</span>';
+                } else {
+                    html += '<button class="btn-confirm-page" onclick="confirmPage(' + pg.id + ')"><i class="fas fa-check"></i> Confirm</button>';
+                }
+                html += '</div>';
+            });
+
+            // Check if all confirmed
+            var allDone = readyPages.every(function(item) { return item.pg.confirmed; });
+            if (allDone) {
+                html += '<div style="text-align:center;padding:20px;margin-top:10px;">';
+                html += '<div class="confirmed-badge" style="font-size:0.92rem;padding:12px 24px;"><i class="fas fa-party-horn" style="margin-right:6px;"></i> All pages confirmed! Check the "VSL Shuffler Added" tab.</div>';
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+            updateConfirmedCount();
+        }
+
+        async function confirmPage(pageId) {
+            await autoSavePage(pageId, 'confirmed', 1);
+            // Update local data
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) {
+                    if (pg.id === pageId) pg.confirmed = 1;
+                });
+            });
+            renderStep4();
+            updateConfirmedCount();
+        }
+
+        // ── Tab 2: Confirmed ──
+        function renderConfirmedTab() {
+            var container = document.getElementById('confirmedList');
+            var filterId = document.getElementById('confirmedDomainFilter').value;
+
+            // Populate filter dropdown
+            var filterSel = document.getElementById('confirmedDomainFilter');
+            var currentVal = filterSel.value;
+            var existingIds = [];
+            for (var o = 1; o < filterSel.options.length; o++) existingIds.push(filterSel.options[o].value);
+
+            vslConfigs.forEach(function(cfg) {
+                var allConfirmed = cfg.pages.length > 0 && cfg.pages.every(function(pg) { return pg.confirmed; });
+                if (allConfirmed && existingIds.indexOf(String(cfg.domainId)) === -1) {
+                    var opt = document.createElement('option');
+                    opt.value = cfg.domainId;
+                    opt.textContent = cfg.label;
+                    filterSel.appendChild(opt);
+                    existingIds.push(String(cfg.domainId));
+                }
+            });
+            filterSel.value = currentVal;
+
+            var confirmedConfigs = vslConfigs.filter(function(cfg) {
+                var allConfirmed = cfg.pages.length > 0 && cfg.pages.every(function(pg) { return pg.confirmed; });
+                if (!allConfirmed) return false;
+                if (filterId && String(cfg.domainId) !== String(filterId)) return false;
+                return true;
+            });
+
+            if (confirmedConfigs.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-check-double"></i>No confirmed VSL configurations' + (filterId ? ' for this domain' : ' yet') + '.</div>';
+                return;
+            }
+
+            var html = '';
+            confirmedConfigs.forEach(function(cfg) {
+                var badge = 'BG';
+                if (cfg.platform === 'digistore24') badge = 'DS';
+                else if (cfg.platform === 'clickbank') badge = 'CB';
+
+                html += '<div class="confirmed-card" id="cc-' + cfg.domainId + '">';
+                html += '<div class="confirmed-card-header" onclick="toggleConfirmedCard(' + cfg.domainId + ')">';
+                html += '<i class="fas fa-globe" style="color:#6c63ff;"></i>';
+                html += '<h3>' + escapeHtml(cfg.label) + '</h3>';
+                html += '<span class="vsl-domain-badge"><i class="fas fa-tag"></i> ' + badge + '</span>';
+                html += '<span class="confirmed-badge"><i class="fas fa-check-circle"></i> ' + cfg.pages.length + ' page' + (cfg.pages.length > 1 ? 's' : '') + '</span>';
+                html += '<span class="cc-toggle"><i class="fas fa-chevron-down"></i></span>';
+                html += '</div>';
+                html += '<div class="confirmed-card-body">';
+
+                cfg.pages.forEach(function(pg) {
+                    var sourceName = pg.video_source ? pg.video_source.charAt(0).toUpperCase() + pg.video_source.slice(1) : '';
+
+                    html += '<div style="padding:16px 0;border-bottom:1px solid #f0f0f5;">';
+                    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+                    html += '<span style="font-weight:700;font-size:0.92rem;color:#1a1a2e;">' + escapeHtml(pg.title) + '</span>';
+                    if (sourceName) html += '<span class="page-source-badge" style="padding:3px 10px;background:#ede9fe;color:#7c3aed;border-radius:6px;font-size:0.72rem;font-weight:600;"><i class="fas fa-play-circle" style="margin-right:4px;"></i>' + sourceName + '</span>';
+                    html += '<a href="' + escapeHtml(pg.url) + '" target="_blank" style="margin-left:auto;font-size:0.78rem;color:#6c63ff;text-decoration:none;font-weight:600;">Visit <i class="fas fa-external-link-alt"></i></a>';
+                    html += '</div>';
+
+                    // Embed details grid
+                    if (pg.embed_code) {
+                        var embedId = '', accountId = '', videoId = '', cdnBase = '';
+                        var embedMatch = pg.embed_code.match(/id=["']?(vidalytics_embed_[a-zA-Z0-9_]+)/);
+                        if (embedMatch) embedId = embedMatch[1];
+                        var urlMatch = pg.embed_code.match(/fast\.vidalytics\.com\/embeds\/([a-zA-Z0-9]+)\/([a-zA-Z0-9_]+)/);
+                        if (urlMatch) { accountId = urlMatch[1]; videoId = urlMatch[2]; cdnBase = 'fast.vidalytics.com/embeds/' + accountId + '/' + videoId + '/'; }
+
+                        html += '<div class="embed-details" style="margin-top:10px;"><div class="embed-details-grid">';
+                        html += '<div class="embed-detail-item"><div class="embed-detail-label">Embed ID</div><div class="embed-detail-value mono">' + escapeHtml(embedId) + '</div></div>';
+                        html += '<div class="embed-detail-item"><div class="embed-detail-label">Account ID</div><div class="embed-detail-value mono">' + escapeHtml(accountId) + '</div></div>';
+                        html += '<div class="embed-detail-item"><div class="embed-detail-label">Video ID</div><div class="embed-detail-value mono">' + escapeHtml(videoId) + '</div></div>';
+                        html += '<div class="embed-detail-item"><div class="embed-detail-label">CDN Base</div><div class="embed-detail-value mono">' + escapeHtml(cdnBase) + '</div></div>';
+                        if (pg.vidalytics_email) {
+                            html += '<div class="embed-detail-item" style="grid-column:1/-1;border-right:none;"><div class="embed-detail-label">Account Email</div><div class="embed-detail-value">' + escapeHtml(pg.vidalytics_email) + '</div></div>';
+                        }
+                        html += '</div></div>';
+                    }
+
+                    // Current code block
+                    html += '<div class="current-embed-label">Current Embed Code</div>';
+                    html += '<div class="current-embed-block"><pre>' + escapeHtml(pg.embed_code || 'No code') + '</pre></div>';
+
+                    // Update input
+                    html += '<div class="update-embed-area">';
+                    html += '<label>Replace with new ' + sourceName + ' code:</label>';
+                    html += '<textarea id="update-code-' + pg.id + '" placeholder="Paste new ' + sourceName + ' embed code here..."></textarea>';
+                    html += '<button class="btn-update-embed" onclick="updateEmbed(' + pg.id + ')"><i class="fas fa-sync-alt"></i> Update Embed Code</button>';
+                    html += '</div>';
+
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleConfirmedCard(domainId) {
+            document.getElementById('cc-' + domainId).classList.toggle('collapsed');
+        }
+
+        async function updateEmbed(pageId) {
+            var textarea = document.getElementById('update-code-' + pageId);
+            var newCode = textarea.value.trim();
+            if (!newCode) { alert('Please paste the new embed code.'); return; }
+
+            await autoSavePage(pageId, 'embed_code', newCode);
+            // Update local data
+            vslConfigs.forEach(function(cfg) {
+                cfg.pages.forEach(function(pg) {
+                    if (pg.id === pageId) pg.embed_code = newCode;
+                });
+            });
+            textarea.value = '';
+            renderConfirmedTab();
+        }
+
+        function toggleStep(sectionId) {
+            document.getElementById(sectionId).classList.toggle('collapsed');
+        }
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+    </script>
+</body>
+</html>

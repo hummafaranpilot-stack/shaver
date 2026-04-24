@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; }
+
+        /* ── Sidebar (shared) ── */
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 {
+            font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle {
+            position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title {
+            padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s;
+        }
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s ease;
+            font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); border-left: none;
+        }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 24px; transition: margin-left 0.3s ease; }
+
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: #fff; padding: 22px 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 3px; font-weight: 700; }
+        .header-left h1 i { color: #6c63ff; }
+        .header-left p { color: #999; font-size: 0.85rem; }
+
+        .card {
+            background: white; padding: 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px;
+        }
+        .card h2 { font-size: 1.2rem; color: #1a1a2e; margin-bottom: 20px; }
+
+        /* Status banner */
+        .status-banner {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px; border-radius: 12px; margin-bottom: 20px;
+            font-size: 0.88rem; font-weight: 500;
+        }
+        .status-banner.enabled { background: #d4edda; color: #155724; }
+        .status-banner.disabled { background: #fff3cd; color: #856404; }
+        .status-banner i { font-size: 1.1rem; }
+
+        /* Shipping table */
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px 14px; background: #f8f9fa;
+            color: #666; font-size: 0.78rem; font-weight: 600;
+            text-transform: uppercase; border-bottom: 2px solid #eee;
+        }
+        td { padding: 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; vertical-align: middle; }
+        tr:hover td { background: #f8f9fa; }
+
+        td.country-cell { font-weight: 600; }
+        td.country-cell .code { color: #6c63ff; font-size: 0.78rem; margin-left: 6px; }
+
+        td .ship-amount { font-weight: 600; }
+        td .ship-amount.free { color: #27ae60; }
+
+        /* Inputs */
+        .ship-select {
+            width: 130px; padding: 8px 10px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 0.88rem;
+            background: #fff; transition: border-color 0.2s;
+        }
+        .ship-select:focus { border-color: #6c63ff; outline: none; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+        .country-select {
+            width: 100%; max-width: 240px; padding: 8px 10px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 0.88rem; background: #fff;
+        }
+        .country-select:focus { border-color: #6c63ff; outline: none; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 16px; border: none; border-radius: 8px;
+            font-family: 'Poppins', sans-serif; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white;
+            box-shadow: 0 4px 15px rgba(108,99,255,0.25);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(108,99,255,0.35); }
+        .btn-ghost { background: #f0f0ff; color: #6c63ff; }
+        .btn-ghost:hover { background: #e0e0ff; }
+        .btn-danger { background: #fee; color: #e74c3c; }
+        .btn-danger:hover { background: #fdd; }
+        .btn-icon {
+            width: 32px; height: 32px; padding: 0; justify-content: center;
+            border-radius: 8px;
+        }
+
+        .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+        .add-row-bar { padding: 16px 0 4px; display: flex; justify-content: flex-end; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #95a5a6; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; padding: 14px 22px;
+            background: #1a1a2e; color: #fff; border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.2); font-size: 0.9rem;
+            z-index: 9999; opacity: 0; transform: translateY(20px); transition: all 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background: #c0392b; }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white; border: none; border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(108,99,255,0.3);
+        }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; flex-direction: column; gap: 15px; align-items: flex-start; }
+            .ship-select { width: 110px; font-size: 0.78rem; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 10px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item active"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-truck"></i> Shipping</h1>
+                <p>Per-domain country shipping rules &mdash; powers the country selector on opted-in pages</p>
+            </div>
+            <select class="domain-selector" id="domainSelector"></select>
+        </div>
+
+        <div class="card">
+            <div id="statusBanner" class="status-banner disabled">
+                <i class="fas fa-info-circle"></i>
+                <span id="statusBannerText">Select a domain to view its shipping rules.</span>
+            </div>
+
+            <table id="shippingTable">
+                <thead id="shippingTableHead">
+                    <tr>
+                        <th style="width:28%;">Country</th>
+                        <th>1 Bottle</th>
+                        <th>2 Bottles</th>
+                        <th>3 Bottles</th>
+                        <th>6+1 Bottles</th>
+                        <th style="text-align:right; width:140px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="shippingTableBody">
+                    <tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin"></i>Loading&hellip;</td></tr>
+                </tbody>
+            </table>
+
+            <div class="add-row-bar">
+                <button class="btn btn-primary" id="addRowBtn" onclick="startAddRow()">
+                    <i class="fas fa-plus"></i> Add Country
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/config.js?v=2.7.0"></script>
+    <script src="js/countries.js?v=1.0.0"></script>
+    <script>
+        // ====== State ======
+        var currentRows = [];
+        var editingRowId = null; // null = no edit, 0 = adding new, >0 = editing existing
+        var shippingEnabled = 0;
+
+        // Default card slots — overridden by auto-detected card_config per domain
+        var DEFAULT_SLOTS = [
+            { slot: '1', label: '1 Bottle', field: 'ship_1_bottle' },
+            { slot: '2', label: '2 Bottles', field: 'ship_2_bottle' },
+            { slot: '3', label: '3 Bottles', field: 'ship_3_bottle' },
+            { slot: '6', label: '6+1 Bottles', field: 'ship_6_bottle' }
+        ];
+        var SLOT_FIELD_MAP = { '1': 'ship_1_bottle', '2': 'ship_2_bottle', '3': 'ship_3_bottle', '6': 'ship_6_bottle' };
+        var activeSlots = DEFAULT_SLOTS; // updated per domain
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initDomainSelector(loadShipping);
+        });
+
+        function buildActiveSlots(cardConfig) {
+            if (!cardConfig || !Array.isArray(cardConfig) || cardConfig.length === 0) {
+                return DEFAULT_SLOTS;
+            }
+            return cardConfig.map(function(c) {
+                return { slot: c.slot, label: c.label, field: SLOT_FIELD_MAP[c.slot] || ('ship_' + c.slot + '_bottle') };
+            }).filter(function(s) { return !!s.field; });
+        }
+
+        function renderTableHead() {
+            var thead = document.getElementById('shippingTableHead');
+            var html = '<tr><th style="width:28%;">Country</th>';
+            activeSlots.forEach(function(s) { html += '<th>' + escapeHtml(s.label) + '</th>'; });
+            html += '<th style="text-align:right; width:140px;">Actions</th></tr>';
+            thead.innerHTML = html;
+        }
+
+        async function loadShipping() {
+            if (!currentDomainId) {
+                renderEmpty('Select a domain to view its shipping rules.');
+                return;
+            }
+            var result = await apiRequest(API_URL, 'get_shipping_config', { domain_id: currentDomainId });
+            if (!result || !result.success) {
+                renderEmpty('Failed to load shipping rules: ' + (result && result.error ? result.error : 'unknown error'));
+                return;
+            }
+            currentRows = result.rows || [];
+            shippingEnabled = result.shipping_enabled || 0;
+            activeSlots = buildActiveSlots(result.card_config);
+            editingRowId = null;
+            renderTableHead();
+            renderTable();
+        }
+
+        function renderEmpty(message) {
+            currentRows = [];
+            shippingEnabled = 0;
+            var cols = activeSlots.length + 2; // country + slots + actions
+            document.getElementById('shippingTableBody').innerHTML =
+                '<tr><td colspan="' + cols + '" class="empty-state"><i class="fas fa-globe"></i>' + escapeHtml(message) + '</td></tr>';
+            updateStatusBanner();
+        }
+
+        function updateStatusBanner() {
+            var banner = document.getElementById('statusBanner');
+            var text = document.getElementById('statusBannerText');
+            if (currentRows.length > 0 && shippingEnabled) {
+                banner.className = 'status-banner enabled';
+                banner.querySelector('i').className = 'fas fa-check-circle';
+                text.textContent = 'Shipping is ACTIVE for this domain (' + currentRows.length + ' country' +
+                    (currentRows.length === 1 ? '' : 'ies') + ' configured). Visitors will see the country selector.';
+            } else {
+                banner.className = 'status-banner disabled';
+                banner.querySelector('i').className = 'fas fa-info-circle';
+                text.textContent = 'Shipping is INACTIVE. Add at least one country to enable the country selector on this domain\'s pages.';
+            }
+        }
+
+        function renderTable() {
+            var tbody = document.getElementById('shippingTableBody');
+            updateStatusBanner();
+
+            if (currentRows.length === 0 && editingRowId === null) {
+                var cols = activeSlots.length + 2;
+                tbody.innerHTML = '<tr><td colspan="' + cols + '" class="empty-state"><i class="fas fa-globe"></i>No countries configured yet. Click "Add Country" to start.</td></tr>';
+                return;
+            }
+
+            var html = '';
+            currentRows.forEach(function(row) {
+                if (editingRowId === parseInt(row.id, 10)) {
+                    html += renderEditRow(row);
+                } else {
+                    html += renderViewRow(row);
+                }
+            });
+            if (editingRowId === 0) {
+                html += renderEditRow({ id: 0, country_code: '', country_name: '', ship_1_bottle: 0, ship_2_bottle: 0, ship_3_bottle: 0, ship_6_bottle: 0 });
+            }
+            tbody.innerHTML = html;
+        }
+
+        function renderViewRow(row) {
+            var html = '<tr><td class="country-cell">' + escapeHtml(row.country_name) + '<span class="code">' + escapeHtml(row.country_code) + '</span></td>';
+            activeSlots.forEach(function(s) {
+                html += '<td>' + formatShipCell(row[s.field]) + '</td>';
+            });
+            html += '<td><div class="row-actions">' +
+                '<button class="btn btn-ghost btn-icon" title="Edit" onclick="startEditRow(' + row.id + ')"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn btn-danger btn-icon" title="Delete" onclick="deleteRow(' + row.id + ')"><i class="fas fa-trash"></i></button>' +
+            '</div></td></tr>';
+            return html;
+        }
+
+        // Allowed shipping amounts (admin chooses from these only)
+        var SHIP_OPTIONS = [
+            { value: 0,     label: 'Free Shipping' },
+            { value: 19.99, label: '$19.99' },
+            { value: 29.99, label: '$29.99' }
+        ];
+
+        function buildShipSelect(id, currentValue) {
+            var html = '<select class="ship-select" id="' + id + '">';
+            var current = parseFloat(currentValue) || 0;
+            // Snap any legacy non-matching value to the closest allowed option
+            var matched = false;
+            for (var i = 0; i < SHIP_OPTIONS.length; i++) {
+                if (Math.abs(SHIP_OPTIONS[i].value - current) < 0.005) { matched = true; break; }
+            }
+            if (!matched) current = 0;
+            for (var j = 0; j < SHIP_OPTIONS.length; j++) {
+                var o = SHIP_OPTIONS[j];
+                var sel = (Math.abs(o.value - current) < 0.005) ? ' selected' : '';
+                html += '<option value="' + o.value + '"' + sel + '>' + o.label + '</option>';
+            }
+            html += '</select>';
+            return html;
+        }
+
+        function renderEditRow(row) {
+            var rowId = row.id || 0;
+            var optionsHtml = '<option value="">— Select country —</option>';
+            (window.COUNTRIES || []).forEach(function(c) {
+                var sel = (c.code === row.country_code) ? ' selected' : '';
+                optionsHtml += '<option value="' + c.code + '" data-name="' + escapeHtml(c.name) + '"' + sel + '>' + escapeHtml(c.name) + '</option>';
+            });
+            var html = '<tr data-edit-row="' + rowId + '">' +
+                '<td><select class="country-select" id="er-country-' + rowId + '">' + optionsHtml + '</select></td>';
+            activeSlots.forEach(function(s) {
+                html += '<td>' + buildShipSelect('er-' + s.slot + '-' + rowId, row[s.field]) + '</td>';
+            });
+            html += '<td><div class="row-actions">' +
+                '<button class="btn btn-primary btn-icon" title="Save" onclick="saveRow(' + rowId + ')"><i class="fas fa-check"></i></button>' +
+                '<button class="btn btn-ghost btn-icon" title="Cancel" onclick="cancelEdit()"><i class="fas fa-times"></i></button>' +
+            '</div></td></tr>';
+            return html;
+        }
+
+        function formatShipCell(amount) {
+            var val = parseFloat(amount) || 0;
+            if (val === 0) return '<span class="ship-amount free">FREE</span>';
+            return '<span class="ship-amount">$' + val.toFixed(2) + '</span>';
+        }
+
+        function startAddRow() {
+            if (!currentDomainId) { showToast('Select a domain first', true); return; }
+            editingRowId = 0;
+            renderTable();
+        }
+
+        function startEditRow(id) {
+            editingRowId = parseInt(id, 10);
+            renderTable();
+        }
+
+        function cancelEdit() {
+            editingRowId = null;
+            renderTable();
+        }
+
+        async function saveRow(rowId) {
+            var sel = document.getElementById('er-country-' + rowId);
+            var code = sel.value;
+            if (!code) { showToast('Select a country', true); return; }
+            var name = sel.options[sel.selectedIndex].getAttribute('data-name') || sel.options[sel.selectedIndex].text;
+
+            var payload = {
+                domain_id: currentDomainId,
+                country_code: code,
+                country_name: name,
+                ship_1_bottle: 0, ship_2_bottle: 0, ship_3_bottle: 0, ship_6_bottle: 0
+            };
+            // Read values only for active slots
+            activeSlots.forEach(function(s) {
+                var el = document.getElementById('er-' + s.slot + '-' + rowId);
+                if (el) payload[s.field] = parseFloat(el.value) || 0;
+            });
+            if (rowId > 0) payload.id = rowId;
+
+            var result = await apiRequest(API_URL, 'save_shipping_row', payload);
+            if (result && result.success) {
+                showToast('Saved');
+                await loadShipping();
+            } else {
+                showToast('Save failed: ' + (result && result.error ? result.error : 'unknown'), true);
+            }
+        }
+
+        async function deleteRow(id) {
+            if (!confirm('Delete this country shipping rule?')) return;
+            var result = await apiRequest(API_URL, 'delete_shipping_row', {
+                domain_id: currentDomainId, id: id
+            });
+            if (result && result.success) {
+                showToast('Deleted');
+                await loadShipping();
+            } else {
+                showToast('Delete failed: ' + (result && result.error ? result.error : 'unknown'), true);
+            }
+        }
+
+        function showToast(msg, isError) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(function() { t.className = 'toast'; }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+    </script>
+</body>
+</html>

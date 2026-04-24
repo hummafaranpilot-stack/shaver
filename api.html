@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Access - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; }
+
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+        .sidebar-header h2 .logo-icon { width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+        .sidebar-header p { font-size: 0.85rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle { position: absolute; top: 18px; right: 12px; width: 28px; height: 28px; background: #f0f0ff; border: none; border-radius: 6px; color: #6c63ff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: background 0.2s, transform 0.3s; z-index: 10; }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; }
+        .nav-section-title { padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; color: #b0b0c0; transition: opacity 0.2s; }
+        .nav-item { display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px; color: #7b7b8e; text-decoration: none; transition: all 0.3s; font-size: 0.84rem; border-radius: 12px; }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; box-shadow: 0 4px 15px rgba(108,99,255,0.3); }
+        .nav-item i { width: 22px; margin-right: 12px; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+        .main-content { margin-left: 240px; padding: 20px; transition: margin-left 0.3s ease; }
+
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; }
+        body.sidebar-collapsed .sidebar-header h2, body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 20px 10px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 1px 6px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header { background: white; padding: 25px 30px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .header-left h1 { font-size: 1.8rem; color: #1a1a2e; margin-bottom: 5px; }
+        .header-left p { color: #7f8c8d; font-size: 0.95rem; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .stat-card h3 { font-size: 0.8rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #1a1a2e; }
+        .stat-card .sub { font-size: 0.8rem; color: #95a5a6; margin-top: 4px; }
+
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-header h2 { font-size: 1.15rem; color: #1a1a2e; margin: 0; }
+
+        .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.2s; }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-danger { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+        .btn-danger:hover { background: #fecaca; }
+        .btn-warn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fef3c7; color: #b45309; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+        .btn-warn:hover { background: #fde68a; }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 11px 14px; background: #f8f9fa; color: #666; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; border-bottom: 2px solid #eee; white-space: nowrap; }
+        td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; vertical-align: middle; }
+        tr:hover td { background: #f8f9fa; }
+
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
+        .badge-active  { background: #dcfce7; color: #166534; }
+        .badge-revoked { background: #fee2e2; color: #dc2626; }
+        .badge-global  { background: #ede8ff; color: #6d28d9; }
+        .badge-domain  { background: #dbeafe; color: #1e40af; }
+
+        /* Key reveal modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 18px; padding: 32px; width: 560px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+        .modal-box h3 { font-size: 1.15rem; margin-bottom: 6px; color: #1a1a2e; }
+        .modal-box .sub { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 22px; }
+        .key-display { background: #1e1b4b; color: #a5f3fc; font-family: 'Courier New', monospace; font-size: 0.88rem; padding: 14px 16px; border-radius: 10px; word-break: break-all; letter-spacing: 0.03em; margin-bottom: 14px; }
+        .copy-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #6c63ff; color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; margin-right: 8px; }
+        .copy-btn:hover { background: #5a52e0; }
+        .copy-btn.copied { background: #16a34a; }
+        .modal-close { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .modal-close:hover { background: #e2e8f0; }
+
+        /* Create key form (inline in card) */
+        .create-form { display: none; background: #f8f6ff; border: 1.5px solid #c4b5fd; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .create-form.open { display: block; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+        .form-group label { font-size: 0.8rem; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { padding: 9px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; font-family: inherit; outline: none; transition: border-color 0.2s; background: #fff; }
+        .form-group input:focus, .form-group select:focus { border-color: #6c63ff; }
+
+        /* API docs */
+        .docs-section { margin-bottom: 28px; }
+        .docs-section h3 { font-size: 1rem; color: #1a1a2e; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f0f0f0; }
+        .base-url-bar { display: flex; align-items: center; gap: 10px; background: #1e1b4b; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; }
+        .base-url-bar span { font-family: 'Courier New', monospace; font-size: 0.88rem; color: #a5f3fc; flex: 1; word-break: break-all; }
+        .base-url-bar button { flex-shrink: 0; padding: 5px 12px; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; }
+        .base-url-bar button:hover { background: rgba(255,255,255,0.25); }
+
+        .endpoint-card { background: #f8f9fa; border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+        .endpoint-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .method-badge { background: #dbeafe; color: #1d4ed8; font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 6px; letter-spacing: 0.05em; }
+        .endpoint-path { font-family: 'Courier New', monospace; font-size: 0.88rem; color: #7c3aed; font-weight: 600; }
+        .endpoint-desc { font-size: 0.84rem; color: #4b5563; margin-bottom: 12px; }
+
+        .params-table { width: 100%; font-size: 0.82rem; border-collapse: collapse; margin-bottom: 12px; }
+        .params-table th { background: #e9e4ff; color: #4c1d95; font-weight: 700; padding: 7px 10px; text-align: left; }
+        .params-table td { padding: 7px 10px; border-bottom: 1px solid #ede9fe; vertical-align: top; }
+        .params-table tr:last-child td { border-bottom: none; }
+        .param-name { font-family: 'Courier New', monospace; color: #7c3aed; font-weight: 600; }
+        .param-opt { color: #9ca3af; font-size: 0.75rem; }
+
+        .code-block { background: #1e1b4b; border-radius: 8px; padding: 14px 16px; font-family: 'Courier New', monospace; font-size: 0.8rem; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; position: relative; margin-bottom: 0; }
+        .code-block .code-copy { position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 5px; padding: 3px 10px; font-size: 0.72rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .code-block .code-copy:hover { background: rgba(255,255,255,0.22); }
+        .code-block .kw { color: #f472b6; }
+        .code-block .str { color: #a5f3fc; }
+        .code-block .key { color: #86efac; }
+        .code-block .num { color: #fde68a; }
+
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .main-content { margin-left: 0; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.mobile-open { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <script src="js/config.js"></script>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item active"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-code"></i> API Access</h1>
+                <p>Manage API keys and integrate Shaver data into external projects</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Active Keys</h3>
+                <div class="value" id="statActive">—</div>
+                <div class="sub">Ready to use</div>
+            </div>
+            <div class="stat-card">
+                <h3>Revoked Keys</h3>
+                <div class="value" id="statRevoked">—</div>
+                <div class="sub">Disabled</div>
+            </div>
+            <div class="stat-card">
+                <h3>API Resources</h3>
+                <div class="value">6</div>
+                <div class="sub">domains · analytics · orders · customers · sessions · traffic</div>
+            </div>
+            <div class="stat-card">
+                <h3>Base URL</h3>
+                <div class="value" style="font-size:0.72rem;color:#6c63ff;word-break:break-all;line-height:1.4;" id="statBaseUrl">—</div>
+                <div class="sub">REST API v1</div>
+            </div>
+        </div>
+
+        <!-- Key Management Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-key" style="color:#6c63ff;margin-right:8px;"></i>API Keys</h2>
+                <button class="btn-primary" onclick="toggleCreateForm()">
+                    <i class="fas fa-plus"></i> Create New Key
+                </button>
+            </div>
+
+            <!-- Inline create form -->
+            <div class="create-form" id="createForm">
+                <div class="form-row">
+                    <div class="form-group" style="min-width:200px;">
+                        <label>Key Label <span style="color:#ef4444">*</span></label>
+                        <input type="text" id="keyLabel" placeholder="e.g. My Dashboard App" maxlength="100">
+                    </div>
+                    <div class="form-group" style="min-width:180px;">
+                        <label>Domain Scope</label>
+                        <select id="keyDomain">
+                            <option value="">All Domains (Global)</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
+                        <button class="btn-primary" onclick="doCreateKey()"><i class="fas fa-check"></i> Generate</button>
+                        <button class="modal-close" onclick="toggleCreateForm()">Cancel</button>
+                    </div>
+                </div>
+                <p style="font-size:0.78rem;color:#6b7280;margin-top:10px;"><i class="fas fa-info-circle" style="color:#6c63ff;"></i> The full key is shown <strong>once</strong> — copy it immediately after creation.</p>
+            </div>
+
+            <!-- Keys table -->
+            <div class="table-wrap">
+                <table id="keysTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Label</th>
+                            <th>Scope</th>
+                            <th>Key Prefix</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Last Used</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysBody">
+                        <tr><td colspan="8"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><div>Loading keys…</div></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- API Reference Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-book-open" style="color:#6c63ff;margin-right:8px;"></i>API Reference</h2>
+            </div>
+
+            <!-- Base URL -->
+            <div class="docs-section">
+                <h3>Base URL</h3>
+                <div class="base-url-bar">
+                    <span id="baseUrlDisplay">https://shaver.trustednutraproduct.com/api-v1.php</span>
+                    <button onclick="copyText(document.getElementById('baseUrlDisplay').textContent, this)">Copy</button>
+                </div>
+            </div>
+
+            <!-- Authentication -->
+            <div class="docs-section">
+                <h3>Authentication</h3>
+                <p style="font-size:0.88rem;color:#4b5563;margin-bottom:12px;">Every request must include your API key via one of these methods:</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <p style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:6px;">HTTP Header (recommended)</p>
+                        <div class="code-block">Authorization: Bearer sk_<span class="str">your_api_key</span></div>
+                    </div>
+                    <div>
+                        <p style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:6px;">Query Parameter</p>
+                        <div class="code-block">?key=sk_<span class="str">your_api_key</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Endpoints -->
+            <div class="docs-section">
+                <h3>Endpoints</h3>
+
+                <!-- domains -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method-badge">GET</span>
+                        <span class="endpoint-path">?r=domains</span>
+                    </div>
+                    <p class="endpoint-desc">List all domains accessible to this API key. Global keys return all active domains; domain-scoped keys return only their own domain.</p>
+                    <div style="margin-bottom:8px;">
+                        <span style="font-size:0.78rem;font-weight:600;color:#555;">No extra parameters required.</span>
+                    </div>
+                    <div class="code-block" id="ex-domains">curl "<span class="str">BASE_URL</span>?r=domains" \
+  -H "Authorization: Bearer <span class="str">sk_your_key</span>"
+<button class="code-copy" onclick="copyCodeBlock('ex-domains')">Copy</button></div>
+                </div>
+
+                <!-- analytics -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method-badge">GET</span>
+                        <span class="endpoint-path">?r=analytics</span>
+                    </div>
+                    <p class="endpoint-desc">Traffic summary stats, top affiliates, and daily breakdown for a date range.</p>
+                    <table class="params-table">
+                        <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="param-name">domain_id</span> <span class="param-opt">optional</span></td><td>integer</td><td>Filter to one domain (ignored for domain-scoped keys)</td></tr>
+                            <tr><td><span class="param-name">from</span> <span class="param-opt">optional</span></td><td>YYYY-MM-DD</td><td>Start date (default: today)</td></tr>
+                            <tr><td><span class="param-name">to</span> <span class="param-opt">optional</span></td><td>YYYY-MM-DD</td><td>End date (default: today)</td></tr>
+                            <tr><td><span class="param-name">aff_id</span> <span class="param-opt">optional</span></td><td>string</td><td>Filter to one affiliate</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="code-block" id="ex-analytics">curl "<span class="str">BASE_URL</span>?r=analytics&amp;domain_id=1&amp;from=2025-01-01&amp;to=2025-01-31" \
+  -H "Authorization: Bearer <span class="str">sk_your_key</span>"
+<button class="code-copy" onclick="copyCodeBlock('ex-analytics')">Copy</button></div>
+                </div>
+
+                <!-- orders -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method-badge">GET</span>
+                        <span class="endpoint-path">?r=orders</span>
+                    </div>
+                    <p class="endpoint-desc">Paginated order list with fulfillment status, amounts, and customer info.</p>
+                    <table class="params-table">
+                        <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="param-name">domain_id</span> <span class="param-opt">optional</span></td><td>integer</td><td>Filter to one domain</td></tr>
+                            <tr><td><span class="param-name">from</span> <span class="param-opt">optional</span></td><td>YYYY-MM-DD</td><td>Created date start</td></tr>
+                            <tr><td><span class="param-name">to</span> <span class="param-opt">optional</span></td><td>YYYY-MM-DD</td><td>Created date end</td></tr>
+                            <tr><td><span class="param-name">status</span> <span class="param-opt">optional</span></td><td>string</td><td>e.g. <code>sale</code>, <code>refund</code>, <code>chargeback</code></td></tr>
+                            <tr><td><span class="param-name">search</span> <span class="param-opt">optional</span></td><td>string</td><td>Search by name, email, or order ID</td></tr>
+                            <tr><td><span class="param-name">page</span> <span class="param-opt">optional</span></td><td>integer</td><td>Page number (default 1)</td></tr>
+                            <tr><td><span class="param-name">limit</span> <span class="param-opt">optional</span></td><td>integer</td><td>Rows per page, max 1000 (default 100)</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="code-block" id="ex-orders">curl "<span class="str">BASE_URL</span>?r=orders&amp;domain_id=1&amp;from=2025-01-01&amp;limit=50" \
+  -H "Authorization: Bearer <span class="str">sk_your_key</span>"
+<button class="code-copy" onclick="copyCodeBlock('ex-orders')">Copy</button></div>
+                </div>
+
+                <!-- customers -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method-badge">GET</span>
+                        <span class="endpoint-path">?r=customers</span>
+                    </div>
+                    <p class="endpoint-desc">Aggregated customer list (unique by email) with total orders and lifetime spend.</p>
+                    <table class="params-table">
+                        <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="param-name">domain_id</span> <span class="param-opt">optional</span></td><td>integer</td><td>Filter to one domain</td></tr>
+                            <tr><td><span class="param-name">search</span> <span class="param-opt">optional</span></td><td>string</td><td>Search by name, email, or phone</td></tr>
+                            <tr><td><span class="param-name">page</span> <span class="param-opt">optional</span></td><td>integer</td><td>Page number (default 1)</td></tr>
+                            <tr><td><span class="param-name">limit</span> <span class="param-opt">optional</span></td><td>integer</td><td>Rows per page, max 1000 (default 100)</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="code-block" id="ex-customers">curl "<span class="str">BASE_URL</span>?r=customers&amp;domain_id=1&amp;limit=100" \
+  -H "Authorization: Bearer <span class="str">sk_your_key</span>"
+<button class="code-copy" onclick="copyCodeBlock('ex-customers')">Copy</button></div>
+                </div>
+
+                <!-- sessions -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method-badge">GET</span>
+                        <span class="endpoint-path">?r=sessions</span>
+                    </div>
+                    <p class="endpoint-desc">All currently active shaving sessions with shaved visit counts.</p>
+                    <table class="params-table">
+                        <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="param-name">domain_id</span> <span class="param-opt">optional</span></td><td>integer</td><td>Filter to one domain</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="code-block" id="ex-sessions">curl "<span class="str">BASE_URL</span>?r=sessions&amp;domain_id=1" \
+  -H "Authorization: Bearer <span class="str">sk_your_key</span>"
+<button class="code-copy" onclick="copyCodeBlock('ex-sessions')">Copy</button></div>
+                </div>
+
+                <!-- traffic -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method-badge">GET</span>
+                        <span class="endpoint-path">?r=traffic</span>
+                    </div>
+                    <p class="endpoint-desc">Raw traffic log with shave status, scroll depth, click counts, and matched order IDs.</p>
+                    <table class="params-table">
+                        <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="param-name">domain_id</span> <span class="param-opt">optional</span></td><td>integer</td><td>Filter to one domain</td></tr>
+                            <tr><td><span class="param-name">from</span> <span class="param-opt">optional</span></td><td>YYYY-MM-DD</td><td>Start date (default: today)</td></tr>
+                            <tr><td><span class="param-name">to</span> <span class="param-opt">optional</span></td><td>YYYY-MM-DD</td><td>End date (default: today)</td></tr>
+                            <tr><td><span class="param-name">aff_id</span> <span class="param-opt">optional</span></td><td>string</td><td>Filter to one affiliate</td></tr>
+                            <tr><td><span class="param-name">page</span> <span class="param-opt">optional</span></td><td>integer</td><td>Page number (default 1)</td></tr>
+                            <tr><td><span class="param-name">limit</span> <span class="param-opt">optional</span></td><td>integer</td><td>Rows per page, max 1000 (default 100)</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="code-block" id="ex-traffic">curl "<span class="str">BASE_URL</span>?r=traffic&amp;domain_id=1&amp;from=2025-01-01&amp;to=2025-01-31&amp;limit=200" \
+  -H "Authorization: Bearer <span class="str">sk_your_key</span>"
+<button class="code-copy" onclick="copyCodeBlock('ex-traffic')">Copy</button></div>
+                </div>
+            </div>
+
+            <!-- Response format -->
+            <div class="docs-section">
+                <h3>Response Format</h3>
+                <p style="font-size:0.88rem;color:#4b5563;margin-bottom:12px;">All responses are JSON. Successful responses wrap data in an <code>ok: true</code> envelope with a <code>meta</code> object.</p>
+                <div class="code-block">{
+  <span class="key">"ok"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: [ <span class="str">/* array of objects */</span> ],
+  <span class="key">"meta"</span>: {
+    <span class="key">"generated_at"</span>: <span class="str">"2025-01-15 14:32:00"</span>,
+    <span class="key">"total"</span>: <span class="num">1284</span>,
+    <span class="key">"page"</span>: <span class="num">1</span>,
+    <span class="key">"limit"</span>: <span class="num">100</span>,
+    <span class="key">"pages"</span>: <span class="num">13</span>,
+    <span class="key">"domain_id"</span>: <span class="num">1</span>
+  }
+}</div>
+                <p style="font-size:0.88rem;color:#4b5563;margin-top:12px;">Error responses:</p>
+                <div class="code-block" style="margin-top:8px;">{
+  <span class="key">"ok"</span>: <span class="num">false</span>,
+  <span class="key">"error"</span>: <span class="str">"Invalid or revoked API key."</span>,
+  <span class="key">"code"</span>: <span class="num">401</span>
+}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Reveal Modal -->
+    <div class="modal-overlay" id="keyModal">
+        <div class="modal-box">
+            <h3><i class="fas fa-key" style="color:#6c63ff;margin-right:8px;"></i>API Key Created</h3>
+            <p class="sub">Copy your key now. It will <strong>never be shown again</strong>.</p>
+            <div class="key-display" id="keyDisplay">sk_...</div>
+            <div style="margin-bottom:20px;">
+                <button class="copy-btn" id="copyKeyBtn" onclick="copyNewKey()"><i class="fas fa-copy"></i> Copy Key</button>
+                <button class="modal-close" onclick="closeKeyModal()">Done</button>
+            </div>
+            <p style="font-size:0.78rem;color:#9ca3af;border-top:1px solid #f0f0f0;padding-top:12px;">Store this key securely — treat it like a password. Regenerate from this page if compromised.</p>
+        </div>
+    </div>
+
+    <script>
+    var BASE_URL = window.location.origin + window.location.pathname.replace('api.html','') + 'api-v1.php';
+    document.getElementById('statBaseUrl').textContent = BASE_URL;
+    document.getElementById('baseUrlDisplay').textContent = BASE_URL;
+
+    // Update code blocks with real base URL
+    document.querySelectorAll('.code-block').forEach(function(el) {
+        el.innerHTML = el.innerHTML.replace(/BASE_URL/g, BASE_URL);
+    });
+
+    // Sidebar toggle
+    function toggleSidebar() {
+        document.body.classList.toggle('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+    }
+    if (localStorage.getItem('sidebarCollapsed') === '1') document.body.classList.add('sidebar-collapsed');
+
+    // Create form toggle
+    function toggleCreateForm() {
+        var f = document.getElementById('createForm');
+        f.classList.toggle('open');
+        if (f.classList.contains('open')) {
+            document.getElementById('keyLabel').focus();
+            loadDomainsIntoSelect();
+        }
+    }
+
+    var domainsLoaded = false;
+    async function loadDomainsIntoSelect() {
+        if (domainsLoaded) return;
+        var res = await apiRequest(API_URL, 'get_domains');
+        if (!res.success) return;
+        var sel = document.getElementById('keyDomain');
+        sel.innerHTML = '<option value="">All Domains (Global)</option>';
+        (res.domains || []).forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.label + ' (' + (d.platform || 'BG').toUpperCase() + ')';
+            sel.appendChild(opt);
+        });
+        domainsLoaded = true;
+    }
+
+    async function doCreateKey() {
+        var label    = document.getElementById('keyLabel').value.trim();
+        var domainId = document.getElementById('keyDomain').value;
+        if (!label) { alert('Please enter a label for this key.'); return; }
+
+        var btn = document.querySelector('#createForm .btn-primary');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+
+        var res = await apiRequest(API_URL, 'create_api_key', { label: label, domain_id: domainId || '' });
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Generate';
+
+        if (!res.success) { alert('Error: ' + (res.error || 'Unknown error')); return; }
+
+        // Show the key modal
+        document.getElementById('keyDisplay').textContent = res.full_key;
+        document.getElementById('keyModal').classList.add('open');
+        document.getElementById('copyKeyBtn').innerHTML = '<i class="fas fa-copy"></i> Copy Key';
+        document.getElementById('copyKeyBtn').classList.remove('copied');
+
+        // Reset + close form
+        document.getElementById('keyLabel').value = '';
+        document.getElementById('keyDomain').value = '';
+        document.getElementById('createForm').classList.remove('open');
+
+        loadKeys();
+    }
+
+    function copyNewKey() {
+        var key = document.getElementById('keyDisplay').textContent;
+        navigator.clipboard.writeText(key).then(function() {
+            var btn = document.getElementById('copyKeyBtn');
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            btn.classList.add('copied');
+        });
+    }
+
+    function closeKeyModal() {
+        document.getElementById('keyModal').classList.remove('open');
+    }
+
+    // Load keys table
+    async function loadKeys() {
+        var res = await apiRequest(API_URL, 'list_api_keys');
+        var tbody = document.getElementById('keysBody');
+        if (!res.success || !res.keys) {
+            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><div>Failed to load keys</div></div></td></tr>';
+            return;
+        }
+        var keys = res.keys;
+        document.getElementById('statActive').textContent  = keys.filter(function(k){ return k.status === 'active'; }).length;
+        document.getElementById('statRevoked').textContent = keys.filter(function(k){ return k.status === 'revoked'; }).length;
+
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-key"></i><div>No API keys yet. Create your first key above.</div></div></td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = keys.map(function(k) {
+            var scopeBadge = k.domain_id
+                ? '<span class="badge badge-domain"><i class="fas fa-globe" style="font-size:0.65rem;"></i> ' + escHtml(k.domain_label || 'Domain #' + k.domain_id) + '</span>'
+                : '<span class="badge badge-global"><i class="fas fa-infinity" style="font-size:0.65rem;"></i> Global</span>';
+            var statusBadge = k.status === 'active'
+                ? '<span class="badge badge-active">Active</span>'
+                : '<span class="badge badge-revoked">Revoked</span>';
+            var actions = '';
+            if (k.status === 'active') {
+                actions += '<button class="btn-warn" onclick="revokeKey(' + k.id + ')" title="Revoke"><i class="fas fa-ban"></i> Revoke</button> ';
+            }
+            actions += '<button class="btn-danger" onclick="deleteKey(' + k.id + ')" title="Delete"><i class="fas fa-trash"></i></button>';
+
+            return '<tr>' +
+                '<td style="color:#9ca3af;font-size:0.78rem;">#' + k.id + '</td>' +
+                '<td><strong>' + escHtml(k.label) + '</strong></td>' +
+                '<td>' + scopeBadge + '</td>' +
+                '<td><code style="font-family:\'Courier New\',monospace;font-size:0.82rem;background:#f3f4f6;padding:2px 7px;border-radius:5px;">' + escHtml(k.key_prefix) + '…</code></td>' +
+                '<td>' + statusBadge + '</td>' +
+                '<td style="font-size:0.8rem;color:#6b7280;">' + fmtDate(k.created_at) + '</td>' +
+                '<td style="font-size:0.8rem;color:#6b7280;">' + (k.last_used_at ? fmtDate(k.last_used_at) : '<span style="color:#d1d5db;">Never</span>') + '</td>' +
+                '<td>' + actions + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    async function revokeKey(id) {
+        if (!confirm('Revoke this API key? Any app using it will stop working.')) return;
+        var res = await apiRequest(API_URL, 'revoke_api_key', { id: id });
+        if (res.success) loadKeys(); else alert('Error: ' + res.error);
+    }
+
+    async function deleteKey(id) {
+        if (!confirm('Permanently delete this API key? This cannot be undone.')) return;
+        var res = await apiRequest(API_URL, 'delete_api_key', { id: id });
+        if (res.success) loadKeys(); else alert('Error: ' + res.error);
+    }
+
+    function escHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmtDate(d) {
+        if (!d) return '-';
+        var dt = new Date(d.replace(' ', 'T') + '+05:00');
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function copyText(text, btn) {
+        navigator.clipboard.writeText(text).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function(){ btn.textContent = orig; }, 1500);
+        });
+    }
+
+    function copyCodeBlock(id) {
+        var el  = document.getElementById(id);
+        var btn = el.querySelector('.code-copy');
+        // Get plain text (strip HTML tags)
+        var txt = el.innerText.replace(/^Copy\s*/m, '').trim();
+        navigator.clipboard.writeText(txt).then(function() {
+            btn.textContent = 'Copied!';
+            setTimeout(function(){ btn.textContent = 'Copy'; }, 1500);
+        });
+    }
+
+    // Close modal on overlay click
+    document.getElementById('keyModal').addEventListener('click', function(e) {
+        if (e.target === this) closeKeyModal();
+    });
+
+    // Init
+    loadKeys();
+    </script>
+</body>
+</html>

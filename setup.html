@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup / Domains - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 240px;
+            background: #fff;
+            color: #1a1a2e;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: width 0.3s ease;
+            border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04);
+            padding: 4px 0;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px 10px;
+            position: relative;
+        }
+
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: #1a1a2e; font-weight: 700; }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.85rem; color: #999; margin-left: 48px; }
+
+        .sidebar-toggle {
+            position: absolute; top: 18px; right: 12px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 6px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 14px; transition: background 0.2s, transform 0.3s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+
+        .nav-section {
+            padding: 2px 0;
+            border-bottom: none;
+        }
+
+        .nav-section-title {
+            padding: 8px 20px 2px;
+            font-size: 0.64rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #b0b0c0;
+            transition: opacity 0.2s;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 18px;
+            margin: 1px 10px;
+            color: #7b7b8e;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 0.84rem;
+            border-radius: 12px;
+        }
+
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; box-shadow: 0 4px 15px rgba(108,99,255,0.3); border-left: none; }
+        .nav-item i { width: 22px; margin-right: 12px; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 240px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Sidebar collapsed state */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; }
+        body.sidebar-collapsed .sidebar-header h2,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 20px 10px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 1px 6px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: none;
+            margin-bottom: 25px;
+        }
+
+        .header h1 { font-size: 1.8rem; color: #1a1a2e; margin-bottom: 5px; }
+        .header p { color: #7f8c8d; font-size: 0.95rem; }
+
+        /* Cards */
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: none;
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+            margin-bottom: 20px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a2e;
+            font-size: 0.9rem;
+        }
+
+        .form-group .help-text {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #6c63ff;
+            outline: none;
+        }
+
+        select {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn-primary {
+            padding: 14px 40px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(108,99,255,0.25);
+        }
+
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-primary:disabled { background: #95a5a6; cursor: not-allowed; transform: none; }
+
+        .btn-sm {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-blue { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; }
+        .btn-blue:hover { opacity: 0.9; }
+        .btn-red { background: #e74c3c; color: white; }
+        .btn-red:hover { background: #c0392b; }
+
+        /* Parse Preview */
+        .parse-preview {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .parse-preview h3 {
+            font-size: 0.95rem;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+        }
+
+        .parse-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .parse-item .icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .icon-ok { background: #27ae60; color: white; }
+        .icon-warn { background: #f39c12; color: white; }
+        .icon-fail { background: #e74c3c; color: white; }
+
+        /* Snippet Output */
+        .snippet-box {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .snippet-box h3 {
+            color: #155724;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .snippet-code {
+            display: flex;
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .snippet-code input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #c3e6cb;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            background: white;
+        }
+
+        .snippet-code button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(108,99,255,0.25);
+        }
+
+        .snippet-code button:hover { opacity: 0.9; }
+
+        .instructions {
+            color: #155724;
+            font-size: 0.88rem;
+            line-height: 1.7;
+        }
+
+        .instructions ol {
+            margin: 8px 0 0 20px;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-bottom: 2px solid #eee;
+        }
+
+        td {
+            padding: 14px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+
+        tr:hover td { background: #f8f9fa; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-green { background: #d4edda; color: #155724; }
+        .badge-gray { background: #e9ecef; color: #666; }
+
+        .code-text {
+            font-family: 'Courier New', monospace;
+            font-size: 0.82rem;
+            color: #555;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #95a5a6;
+        }
+
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        /* Alert */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 640px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+            animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 25px;
+            border-bottom: 1px solid #eee;
+        }
+        .modal-header h3 { font-size: 1.1rem; color: #1a1a2e; }
+        .modal-close {
+            width: 32px; height: 32px;
+            border: none; background: #f0f0f0;
+            border-radius: 50%; cursor: pointer;
+            font-size: 1rem; color: #666;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .modal-close:hover { background: #e0e0e0; }
+        .modal-body { padding: 25px; }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 12px 16px;
+            font-size: 0.9rem;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding-top: 2px;
+        }
+        .detail-value {
+            color: #1a1a2e;
+            word-break: break-all;
+        }
+        .detail-value code {
+            display: block;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .detail-divider {
+            grid-column: 1 / -1;
+            border-top: 1px solid #f0f0f0;
+            margin: 4px 0;
+        }
+
+        /* Action buttons in table */
+        .btn-icon {
+            width: 32px; height: 32px;
+            border: none; border-radius: 6px;
+            cursor: pointer; font-size: 0.85rem;
+            display: inline-flex; align-items: center;
+            justify-content: center; transition: all 0.2s;
+        }
+        .btn-icon-view { background: #edf2ff; color: #4263eb; }
+        .btn-icon-view:hover { background: #dbe4ff; }
+        .btn-icon-code { background: #e6fcf5; color: #0ca678; }
+        .btn-icon-code:hover { background: #c3fae8; }
+        .btn-icon-delete { background: #fff0f0; color: #e03131; }
+        .btn-icon-delete:hover { background: #ffe0e0; }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px; left: 15px;
+            z-index: 1100;
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(108,99,255,0.25);
+        }
+
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; }
+            .header h1 { font-size: 1.4rem; }
+            .card { padding: 20px 15px; }
+            .form-row { grid-template-columns: 1fr; }
+            table { font-size: 0.8rem; min-width: 700px; }
+            th, td { padding: 10px 8px; }
+            .snippet-code { flex-direction: column; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .modal-header { padding: 15px 18px; }
+            .modal-body { padding: 18px; }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.2rem; }
+            .btn-primary { padding: 12px 20px; font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item active"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1><i class="fas fa-globe"></i> Setup / Domains</h1>
+            <p>Register new domains and generate shaving snippets</p>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <!-- Register New Domain -->
+        <div class="card">
+            <h2><i class="fas fa-plus-circle" style="color:#27ae60;"></i> Register New Domain</h2>
+            <p style="color:#7f8c8d; margin-bottom:20px; font-size:0.9rem;">Paste your tracking script and we'll generate a shaving snippet for your pages</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Domain Label</label>
+                    <input type="text" id="domainLabel" placeholder="e.g. ClimaHeater EN">
+                </div>
+                <div class="form-group">
+                    <label>Domain URL</label>
+                    <input type="text" id="domainUrl" placeholder="e.g. bg.climaofficial.com/heater/">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Platform</label>
+                <div style="display:flex; gap:10px; margin-bottom:5px;">
+                    <button type="button" id="platformBG" style="padding:10px 25px; border:2px solid #3498db; background:#3498db; color:white; border-radius:8px; font-weight:600; cursor:pointer; transition:all 0.3s;" onclick="setPlatform('buygoods')">
+                        BuyGoods
+                    </button>
+                    <button type="button" id="platformDS24" style="padding:10px 25px; border:2px solid #e0e0e0; background:white; color:#333; border-radius:8px; font-weight:600; cursor:pointer; transition:all 0.3s;" onclick="setPlatform('digistore24')">
+                        Digistore24
+                    </button>
+                    <button type="button" id="platformCB" style="padding:10px 25px; border:2px solid #e0e0e0; background:white; color:#333; border-radius:8px; font-weight:600; cursor:pointer; transition:all 0.3s;" onclick="setPlatform('clickbank')">
+                        ClickBank
+                    </button>
+                </div>
+                <input type="hidden" id="selectedPlatform" value="buygoods">
+            </div>
+
+            <div class="form-group" id="bgScriptGroup">
+                <label>BuyGoods Tracking Script <span style="color:#7f8c8d;font-weight:400;font-size:0.8rem;">(for all Landing Pages)</span></label>
+                <textarea id="bgScript" rows="8" placeholder="Paste your FULL BuyGoods tracking code here (both the tracking script AND the conversion iframe script)..." oninput="parseAndPreview()"></textarea>
+                <div class="help-text">Paste the complete tracking code from BuyGoods (includes tracking.buygoods.com/track and conversion iframe scripts). This is used on landing pages and as a default fallback.</div>
+            </div>
+
+            <div class="form-group" id="bgPageScriptsGroup">
+                <label style="display:flex;align-items:center;justify-content:space-between;">
+                    <span><i class="fas fa-layer-group" style="color:#9b59b6;"></i> Page-Specific Scripts <span style="color:#7f8c8d;font-weight:400;font-size:0.8rem;">(for Upsell / Thankyou pages — optional)</span></span>
+                    <button type="button" onclick="addPageScriptRow()" style="padding:6px 14px;background:#9b59b6;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;"><i class="fas fa-plus"></i> Add Page</button>
+                </label>
+                <div class="help-text" style="margin-bottom:10px;">BuyGoods gives different scripts for upsell pages (different product codes, different iframe shape). Add one row per upsell/thankyou page. Leave empty if you only have landing pages.</div>
+                <div id="pageScriptsList"></div>
+            </div>
+
+            <div class="form-group" id="ds24ScriptGroup" style="display:none;">
+                <label>Digistore24 Tracking Script</label>
+                <textarea id="ds24Script" rows="8" placeholder='Paste your Digistore24 tracking code here, e.g.:
+<script src="https://www.digistore24-scripts.com/service/digistore.js"></script>
+<script type="text/javascript">
+digistorePromocode({ "product_id": 670141, "adjust_all_urls": true, "adjust_domain": true });
+</script>' oninput="parseDS24AndPreview()"></textarea>
+                <div class="help-text">Paste the complete Digistore24 tracking code (includes digistore.js and digistorePromocode call)</div>
+            </div>
+
+            <div class="form-group" id="cbScriptGroup" style="display:none;">
+                <label>ClickBank Tracking Script</label>
+                <textarea id="cbScript" rows="6" placeholder='Paste your ClickBank tracking code here, e.g.:
+<script>
+    window.clickbank = { vendor: "tnproduct" }
+</script>
+<script src="https://scripts.clickbank.net/hop.min.js" defer></script>' oninput="parseCBAndPreview()"></textarea>
+                <div class="help-text">Paste the complete ClickBank tracking code (includes window.clickbank vendor config and hop.min.js)</div>
+            </div>
+
+            <!-- Parse Preview -->
+            <div id="parsePreview" style="display:none;"></div>
+
+            <button class="btn-primary" id="registerBtn" onclick="registerDomain()">
+                <i class="fas fa-plus-circle"></i> Register Domain & Generate Snippet
+            </button>
+
+            <!-- Generated Snippet Output -->
+            <div id="snippetOutput" style="display:none;"></div>
+        </div>
+
+        <!-- Affiliate Names Upload -->
+        <div class="card">
+            <h2><i class="fas fa-users" style="color:#8e44ad;"></i> Affiliate Names</h2>
+            <p style="color:#7f8c8d;font-size:0.85rem;margin-bottom:15px;">Upload a CSV file (aff_id, name) to show affiliate names in tables. Each domain has its own affiliate list.</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Select Domain</label>
+                    <select id="affDomainSelect" style="width:100%;padding:12px 15px;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem;font-family:inherit;">
+                        <option value="">Loading domains...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>CSV File (aff_id, name)</label>
+                    <input type="file" id="affCsvFile" accept=".csv,.txt" style="width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem;">
+                </div>
+            </div>
+            <button class="btn-primary" style="background:#8e44ad;max-width:300px;" onclick="uploadAffiliateCSV()">
+                <i class="fas fa-upload"></i> Upload Affiliate Names
+            </button>
+            <div id="affUploadResult" style="margin-top:12px;"></div>
+            <div id="affCurrentCount" style="margin-top:10px;font-size:0.85rem;color:#7f8c8d;"></div>
+        </div>
+
+        <!-- Registered Domains Table -->
+        <div class="card">
+            <h2><i class="fas fa-list" style="color:#3498db;"></i> Registered Domains</h2>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                <div id="domainsTableContainer">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Domain Detail Modal -->
+    <div class="modal-overlay" id="domainModal" onclick="if(event.target===this)closeDomainModal()">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modalTitle"><i class="fas fa-eye"></i> Domain Details</h3>
+                <button class="modal-close" onclick="closeDomainModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Manage Page Scripts Modal -->
+    <div class="modal-overlay" id="pageScriptsModal" onclick="if(event.target===this)closePageScriptsModal()">
+        <div class="modal-box" style="max-width:820px;">
+            <div class="modal-header">
+                <h3 id="psModalTitle"><i class="fas fa-layer-group" style="color:#9b59b6;"></i> Page-Specific Scripts</h3>
+                <button class="modal-close" onclick="closePageScriptsModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:#7f8c8d;font-size:0.88rem;margin-bottom:15px;">
+                    BuyGoods provides different scripts for upsell / thankyou pages (different product codes + iframe shape).
+                    Paste each page's script here and we'll pick the right one automatically based on the page URL.
+                </p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                    <strong id="psModalDomainLabel" style="color:#1a1a2e;"></strong>
+                    <button type="button" onclick="addManagedPageScriptRow()" style="padding:8px 16px;background:#9b59b6;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fas fa-plus"></i> Add Page</button>
+                </div>
+                <div id="managedPageScriptsList"></div>
+                <div style="display:flex;gap:10px;margin-top:20px;">
+                    <button type="button" onclick="savePageScriptsModal()" class="btn-primary" style="flex:1;margin:0;"><i class="fas fa-save"></i> Save All Page Scripts</button>
+                </div>
+                <div id="psModalResult" style="margin-top:12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=2.7.0"></script>
+    <script>
+        // ============================================================
+        // PAGE-SPECIFIC BG SCRIPTS (repeater for upsell/thankyou pages)
+        // ============================================================
+        var _pageScriptRowSeq = 0;
+
+        function addPageScriptRow(prefill) {
+            var id = ++_pageScriptRowSeq;
+            var data = prefill || {};
+            var wrap = document.createElement('div');
+            wrap.className = 'page-script-row';
+            wrap.setAttribute('data-row-id', id);
+            wrap.style.cssText = 'background:#faf8ff;border:2px solid #e0d3f3;border-radius:10px;padding:14px;margin-bottom:12px;';
+
+            wrap.innerHTML =
+                '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">' +
+                    '<div style="flex:1;">' +
+                        '<label style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px;display:block;">Page Label</label>' +
+                        '<input type="text" class="ps-label" placeholder="e.g. Upsell 1" value="' + escapeHtml(data.page_label || '') + '" style="width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:0.88rem;">' +
+                    '</div>' +
+                    '<div style="flex:2;">' +
+                        '<label style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px;display:block;">URL Path (match)</label>' +
+                        '<input type="text" class="ps-path" placeholder="e.g. /v2/upsell1.html" value="' + escapeHtml(data.url_path_pattern || '') + '" style="width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:0.88rem;">' +
+                    '</div>' +
+                    '<button type="button" onclick="removePageScriptRow(' + id + ')" style="background:#e74c3c;color:white;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;margin-top:22px;"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
+                '<label style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px;display:block;">Paste the BuyGoods tracking + iframe script for this page</label>' +
+                '<textarea class="ps-script" rows="4" placeholder="Paste the full tracking + iframe script BuyGoods provided for this specific page..." style="width:100%;padding:10px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:0.85rem;font-family:Courier New,monospace;" oninput="parsePageScriptRow(' + id + ')">' + escapeHtml(data.bg_raw_script || '') + '</textarea>' +
+                '<div class="ps-preview" style="margin-top:8px;font-size:0.82rem;"></div>';
+
+            document.getElementById('pageScriptsList').appendChild(wrap);
+            if (data.bg_raw_script || data.bg_product_codes) parsePageScriptRow(id);
+            return wrap;
+        }
+
+        function removePageScriptRow(id) {
+            var row = document.querySelector('.page-script-row[data-row-id="' + id + '"]');
+            if (row) row.parentNode.removeChild(row);
+        }
+
+        function clearPageScriptRows() {
+            document.getElementById('pageScriptsList').innerHTML = '';
+        }
+
+        // Parse a pasted page script → extract product codes, detect is_upsell flag
+        function parsePageScriptForRow(raw) {
+            var out = { productCodes: null, isUpsell: false };
+            if (!raw) return out;
+            var m = raw.match(/[&?]product=([a-zA-Z0-9_,]+)/);
+            if (m) out.productCodes = m[1];
+            out.isUpsell = (raw.indexOf('conversion=1') !== -1);
+            return out;
+        }
+
+        function parsePageScriptRow(id) {
+            var row = document.querySelector('.page-script-row[data-row-id="' + id + '"]');
+            if (!row) return;
+            var script = row.querySelector('.ps-script').value.trim();
+            var preview = row.querySelector('.ps-preview');
+            if (!script) { preview.innerHTML = ''; return; }
+            var parsed = parsePageScriptForRow(script);
+            var html = '';
+            if (parsed.productCodes) {
+                html += '<span style="background:#d4edda;color:#155724;padding:3px 10px;border-radius:12px;font-weight:600;">✓ Products: ' + escapeHtml(parsed.productCodes) + '</span> ';
+            } else {
+                html += '<span style="background:#f8d7da;color:#721c24;padding:3px 10px;border-radius:12px;font-weight:600;">✗ No product codes found</span> ';
+            }
+            html += parsed.isUpsell
+                ? '<span style="background:#fff3cd;color:#856404;padding:3px 10px;border-radius:12px;font-weight:600;margin-left:6px;">⚡ Upsell iframe detected</span>'
+                : '<span style="background:#d1ecf1;color:#0c5460;padding:3px 10px;border-radius:12px;font-weight:600;margin-left:6px;">🏠 Landing iframe</span>';
+            preview.innerHTML = html;
+        }
+
+        function collectPageScriptRows() {
+            var rows = document.querySelectorAll('.page-script-row');
+            var out = [];
+            rows.forEach(function(r) {
+                var label = r.querySelector('.ps-label').value.trim();
+                var path = r.querySelector('.ps-path').value.trim();
+                var script = r.querySelector('.ps-script').value.trim();
+                if (!path || !script) return;
+                var parsed = parsePageScriptForRow(script);
+                if (!parsed.productCodes) return; // skip rows where parser failed
+                out.push({
+                    page_label: label,
+                    url_path_pattern: path,
+                    bg_product_codes: parsed.productCodes,
+                    is_upsell: parsed.isUpsell ? 1 : 0,
+                    bg_raw_script: script
+                });
+            });
+            return out;
+        }
+
+        // Platform switching
+        var selectedPlatform = 'buygoods';
+
+        function setPlatform(platform) {
+            selectedPlatform = platform;
+            document.getElementById('selectedPlatform').value = platform;
+
+            var bgBtn = document.getElementById('platformBG');
+            var ds24Btn = document.getElementById('platformDS24');
+            var cbBtn = document.getElementById('platformCB');
+
+            // Reset all buttons
+            [bgBtn, ds24Btn, cbBtn].forEach(function(btn) {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.style.borderColor = '#e0e0e0';
+            });
+
+            // Hide all script groups
+            document.getElementById('bgScriptGroup').style.display = 'none';
+            document.getElementById('ds24ScriptGroup').style.display = 'none';
+            document.getElementById('cbScriptGroup').style.display = 'none';
+            document.getElementById('bgPageScriptsGroup').style.display = 'none';
+
+            if (platform === 'buygoods') {
+                bgBtn.style.background = '#3498db'; bgBtn.style.color = 'white'; bgBtn.style.borderColor = '#3498db';
+                document.getElementById('bgScriptGroup').style.display = 'block';
+                document.getElementById('bgPageScriptsGroup').style.display = 'block';
+            } else if (platform === 'digistore24') {
+                ds24Btn.style.background = '#9b59b6'; ds24Btn.style.color = 'white'; ds24Btn.style.borderColor = '#9b59b6';
+                document.getElementById('ds24ScriptGroup').style.display = 'block';
+            } else if (platform === 'clickbank') {
+                cbBtn.style.background = '#e67e22'; cbBtn.style.color = 'white'; cbBtn.style.borderColor = '#e67e22';
+                document.getElementById('cbScriptGroup').style.display = 'block';
+            }
+
+            document.getElementById('parsePreview').style.display = 'none';
+        }
+
+        // DS24 script parser
+        function parseDS24Script(rawScript) {
+            var result = { productId: null, hasDigistoreJs: false, hasPromocode: false };
+            if (!rawScript) return result;
+            result.hasDigistoreJs = rawScript.indexOf('digistore24-scripts.com/service/digistore.js') !== -1;
+            var productMatch = rawScript.match(/["']product_id["']\s*:\s*(\d+)/);
+            if (productMatch) result.productId = productMatch[1];
+            result.hasPromocode = rawScript.indexOf('digistorePromocode') !== -1;
+            return result;
+        }
+
+        function parseDS24AndPreview() {
+            var rawScript = document.getElementById('ds24Script').value.trim();
+            var previewDiv = document.getElementById('parsePreview');
+            if (!rawScript) { previewDiv.style.display = 'none'; return; }
+
+            var parsed = parseDS24Script(rawScript);
+            var html = '<div class="parse-preview"><h3>Parsed DS24 Configuration</h3>';
+
+            html += '<div class="parse-item">';
+            if (parsed.hasDigistoreJs) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>digistore.js:</strong>&nbsp;Found';
+            } else {
+                html += '<span class="icon icon-fail"><i class="fas fa-times"></i></span>';
+                html += '<strong>digistore.js:</strong>&nbsp;<span style="color:#e74c3c;">Not found</span>';
+            }
+            html += '</div>';
+
+            html += '<div class="parse-item">';
+            if (parsed.productId) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>Product ID:</strong>&nbsp;' + escapeHtml(parsed.productId);
+            } else {
+                html += '<span class="icon icon-fail"><i class="fas fa-times"></i></span>';
+                html += '<strong>Product ID:</strong>&nbsp;<span style="color:#e74c3c;">Not found</span>';
+            }
+            html += '</div>';
+
+            html += '<div class="parse-item">';
+            if (parsed.hasPromocode) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>digistorePromocode():</strong>&nbsp;Found';
+            } else {
+                html += '<span class="icon icon-warn"><i class="fas fa-exclamation"></i></span>';
+                html += '<strong>digistorePromocode():</strong>&nbsp;<span style="color:#7f8c8d;">Not found</span>';
+            }
+            html += '</div></div>';
+
+            previewDiv.innerHTML = html;
+            previewDiv.style.display = 'block';
+        }
+
+        // ClickBank script parser
+        function parseCBScript(rawScript) {
+            var result = { vendor: null, hasHopJs: false };
+            if (!rawScript) return result;
+            var vendorMatch = rawScript.match(/vendor\s*:\s*["']([^"']+)["']/);
+            if (vendorMatch) result.vendor = vendorMatch[1];
+            result.hasHopJs = rawScript.indexOf('scripts.clickbank.net/hop.min.js') !== -1;
+            return result;
+        }
+
+        function parseCBAndPreview() {
+            var rawScript = document.getElementById('cbScript').value.trim();
+            var previewDiv = document.getElementById('parsePreview');
+            if (!rawScript) { previewDiv.style.display = 'none'; return; }
+
+            var parsed = parseCBScript(rawScript);
+            var html = '<div class="parse-preview"><h3>Parsed ClickBank Configuration</h3>';
+
+            html += '<div class="parse-item">';
+            if (parsed.vendor) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>Vendor:</strong>&nbsp;' + escapeHtml(parsed.vendor);
+            } else {
+                html += '<span class="icon icon-fail"><i class="fas fa-times"></i></span>';
+                html += '<strong>Vendor:</strong>&nbsp;<span style="color:#e74c3c;">Not found</span>';
+            }
+            html += '</div>';
+
+            html += '<div class="parse-item">';
+            if (parsed.hasHopJs) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>hop.min.js:</strong>&nbsp;Found';
+            } else {
+                html += '<span class="icon icon-warn"><i class="fas fa-exclamation"></i></span>';
+                html += '<strong>hop.min.js:</strong>&nbsp;<span style="color:#7f8c8d;">Not found (will still work)</span>';
+            }
+            html += '</div></div>';
+
+            previewDiv.innerHTML = html;
+            previewDiv.style.display = 'block';
+        }
+
+        // Parse BuyGoods tracking script
+        function parseBGScript(rawScript) {
+            const result = {
+                accountId: null,
+                productCodes: null,
+                conversionToken: null,
+                trackingScript: '',
+                iframeScript: ''
+            };
+            if (!rawScript) return result;
+
+            const accountMatch = rawScript.match(/[?&]a=(\d+)/);
+            if (accountMatch) result.accountId = accountMatch[1];
+
+            const productMatch = rawScript.match(/[&?]product=([a-zA-Z0-9_,]+)/);
+            if (productMatch) result.productCodes = productMatch[1];
+
+            const tokenMatch = rawScript.match(/[&?]t=([a-f0-9]{32})/);
+            if (tokenMatch) result.conversionToken = tokenMatch[1];
+
+            if (rawScript.includes('tracking.buygoods.com/track')) result.trackingScript = rawScript;
+            if (rawScript.includes('conversion/iframe')) result.iframeScript = rawScript;
+            if (result.trackingScript && rawScript.includes('conversion/iframe')) {
+                result.trackingScript = rawScript;
+                result.iframeScript = rawScript;
+            }
+            return result;
+        }
+
+        function parseAndPreview() {
+            const rawScript = document.getElementById('bgScript').value.trim();
+            const previewDiv = document.getElementById('parsePreview');
+
+            if (!rawScript) { previewDiv.style.display = 'none'; return; }
+
+            const parsed = parseBGScript(rawScript);
+            let html = '<div class="parse-preview"><h3>Parsed Configuration</h3>';
+
+            // Account ID
+            html += '<div class="parse-item">';
+            if (parsed.accountId) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>Account ID:</strong>&nbsp;' + escapeHtml(parsed.accountId);
+            } else {
+                html += '<span class="icon icon-fail"><i class="fas fa-times"></i></span>';
+                html += '<strong>Account ID:</strong>&nbsp;<span style="color:#e74c3c;">Not found</span>';
+            }
+            html += '</div>';
+
+            // Product Codes
+            html += '<div class="parse-item">';
+            if (parsed.productCodes) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>Product Codes:</strong>&nbsp;' + escapeHtml(parsed.productCodes);
+            } else {
+                html += '<span class="icon icon-warn"><i class="fas fa-exclamation"></i></span>';
+                html += '<strong>Product Codes:</strong>&nbsp;<span style="color:#7f8c8d;">Not found (optional)</span>';
+            }
+            html += '</div>';
+
+            // Conversion Token
+            html += '<div class="parse-item">';
+            if (parsed.conversionToken) {
+                html += '<span class="icon icon-ok"><i class="fas fa-check"></i></span>';
+                html += '<strong>Conversion Token:</strong>&nbsp;' + escapeHtml(parsed.conversionToken.substring(0, 8)) + '...';
+            } else {
+                html += '<span class="icon icon-warn"><i class="fas fa-exclamation"></i></span>';
+                html += '<strong>Conversion Token:</strong>&nbsp;<span style="color:#7f8c8d;">Not found (optional)</span>';
+            }
+            html += '</div></div>';
+
+            previewDiv.innerHTML = html;
+            previewDiv.style.display = 'block';
+        }
+
+        async function registerDomain() {
+            var label = document.getElementById('domainLabel').value.trim();
+            var domainUrl = document.getElementById('domainUrl').value.trim();
+            var platform = document.getElementById('selectedPlatform').value;
+
+            if (!label) { showAlert('Please enter a domain label', 'error'); return; }
+            if (!domainUrl) { showAlert('Please enter the domain URL', 'error'); return; }
+
+            var requestData = { label: label, domain_url: domainUrl, platform: platform };
+
+            if (platform === 'buygoods') {
+                var rawScript = document.getElementById('bgScript').value.trim();
+                if (!rawScript) { showAlert('Please paste your BuyGoods tracking script', 'error'); return; }
+                var parsed = parseBGScript(rawScript);
+                if (!parsed.accountId) {
+                    if (!confirm('Could not extract BuyGoods Account ID from the script. Continue anyway?')) return;
+                }
+                requestData.bg_account_id = parsed.accountId || '';
+                requestData.bg_product_codes = parsed.productCodes || '';
+                requestData.bg_conversion_token = parsed.conversionToken || '';
+                requestData.bg_tracking_script = rawScript;
+                requestData.bg_iframe_script = parsed.iframeScript || '';
+                requestData.ds24_product_id = '';
+                requestData.page_scripts = collectPageScriptRows();
+            } else if (platform === 'digistore24') {
+                var rawScript = document.getElementById('ds24Script').value.trim();
+                if (!rawScript) { showAlert('Please paste your Digistore24 tracking script', 'error'); return; }
+                var parsed = parseDS24Script(rawScript);
+                if (!parsed.productId) {
+                    if (!confirm('Could not extract Digistore24 Product ID from the script. Continue anyway?')) return;
+                }
+                requestData.bg_account_id = '';
+                requestData.bg_product_codes = '';
+                requestData.bg_conversion_token = '';
+                requestData.bg_tracking_script = rawScript;
+                requestData.bg_iframe_script = '';
+                requestData.ds24_product_id = parsed.productId || '';
+            } else if (platform === 'clickbank') {
+                var rawScript = document.getElementById('cbScript').value.trim();
+                if (!rawScript) { showAlert('Please paste your ClickBank tracking script', 'error'); return; }
+                var parsed = parseCBScript(rawScript);
+                if (!parsed.vendor) {
+                    if (!confirm('Could not extract ClickBank vendor from the script. Continue anyway?')) return;
+                }
+                requestData.bg_account_id = '';
+                requestData.bg_product_codes = '';
+                requestData.bg_conversion_token = '';
+                requestData.bg_tracking_script = rawScript;
+                requestData.bg_iframe_script = '';
+                requestData.ds24_product_id = '';
+                requestData.cb_vendor = parsed.vendor || '';
+            }
+
+            var btn = document.getElementById('registerBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+
+            var result = await apiRequest(API_URL, 'register_domain', requestData);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-plus-circle"></i> Register Domain & Generate Snippet';
+
+            if (result.success) {
+                showSnippet(result.domain_key);
+                loadRegisteredDomains();
+                document.getElementById('domainLabel').value = '';
+                document.getElementById('domainUrl').value = '';
+                document.getElementById('bgScript').value = '';
+                document.getElementById('ds24Script').value = '';
+                document.getElementById('parsePreview').style.display = 'none';
+                clearPageScriptRows();
+                showAlert('Domain registered successfully!', 'success');
+            } else {
+                showAlert('Error: ' + (result.error || 'Registration failed'), 'error');
+            }
+        }
+
+        function showSnippet(domainKey) {
+            const snippetDiv = document.getElementById('snippetOutput');
+            const snippet = '<script src="https://cdn.trustednutraproduct.com/t.js?v=' + domainKey + '"><\/script>';
+
+            snippetDiv.innerHTML = '<div class="snippet-box">' +
+                '<h3><i class="fas fa-check-circle"></i> Domain Registered! Here\'s your snippet:</h3>' +
+                '<p class="instructions">Add this single line to your landing pages in the <code>&lt;head&gt;</code> section. <strong>Replace your existing tracking code</strong> with this snippet:</p>' +
+                '<div class="snippet-code">' +
+                    '<input type="text" id="snippetCode" value=\'' + snippet + '\' readonly>' +
+                    '<button onclick="copySnippet()"><i class="fas fa-copy"></i> Copy</button>' +
+                '</div>' +
+                '<div class="instructions"><strong>Installation:</strong>' +
+                '<ol>' +
+                    '<li>Open each of your landing pages (e.g. v1.html, v2.html, etc.)</li>' +
+                    '<li>Find and <strong>remove</strong> your existing tracking script blocks</li>' +
+                    '<li>Paste the snippet above inside <code>&lt;head&gt;</code> as the <strong>first script</strong></li>' +
+                    '<li>Tracking will be automatically injected via the CDN</li>' +
+                '</ol></div></div>';
+            snippetDiv.style.display = 'block';
+            snippetDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copySnippet() {
+            const input = document.getElementById('snippetCode');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(function() {
+                showAlert('Snippet copied to clipboard!', 'success');
+            }).catch(function() {
+                document.execCommand('copy');
+                showAlert('Snippet copied!', 'success');
+            });
+        }
+
+        // Store domains data for modal access
+        var _domainsCache = [];
+
+        async function loadRegisteredDomains() {
+            const result = await apiRequest(API_URL, 'get_domains');
+            const container = document.getElementById('domainsTableContainer');
+
+            if (!result.success || !result.domains || !result.domains.length) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-globe"></i>No domains registered yet. Register your first domain above.</div>';
+                _domainsCache = [];
+                return;
+            }
+
+            _domainsCache = result.domains;
+
+            var html = '<table><thead><tr>';
+            html += '<th>Label</th><th>Domain URL</th><th>Platform</th>';
+            html += '<th>Account / Product ID</th><th>Product Codes</th><th>Conv. Token</th>';
+            html += '<th>Status</th><th>Actions</th>';
+            html += '</tr></thead><tbody>';
+
+            result.domains.forEach(function(d, idx) {
+                var statusBadge = d.status === 'active'
+                    ? '<span class="badge badge-green">Active</span>'
+                    : '<span class="badge badge-gray">Paused</span>';
+
+                var platformBadge = d.platform === 'clickbank'
+                    ? '<span class="badge" style="background:#fef3e2;color:#e67e22;">CB</span>'
+                    : d.platform === 'digistore24'
+                    ? '<span class="badge" style="background:#f0e6ff;color:#7d3c98;">DS24</span>'
+                    : '<span class="badge" style="background:#e3f2fd;color:#1565c0;">BG</span>';
+
+                var accountId, productCodes, convToken;
+                if (d.platform === 'clickbank') {
+                    accountId = escapeHtml(d.cb_vendor || '-');
+                    productCodes = '<span style="color:#aaa;">-</span>';
+                    convToken = '<span style="color:#aaa;">-</span>';
+                } else if (d.platform === 'digistore24') {
+                    accountId = escapeHtml(d.ds24_product_id || '-');
+                    productCodes = '<span style="color:#aaa;">-</span>';
+                    convToken = '<span style="color:#aaa;">-</span>';
+                } else {
+                    accountId = escapeHtml(d.bg_account_id || '-');
+                    productCodes = d.bg_product_codes ? '<span class="code-text">' + escapeHtml(d.bg_product_codes) + '</span>' : '<span style="color:#aaa;">-</span>';
+                    var token = d.bg_conversion_token || '';
+                    convToken = token ? '<span class="code-text" title="' + escapeHtml(token) + '">' + escapeHtml(token.substring(0,8)) + '...</span>' : '<span style="color:#aaa;">-</span>';
+                }
+
+                html += '<tr>';
+                html += '<td><strong>' + escapeHtml(d.label) + '</strong></td>';
+                html += '<td><span class="code-text">' + escapeHtml(d.domain_url) + '</span></td>';
+                html += '<td>' + platformBadge + '</td>';
+                html += '<td>' + accountId + '</td>';
+                html += '<td>' + productCodes + '</td>';
+                html += '<td>' + convToken + '</td>';
+                html += '<td>' + statusBadge + '</td>';
+                html += '<td style="white-space:nowrap;">';
+                html += '<button class="btn-icon btn-icon-view" onclick="viewDomain(' + idx + ')" title="View Details"><i class="fas fa-eye"></i></button> ';
+                if (d.platform === 'buygoods') {
+                    var psCount = (d.page_scripts && d.page_scripts.length) || 0;
+                    html += '<button class="btn-icon" style="background:#f3e9ff;color:#7d3c98;" onclick="openPageScriptsModal(' + d.id + ',\'' + escapeHtml(d.label).replace(/'/g,"\\'") + '\')" title="Manage Page Scripts"><i class="fas fa-layer-group"></i>' + (psCount > 0 ? ' <span style="font-size:0.7rem;font-weight:700;">' + psCount + '</span>' : '') + '</button> ';
+                }
+                html += '<button class="btn-icon btn-icon-code" onclick="showSnippet(\'' + escapeHtml(d.domain_key) + '\')" title="Get Snippet"><i class="fas fa-code"></i></button> ';
+                html += '<button class="btn-icon btn-icon-delete" onclick="deleteDomain(' + d.id + ')" title="Delete"><i class="fas fa-trash"></i></button>';
+                html += '</td></tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function viewDomain(idx) {
+            var d = _domainsCache[idx];
+            if (!d) return;
+
+            var modal = document.getElementById('domainModal');
+            var body = document.getElementById('modalBody');
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-eye" style="color:#4263eb;"></i> ' + escapeHtml(d.label);
+
+            var html = '<div class="detail-grid">';
+
+            // General info
+            html += '<div class="detail-label">Label</div><div class="detail-value">' + escapeHtml(d.label) + '</div>';
+            html += '<div class="detail-label">Domain URL</div><div class="detail-value"><a href="' + escapeHtml(d.domain_url) + '" target="_blank" style="color:#3498db;">' + escapeHtml(d.domain_url) + '</a></div>';
+            html += '<div class="detail-label">Domain Key</div><div class="detail-value"><span class="code-text">' + escapeHtml(d.domain_key) + '</span></div>';
+            var platBadge = d.platform === 'clickbank' ? '<span class="badge" style="background:#fef3e2;color:#e67e22;">ClickBank</span>'
+                : d.platform === 'digistore24' ? '<span class="badge" style="background:#f0e6ff;color:#7d3c98;">Digistore24</span>'
+                : '<span class="badge" style="background:#e3f2fd;color:#1565c0;">BuyGoods</span>';
+            html += '<div class="detail-label">Platform</div><div class="detail-value">' + platBadge + '</div>';
+            html += '<div class="detail-label">Status</div><div class="detail-value">' + (d.status === 'active' ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-gray">' + escapeHtml(d.status) + '</span>') + '</div>';
+            html += '<div class="detail-label">Created</div><div class="detail-value">' + escapeHtml(d.created_at || '-') + '</div>';
+
+            html += '<div class="detail-divider"></div>';
+
+            if (d.platform === 'clickbank') {
+                html += '<div class="detail-label">Vendor</div><div class="detail-value"><strong>' + escapeHtml(d.cb_vendor || '-') + '</strong></div>';
+                html += '<div class="detail-divider"></div>';
+                html += '<div class="detail-label">Tracking Script</div><div class="detail-value"><code>' + escapeHtml(d.bg_tracking_script || 'Not stored') + '</code></div>';
+            } else if (d.platform === 'buygoods') {
+                html += '<div class="detail-label">Account ID</div><div class="detail-value">' + escapeHtml(d.bg_account_id || '-') + '</div>';
+                html += '<div class="detail-label">Product Codes</div><div class="detail-value">' + escapeHtml(d.bg_product_codes || '-') + '</div>';
+                html += '<div class="detail-label">Conv. Token</div><div class="detail-value"><span class="code-text">' + escapeHtml(d.bg_conversion_token || '-') + '</span></div>';
+                html += '<div class="detail-divider"></div>';
+                html += '<div class="detail-label">Tracking Script</div><div class="detail-value"><code>' + escapeHtml(d.bg_tracking_script || 'Not stored') + '</code></div>';
+            } else {
+                html += '<div class="detail-label">Product ID</div><div class="detail-value">' + escapeHtml(d.ds24_product_id || '-') + '</div>';
+                html += '<div class="detail-divider"></div>';
+                html += '<div class="detail-label">Tracking Script</div><div class="detail-value"><code>' + escapeHtml(d.bg_tracking_script || 'Not stored') + '</code></div>';
+            }
+
+            html += '</div>';
+            body.innerHTML = html;
+            modal.classList.add('active');
+        }
+
+        function closeDomainModal() {
+            document.getElementById('domainModal').classList.remove('active');
+        }
+
+        // ============================================================
+        // Manage Page Scripts Modal (for existing domains)
+        // ============================================================
+        var _psModalDomainId = null;
+        var _psModalRowSeq = 0;
+
+        async function openPageScriptsModal(domainId, label) {
+            _psModalDomainId = domainId;
+            document.getElementById('psModalTitle').innerHTML = '<i class="fas fa-layer-group" style="color:#9b59b6;"></i> Page Scripts — ' + escapeHtml(label);
+            document.getElementById('psModalDomainLabel').textContent = label;
+            document.getElementById('managedPageScriptsList').innerHTML = '<div style="text-align:center;color:#95a5a6;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            document.getElementById('psModalResult').innerHTML = '';
+            document.getElementById('pageScriptsModal').classList.add('active');
+
+            var result = await apiRequest(API_URL, 'get_page_scripts', { domain_id: domainId });
+            var list = document.getElementById('managedPageScriptsList');
+            list.innerHTML = '';
+            if (result.success && result.scripts && result.scripts.length) {
+                result.scripts.forEach(function(s) { addManagedPageScriptRow(s); });
+            } else {
+                list.innerHTML = '<div style="text-align:center;color:#95a5a6;padding:20px;font-size:0.9rem;">No page-specific scripts yet. Click "Add Page" to add one.</div>';
+            }
+        }
+
+        function closePageScriptsModal() {
+            document.getElementById('pageScriptsModal').classList.remove('active');
+            _psModalDomainId = null;
+        }
+
+        function addManagedPageScriptRow(prefill) {
+            var list = document.getElementById('managedPageScriptsList');
+            // Clear empty-state message if present
+            if (list.querySelector('div[style*="No page-specific"]')) list.innerHTML = '';
+
+            var id = ++_psModalRowSeq;
+            var data = prefill || {};
+            var raw = data.bg_raw_script || '';
+            // If we only have parsed fields (no raw script stored), reconstruct a placeholder hint
+            if (!raw && data.bg_product_codes) {
+                raw = '[Previously saved — product=' + data.bg_product_codes + (data.is_upsell ? ' (upsell)' : ' (landing)') + ']';
+            }
+            var wrap = document.createElement('div');
+            wrap.className = 'ps-managed-row';
+            wrap.setAttribute('data-row-id', id);
+            wrap.style.cssText = 'background:#faf8ff;border:2px solid #e0d3f3;border-radius:10px;padding:14px;margin-bottom:12px;';
+
+            wrap.innerHTML =
+                '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">' +
+                    '<div style="flex:1;">' +
+                        '<label style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px;display:block;">Page Label</label>' +
+                        '<input type="text" class="psm-label" placeholder="e.g. Upsell 1" value="' + escapeHtml(data.page_label || '') + '" style="width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:0.88rem;">' +
+                    '</div>' +
+                    '<div style="flex:2;">' +
+                        '<label style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px;display:block;">URL Path (match)</label>' +
+                        '<input type="text" class="psm-path" placeholder="e.g. /v2/upsell1.html" value="' + escapeHtml(data.url_path_pattern || '') + '" style="width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:0.88rem;">' +
+                    '</div>' +
+                    '<button type="button" onclick="removeManagedPageScriptRow(' + id + ')" style="background:#e74c3c;color:white;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;margin-top:22px;"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
+                '<label style="font-size:0.78rem;font-weight:600;color:#555;margin-bottom:4px;display:block;">Paste the BuyGoods tracking + iframe script for this page</label>' +
+                '<textarea class="psm-script" rows="4" placeholder="Paste the full tracking + iframe script BuyGoods provided..." style="width:100%;padding:10px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:0.85rem;font-family:Courier New,monospace;" oninput="parseManagedPageScriptRow(' + id + ')">' + escapeHtml(raw) + '</textarea>' +
+                '<div class="psm-preview" style="margin-top:8px;font-size:0.82rem;"></div>' +
+                '<input type="hidden" class="psm-codes" value="' + escapeHtml(data.bg_product_codes || '') + '">' +
+                '<input type="hidden" class="psm-upsell" value="' + (data.is_upsell ? '1' : '0') + '">';
+
+            list.appendChild(wrap);
+            if (raw && !raw.startsWith('[Previously saved')) parseManagedPageScriptRow(id);
+            else if (data.bg_product_codes) renderManagedRowPreview(id, data.bg_product_codes, !!data.is_upsell);
+        }
+
+        function removeManagedPageScriptRow(id) {
+            var row = document.querySelector('.ps-managed-row[data-row-id="' + id + '"]');
+            if (row) row.parentNode.removeChild(row);
+        }
+
+        function parseManagedPageScriptRow(id) {
+            var row = document.querySelector('.ps-managed-row[data-row-id="' + id + '"]');
+            if (!row) return;
+            var raw = row.querySelector('.psm-script').value.trim();
+            if (!raw || raw.startsWith('[Previously saved')) {
+                row.querySelector('.psm-preview').innerHTML = '';
+                return;
+            }
+            var parsed = parsePageScriptForRow(raw);
+            row.querySelector('.psm-codes').value = parsed.productCodes || '';
+            row.querySelector('.psm-upsell').value = parsed.isUpsell ? '1' : '0';
+            renderManagedRowPreview(id, parsed.productCodes, parsed.isUpsell);
+        }
+
+        function renderManagedRowPreview(id, productCodes, isUpsell) {
+            var row = document.querySelector('.ps-managed-row[data-row-id="' + id + '"]');
+            if (!row) return;
+            var preview = row.querySelector('.psm-preview');
+            var html = '';
+            if (productCodes) {
+                html += '<span style="background:#d4edda;color:#155724;padding:3px 10px;border-radius:12px;font-weight:600;">✓ Products: ' + escapeHtml(productCodes) + '</span> ';
+            } else {
+                html += '<span style="background:#f8d7da;color:#721c24;padding:3px 10px;border-radius:12px;font-weight:600;">✗ No product codes found</span> ';
+            }
+            html += isUpsell
+                ? '<span style="background:#fff3cd;color:#856404;padding:3px 10px;border-radius:12px;font-weight:600;margin-left:6px;">⚡ Upsell iframe</span>'
+                : '<span style="background:#d1ecf1;color:#0c5460;padding:3px 10px;border-radius:12px;font-weight:600;margin-left:6px;">🏠 Landing iframe</span>';
+            preview.innerHTML = html;
+        }
+
+        async function savePageScriptsModal() {
+            if (!_psModalDomainId) return;
+            var rows = document.querySelectorAll('.ps-managed-row');
+            var scripts = [];
+            var errors = [];
+            rows.forEach(function(r, i) {
+                var label = r.querySelector('.psm-label').value.trim();
+                var path = r.querySelector('.psm-path').value.trim();
+                var rawScript = r.querySelector('.psm-script').value.trim();
+                var codes = r.querySelector('.psm-codes').value.trim();
+                var isUpsell = r.querySelector('.psm-upsell').value === '1';
+                if (!path) { errors.push('Row ' + (i+1) + ': URL Path is required'); return; }
+                if (!codes) { errors.push('Row ' + (i+1) + ': could not extract product codes from script'); return; }
+                scripts.push({
+                    page_label: label,
+                    url_path_pattern: path,
+                    bg_product_codes: codes,
+                    is_upsell: isUpsell ? 1 : 0,
+                    bg_raw_script: rawScript.startsWith('[Previously saved') ? '' : rawScript
+                });
+            });
+
+            var resultDiv = document.getElementById('psModalResult');
+            if (errors.length) {
+                resultDiv.innerHTML = '<div class="alert alert-error">' + errors.join('<br>') + '</div>';
+                return;
+            }
+
+            var result = await apiRequest(API_URL, 'save_page_scripts', { domain_id: _psModalDomainId, scripts: scripts });
+            if (result.success) {
+                resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Saved ' + result.count + ' page script(s)!</div>';
+                loadRegisteredDomains();
+                setTimeout(function() { closePageScriptsModal(); }, 1000);
+            } else {
+                resultDiv.innerHTML = '<div class="alert alert-error">Error: ' + (result.error || 'Save failed') + '</div>';
+            }
+        }
+
+        async function deleteDomain(domainId) {
+            if (!confirm('Delete this domain? All active shaving sessions will be stopped.')) return;
+            const result = await apiRequest(API_URL, 'delete_domain', { domain_id: domainId });
+            if (result.success) {
+                showAlert('Domain deleted', 'success');
+                loadRegisteredDomains();
+            } else {
+                showAlert('Error: ' + (result.error || 'Delete failed'), 'error');
+            }
+        }
+
+        // Helpers
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = '<div class="alert alert-' + type + '"><i class="fas fa-' + (type === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' + message + '</div>';
+            setTimeout(function() { container.innerHTML = ''; }, 4000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // Mobile Menu
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+
+        // Affiliate Names Upload
+        async function populateAffDomainSelect() {
+            var sel = document.getElementById('affDomainSelect');
+            var result = await apiRequest(API_URL, 'get_domains');
+            if (!result.success || !result.domains || !result.domains.length) {
+                sel.innerHTML = '<option value="">No domains registered</option>';
+                return;
+            }
+            sel.innerHTML = '<option value="">-- Select Domain --</option>';
+            result.domains.forEach(function(d) {
+                var plat = d.platform === 'digistore24' ? ' [DS24]' : ' [BG]';
+                sel.innerHTML += '<option value="' + d.id + '">' + escapeHtml(d.label) + plat + '</option>';
+            });
+            // Show count for first domain if previously selected
+            sel.addEventListener('change', showAffCount);
+        }
+
+        async function showAffCount() {
+            var domainId = document.getElementById('affDomainSelect').value;
+            var countDiv = document.getElementById('affCurrentCount');
+            if (!domainId) { countDiv.innerHTML = ''; return; }
+            var result = await apiRequest(API_URL, 'get_affiliate_names', { domain_id: domainId });
+            var count = result.success ? Object.keys(result.names || {}).length : 0;
+            countDiv.innerHTML = count > 0
+                ? '<i class="fas fa-check-circle" style="color:#27ae60;"></i> ' + count + ' affiliate names loaded for this domain'
+                : '<i class="fas fa-info-circle" style="color:#95a5a6;"></i> No affiliate names uploaded yet';
+        }
+
+        async function uploadAffiliateCSV() {
+            var domainId = document.getElementById('affDomainSelect').value;
+            var fileInput = document.getElementById('affCsvFile');
+            var resultDiv = document.getElementById('affUploadResult');
+
+            if (!domainId) {
+                resultDiv.innerHTML = '<div class="alert alert-error">Please select a domain first</div>';
+                return;
+            }
+            if (!fileInput.files.length) {
+                resultDiv.innerHTML = '<div class="alert alert-error">Please select a CSV file</div>';
+                return;
+            }
+
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = async function(e) {
+                var csvData = e.target.result;
+                var result = await apiRequest(API_URL, 'upload_affiliates', { domain_id: domainId, csv_data: csvData });
+                if (result.success) {
+                    resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Uploaded ' + result.count + ' affiliate names successfully!</div>';
+                    fileInput.value = '';
+                    showAffCount();
+                } else {
+                    resultDiv.innerHTML = '<div class="alert alert-error">Error: ' + (result.error || 'Upload failed') + '</div>';
+                }
+                setTimeout(function() { resultDiv.innerHTML = ''; }, 5000);
+            };
+            reader.readAsText(file);
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRegisteredDomains();
+            populateAffDomainSelect();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPN Receiver - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 {
+            font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle {
+            position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title {
+            padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s;
+        }
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s ease;
+            font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); border-left: none;
+        }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        /* Sidebar collapsed */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        /* Main */
+        .main-content { margin-left: 240px; flex: 1; padding: 24px; transition: margin-left 0.3s ease; }
+        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 1.5rem; color: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+        .page-header h1 i { color: #6c63ff; }
+
+        /* Stat cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: none; }
+        .stat-card h3 { font-size: 0.75rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #1a1a2e; }
+        .stat-card .sub { font-size: 0.8rem; color: #95a5a6; margin-top: 4px; }
+
+        /* Filters */
+        .filters-bar { background: white; border-radius: 16px; padding: 16px 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: none; }
+        .filters-bar label { font-size: 0.82rem; color: #555; font-weight: 600; }
+        .filters-bar select, .filters-bar input[type=date] { padding: 7px 10px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 0.85rem; font-family: 'Poppins', sans-serif; color: #1a1a2e; }
+        .filters-bar select:focus, .filters-bar input[type=date]:focus { border-color: #6c63ff; outline: none; box-shadow: 0 0 0 3px rgba(108,99,255,0.1); }
+        .btn-fetch { padding: 8px 18px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 0.85rem; font-family: 'Poppins', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s; }
+        .btn-fetch:hover { opacity: 0.85; }
+
+        /* Tab toggle */
+        .tab-toggle { display: flex; gap: 6px; margin-bottom: 16px; }
+        .ttab { padding: 8px 20px; border: none; border-radius: 10px; font-weight: 600; font-size: 0.85rem; font-family: 'Poppins', sans-serif; cursor: pointer; background: #f0f0ff; color: #7b7b8e; transition: all 0.2s; }
+        .ttab:hover { background: #e8e8f0; }
+        .ttab.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); }
+
+        /* Table card */
+        .card { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); overflow: hidden; border: none; }
+        .card-head { padding: 16px 20px; border-bottom: 1px solid #f0f0ff; display: flex; align-items: center; justify-content: space-between; }
+        .card-head h2 { font-size: 1rem; color: #1a1a2e; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .card-head h2 i { color: #6c63ff; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        th { background: #f5f5ff; padding: 10px 12px; text-align: left; font-size: 0.78rem; font-weight: 700; color: #555; text-transform: uppercase; white-space: nowrap; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f0f0ff; font-size: 0.84rem; color: #1a1a2e; white-space: nowrap; }
+        tr:hover td { background: #f5f5ff; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+        .pill-green { background: #e6f9ee; color: #16a34a; }
+        .pill-blue  { background: #eeeeff; color: #6c63ff; }
+        .pill-gray  { background: #f0f0ff; color: #666; }
+        .pill-orange{ background: #fff3e0; color: #e67e22; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        /* Detail overlay */
+        .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
+        .detail-overlay.open { display: flex; }
+        .detail-box { background: white; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .detail-header { padding: 20px; border-bottom: 1px solid #f0f0ff; display: flex; align-items: center; justify-content: space-between; }
+        .detail-header h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; }
+        .detail-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8; padding: 4px 8px; }
+        .detail-body { padding: 20px; }
+        .dm-section { background: #f5f5ff; border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+        .dm-section-head { padding: 10px 14px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border-bottom: 1px solid #e8e8f0; display: flex; align-items: center; gap: 6px; }
+        .dm-table { width: 100%; border-collapse: collapse; }
+        .dm-table tr { border-bottom: 1px solid #e8e8f0; }
+        .dm-table tr:last-child { border-bottom: none; }
+        .dm-table th { width: 140px; padding: 8px 14px; font-size: 0.78rem; color: #64748b; font-weight: 600; text-align: left; vertical-align: top; }
+        .dm-table td { padding: 8px 14px; font-size: 0.84rem; color: #1a1a2e; }
+
+        /* Mobile toggle button */
+        .mobile-toggle { display: none; position: fixed; top: 16px; left: 16px; z-index: 1100; width: 40px; height: 40px; background: linear-gradient(135deg, #6c63ff, #48c6ef); border: none; border-radius: 12px; color: #fff; font-size: 18px; cursor: pointer; box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); align-items: center; justify-content: center; }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @media (max-width: 768px) {
+            .sidebar { left: -240px; border-radius: 0 24px 24px 0; }
+            .sidebar.mobile-open { left: 0; }
+            .main-content { margin-left: 0; padding: 15px; }
+            .mobile-toggle { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('mobile-open')"><i class="fas fa-bars"></i></button>
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h2><span class="logo-icon"><i class="fas fa-chart-line"></i></span> <span>Shaver</span></h2>
+        <p>Admin Panel</p>
+        <button class="sidebar-toggle" onclick="document.body.classList.toggle('sidebar-collapsed')"><i class="fas fa-chevron-left"></i></button>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Main</div>
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Domain Management</div>
+        <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Shaving</div>
+        <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+        <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Analytics</div>
+        <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+        <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+        <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Orders</div>
+        <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+        <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Tools</div>
+        <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+        <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">ClickBank</div>
+        <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+        <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+        <a href="cb-conversions.html" class="nav-item active"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Developer</div>
+        <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="page-header">
+        <h1><i class="fas fa-bolt"></i> IPN Receiver</h1>
+        <span style="font-size:0.82rem; color:#94a3b8;"><span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; margin-right:5px; animation:pulse 2s infinite;"></span>Live — auto-refresh every 10s</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Events</h3>
+            <div class="value" id="statTotal">-</div>
+            <div class="sub">All IPN notifications</div>
+        </div>
+        <div class="stat-card">
+            <h3>Sales</h3>
+            <div class="value" id="statSales" style="color:#16a34a;">-</div>
+            <div class="sub">SALE + BILL events</div>
+        </div>
+        <div class="stat-card">
+            <h3>Refunds</h3>
+            <div class="value" id="statRefunds" style="color:#dc2626;">-</div>
+            <div class="sub">RFND + CGBK events</div>
+        </div>
+        <div class="stat-card">
+            <h3>Net Revenue</h3>
+            <div class="value" id="statRevenue" style="font-size:1.5rem; color:#e67e22;">-</div>
+            <div class="sub">Sales minus refunds</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+        <label>Type:</label>
+        <select id="filterType">
+            <option value="">All</option>
+            <option value="SALE">SALE</option>
+            <option value="BILL">BILL</option>
+            <option value="RFND">RFND</option>
+            <option value="CGBK">CGBK</option>
+            <option value="CANCEL-REBILL">CANCEL</option>
+            <option value="ABANDONED_ORDER">ABANDONED</option>
+        </select>
+        <button class="btn-fetch" onclick="loadData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+
+    <!-- Tab toggle -->
+    <div class="tab-toggle">
+        <button class="ttab active" id="ttabAll"  onclick="switchTab('all')">All Events</button>
+        <button class="ttab"        id="ttabSales" onclick="switchTab('sale')">Sales</button>
+        <button class="ttab"        id="ttabForm"  onclick="switchTab('form')">Refunds</button>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-head">
+            <h2><i class="fas fa-list"></i> <span id="tableTitle">All Events</span></h2>
+            <span id="rowCount" style="font-size:0.82rem; color:#94a3b8;"></span>
+        </div>
+        <div class="table-wrap">
+            <table id="hitsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Type</th>
+                        <th>Date / Time</th>
+                        <th>Receipt</th>
+                        <th>Affiliate</th>
+                        <th>Product</th>
+                        <th>Amount</th>
+                        <th>Payment</th>
+                        <th>Verified</th>
+                        <th>IP</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="hitsBody">
+                    <tr><td colspan="11"><div class="empty-state"><i class="fas fa-bolt"></i>Click Fetch to load data</div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+    <div class="detail-box">
+        <div class="detail-header">
+            <h3 id="detailTitle">Event Detail</h3>
+            <button class="detail-close" onclick="closeDetail()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+    </div>
+</div>
+
+<script src="js/config.js?v=2.7.0"></script>
+<script>
+    var allRows = [];
+    var currentTab = 'all';
+
+
+    async function loadData() {
+        var btn = document.querySelector('.btn-fetch');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+        btn.disabled = true;
+
+        var filterType = document.getElementById('filterType').value;
+        var result = await apiRequest('api.php', 'get_ipn_events', { event_type: filterType });
+
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        btn.disabled = false;
+
+        if (!result.success) {
+            document.getElementById('hitsBody').innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-exclamation-circle"></i>Error loading data</div></td></tr>';
+            return;
+        }
+
+        allRows = result.rows || [];
+
+        // Stats
+        var sales = 0, refunds = 0, saleAmt = 0, refundAmt = 0;
+        allRows.forEach(function(r) {
+            var t = (r.notification_type || '').toUpperCase();
+            if (t === 'SALE' || t === 'BILL') { sales++; saleAmt += Math.abs(parseFloat(r.amount) || 0); }
+            if (t === 'RFND' || t === 'CGBK' || t === 'INSF') { refunds++; refundAmt += Math.abs(parseFloat(r.amount) || 0); }
+        });
+        document.getElementById('statTotal').textContent = allRows.length;
+        document.getElementById('statSales').textContent = sales;
+        document.getElementById('statRefunds').textContent = refunds;
+        document.getElementById('statRevenue').textContent = '$' + (saleAmt - refundAmt).toFixed(2);
+
+        renderTable();
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        ['all','sales','form'].forEach(function(t) {
+            var el = document.getElementById('ttab' + t.charAt(0).toUpperCase() + t.slice(1));
+            if (el) el.classList.toggle('active', t === tab);
+        });
+        var titles = { all: 'All Events', sale: 'Sales', form: 'Refunds' };
+        document.getElementById('tableTitle').textContent = titles[tab] || 'All Events';
+        renderTable();
+    }
+
+    function renderTable() {
+        var rows = allRows;
+        if (currentTab === 'sale') rows = rows.filter(function(r) { var t = (r.notification_type||'').toUpperCase(); return t === 'SALE' || t === 'BILL'; });
+        if (currentTab === 'form') rows = rows.filter(function(r) { var t = (r.notification_type||'').toUpperCase(); return t === 'RFND' || t === 'CGBK' || t === 'INSF'; });
+
+        document.getElementById('rowCount').textContent = rows.length + ' record(s)';
+
+        if (!rows.length) {
+            document.getElementById('hitsBody').innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i>No records found</div></td></tr>';
+            return;
+        }
+
+        var typeColors = { SALE:'#16a34a', BILL:'#2980b9', RFND:'#e74c3c', CGBK:'#c0392b', INSF:'#c0392b', CANCEL:'#e67e22', 'CANCEL-REBILL':'#e67e22', DECLINE:'#8e44ad', TEST:'#95a5a6', ABANDONED_ORDER:'#ca8a04' };
+        var html = '';
+        rows.forEach(function(r, i) {
+            var t = (r.notification_type || '').toUpperCase();
+            var clr = typeColors[t] || '#555';
+            var isRefund = t === 'RFND' || t === 'CGBK' || t === 'INSF';
+            var amt = r.amount != null ? (isRefund ? '-' : '') + '$' + Math.abs(parseFloat(r.amount)).toFixed(2) : '-';
+            var amtColor = isRefund ? '#dc2626' : '#16a34a';
+            var verifiedIcon = r.verified ? '<span style="color:#16a34a;"><i class="fas fa-check-circle"></i></span>' : '<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i></span>';
+
+            html += '<tr style="cursor:pointer;' + (isRefund ? 'background:#fef2f2;' : '') + '" onclick="openDetail(' + r.id + ')">';
+            html += '<td style="color:#94a3b8; font-size:0.78rem;">' + (i + 1) + '</td>';
+            html += '<td><span style="background:' + clr + '20; color:' + clr + '; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">' + escapeHtml(t || '-') + '</span></td>';
+            html += '<td style="color:#555; font-size:0.8rem;">' + escapeHtml(r.created_at || '-') + '</td>';
+            html += '<td style="font-family:monospace; font-size:0.8rem; color:#e67e22;">' + escapeHtml(r.receipt || '-') + '</td>';
+            html += '<td><strong>' + escapeHtml(r.affiliate || '-') + '</strong></td>';
+            html += '<td style="max-width:160px; overflow:hidden; text-overflow:ellipsis;">' + escapeHtml(r.product || r.sku || '-') + '</td>';
+            html += '<td style="font-weight:700; color:' + amtColor + ';">' + escapeHtml(amt) + '</td>';
+            html += '<td>' + escapeHtml(r.payment_method || '-') + '</td>';
+            html += '<td>' + verifiedIcon + '</td>';
+            html += '<td style="font-family:monospace; font-size:0.75rem; color:#888;">' + escapeHtml(r.ip_address || '-') + '</td>';
+            html += '<td><button onclick="event.stopPropagation(); openDetail(' + r.id + ')" style="padding:3px 10px; background:linear-gradient(135deg,#6c63ff,#48c6ef); color:white; border:none; border-radius:8px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-eye"></i></button></td>';
+            html += '</tr>';
+        });
+
+        document.getElementById('hitsBody').innerHTML = html;
+    }
+
+    function openDetail(id) {
+        var r = allRows.find(function(x) { return x.id === id; });
+        if (!r) return;
+
+        var t = (r.notification_type || '').toUpperCase();
+        document.getElementById('detailTitle').textContent = t + ' — ' + (r.receipt || 'No receipt');
+
+        var html = '';
+
+        // Event info
+        html += '<div class="dm-section"><div class="dm-section-head"><i class="fas fa-receipt"></i> Event Info</div>';
+        html += '<table class="dm-table">';
+        html += '<tr><th>Type</th><td><strong>' + escapeHtml(t || '-') + '</strong></td></tr>';
+        html += '<tr><th>Receipt</th><td style="font-family:monospace; color:#e67e22;">' + escapeHtml(r.receipt || '-') + '</td></tr>';
+        html += '<tr><th>Affiliate</th><td><strong>' + escapeHtml(r.affiliate || '-') + '</strong></td></tr>';
+        html += '<tr><th>Vendor</th><td>' + escapeHtml(r.vendor || '-') + '</td></tr>';
+        html += '<tr><th>Product</th><td>' + escapeHtml(r.product || '-') + '</td></tr>';
+        html += '<tr><th>Amount</th><td style="font-weight:700; color:' + (parseFloat(r.amount) < 0 ? '#dc2626' : '#16a34a') + ';">$' + (r.amount || '0') + '</td></tr>';
+        html += '<tr><th>Payment</th><td>' + escapeHtml(r.payment_method || '-') + '</td></tr>';
+        html += '<tr><th>Currency</th><td>' + escapeHtml(r.currency || '-') + '</td></tr>';
+        html += '<tr><th>Verified</th><td>' + (r.verified ? '<span style="color:#16a34a;font-weight:700;">Yes</span>' : '<span style="color:#dc2626;">No</span>') + '</td></tr>';
+        html += '</table></div>';
+
+        // Customer
+        if (r.customer_name || r.customer_email) {
+            html += '<div class="dm-section"><div class="dm-section-head"><i class="fas fa-user"></i> Customer</div>';
+            html += '<table class="dm-table">';
+            html += '<tr><th>Name</th><td>' + escapeHtml(r.customer_name || '-') + '</td></tr>';
+            html += '<tr><th>Email</th><td>' + escapeHtml(r.customer_email || '-') + '</td></tr>';
+            html += '<tr><th>Address</th><td>' + escapeHtml([r.customer_address1, r.customer_city, r.customer_state, r.customer_zip, r.customer_country].filter(Boolean).join(', ') || '-') + '</td></tr>';
+            html += '</table></div>';
+        }
+
+        // Meta
+        html += '<div class="dm-section"><div class="dm-section-head"><i class="fas fa-info-circle"></i> Meta</div>';
+        html += '<table class="dm-table">';
+        html += '<tr><th>IP Address</th><td style="font-family:monospace;">' + escapeHtml(r.ip_address || '-') + '</td></tr>';
+        html += '<tr><th>Recorded At</th><td>' + escapeHtml(r.created_at || '-') + '</td></tr>';
+        html += '</table></div>';
+
+        document.getElementById('detailBody').innerHTML = html;
+        document.getElementById('detailOverlay').classList.add('open');
+    }
+
+    function closeDetail() {
+        document.getElementById('detailOverlay').classList.remove('open');
+    }
+
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Auto-load on page open + refresh every 10 seconds
+    loadData();
+    setInterval(loadData, 10000);
+</script>
+</body>
+</html>

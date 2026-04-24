@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout Leads - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 240px;
+            background: #fff;
+            color: #1a1a2e;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: width 0.3s ease;
+            border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04);
+            padding: 4px 0;
+        }
+
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+        .sidebar-header p { font-size: 0.85rem; color: #999; margin-left: 48px; }
+
+        .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+
+        .sidebar-toggle {
+            position: absolute; top: 18px; right: 12px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 6px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 14px; transition: background 0.2s, transform 0.3s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e8e8f0; }
+
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title { padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; color: #b0b0c0; transition: opacity 0.2s; }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s; font-size: 0.84rem;
+            border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 18px; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; box-shadow: 0 4px 15px rgba(108,99,255,0.3); border-left: none; }
+        .nav-item i { width: 25px; margin-right: 10px; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 20px; transition: margin-left 0.3s ease; }
+
+        /* Sidebar collapsed state */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 16px 10px 10px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 8px 0; margin: 1px 6px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: white; padding: 25px 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; margin-bottom: 25px;
+        }
+        .header-top {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+        }
+        .header-left h1 { font-size: 1.8rem; color: #1a1a2e; margin-bottom: 5px; }
+        .header-left p { color: #7f8c8d; font-size: 0.95rem; }
+
+        /* Snippet box */
+        .snippet-box {
+            background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 8px;
+            padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+        }
+        .snippet-box code {
+            flex: 1; font-size: 0.82rem; color: #e74c3c; word-break: break-all;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        .snippet-box button {
+            padding: 6px 14px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; font-family: 'Poppins', sans-serif;
+        }
+        .snippet-box button:hover { opacity: 0.9; }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 15px; margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white; padding: 20px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none;
+        }
+        .stat-card h3 { font-size: 0.8rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #1a1a2e; }
+
+        /* Cards */
+        .card {
+            background: white; padding: 25px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; margin-bottom: 25px;
+        }
+        .card h2 { font-size: 1.2rem; color: #1a1a2e; margin-bottom: 20px; }
+
+        /* Filters */
+        .filters-bar {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+        }
+        .filters-bar input, .filters-bar select {
+            padding: 10px 14px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 0.9rem; font-family: 'Poppins', sans-serif;
+        }
+        .filters-bar input:focus, .filters-bar select:focus { border-color: #6c63ff; outline: none; }
+        .filters-bar input[type="text"] { flex: 1; min-width: 200px; }
+        .filters-bar input[type="date"] { width: 150px; }
+        .filters-bar button {
+            padding: 10px 20px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-family: 'Poppins', sans-serif;
+        }
+        .filters-bar button:hover { opacity: 0.9; }
+        .btn-reset {
+            background: #95a5a6 !important;
+        }
+        .btn-reset:hover { background: #7f8c8d !important; }
+
+        /* Table */
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-responsive table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+        .table-responsive th {
+            text-align: left; padding: 12px 15px; background: #f8f9fa;
+            color: #666; font-size: 0.8rem; font-weight: 600;
+            text-transform: uppercase; border-bottom: 2px solid #eee;
+        }
+        .table-responsive td { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; }
+        .table-responsive tr:hover td { background: #f8f9fa; }
+
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .badge-gray { background: #e9ecef; color: #666; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-orange { background: #fed7aa; color: #9a3412; }
+        .badge-green { background: #d4edda; color: #155724; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #95a5a6; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; align-items: center; }
+        .pagination button {
+            padding: 8px 14px; border: 1px solid #ddd; border-radius: 6px;
+            background: white; cursor: pointer; font-size: 0.85rem;
+        }
+        .pagination button:hover { background: #f0f0f0; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination span { font-size: 0.85rem; color: #666; }
+
+        /* Detail Modal */
+        .detail-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15,23,42,0.6); z-index: 2000; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
+        .detail-overlay.active { display: flex; }
+        .detail-box {
+            background: #fff; border-radius: 16px; width: 94%; max-width: 700px;
+            max-height: 88vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            animation: detailIn 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes detailIn { from { opacity:0; transform:translateY(20px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .detail-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 28px; border-bottom: 2px solid #f0f2f5;
+            position: sticky; top: 0; background: white; z-index: 1; border-radius: 16px 16px 0 0;
+        }
+        .detail-header-left { display: flex; align-items: center; gap: 12px; }
+        .detail-header-icon {
+            width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #e67e22, #d35400);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem;
+        }
+        .detail-header h3 { font-size: 1.1rem; color: #1e293b; font-weight: 700; }
+        .detail-header-sub { font-size: 0.78rem; color: #94a3b8; font-weight: 400; }
+        .detail-close {
+            width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 10px;
+            cursor: pointer; font-size: 1.1rem; color: #64748b; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .detail-close:hover { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+        .detail-body { padding: 24px 28px; }
+
+        .dm-section {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+            margin-bottom: 16px; overflow: hidden;
+        }
+        .dm-section-head {
+            padding: 12px 18px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;
+            font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase;
+            letter-spacing: 0.6px; display: flex; align-items: center; gap: 8px;
+        }
+        .dm-section-head i { color: #6c63ff; font-size: 0.82rem; }
+
+        .dm-table { width: 100%; border-collapse: collapse; }
+        .dm-table tr { border-bottom: 1px solid #e2e8f0; }
+        .dm-table tr:last-child { border-bottom: none; }
+        .dm-table th {
+            text-align: left; padding: 10px 18px; width: 155px; font-size: 0.76rem;
+            font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;
+            background: #fff; vertical-align: top;
+        }
+        .dm-table td {
+            padding: 10px 18px; font-size: 0.88rem; color: #1e293b; word-break: break-word;
+        }
+
+        .dm-pill {
+            display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.72rem;
+            font-weight: 700; letter-spacing: 0.3px;
+        }
+        .dm-pill-green { background: #dcfce7; color: #166534; }
+        .dm-pill-orange { background: #fed7aa; color: #9a3412; }
+        .dm-pill-blue { background: #dbeafe; color: #1e40af; }
+        .dm-pill-gray { background: #f1f5f9; color: #475569; }
+
+        .detail-box::-webkit-scrollbar { width: 6px; }
+        .detail-box::-webkit-scrollbar-track { background: transparent; }
+        .detail-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .detail-box::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 8px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+        }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; }
+            .header-top { flex-direction: column; gap: 15px; align-items: flex-start; }
+            .header-left h1 { font-size: 1.4rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .card { padding: 20px 15px; }
+            .table-responsive table { font-size: 0.8rem; }
+            .table-responsive th, .table-responsive td { padding: 10px 8px; }
+            .filters-bar { flex-direction: column; }
+            .filters-bar input[type="text"] { min-width: auto; width: 100%; }
+            .filters-bar input[type="date"] { width: 100%; }
+            .detail-body { padding: 16px; }
+            .dm-table th { width: 110px; padding: 8px 12px; font-size: 0.72rem; }
+            .dm-table td { padding: 8px 12px; font-size: 0.82rem; }
+            .detail-header { padding: 16px 18px; }
+            .snippet-box { flex-direction: column; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .stat-card .value { font-size: 1.5rem; }
+            .stat-card { padding: 18px; }
+            .header-left h1 { font-size: 1.2rem; }
+            .dm-table th, .dm-table td { display: block; width: 100%; padding: 4px 14px; }
+            .dm-table th { padding-top: 10px; padding-bottom: 0; }
+            .dm-table td { padding-bottom: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+        <div class="detail-box">
+            <div class="detail-header">
+                <div class="detail-header-left">
+                    <div class="detail-header-icon"><i class="fas fa-magnet"></i></div>
+                    <div>
+                        <h3 id="detailName">Lead Details</h3>
+                        <div class="detail-header-sub" id="detailSub"></div>
+                    </div>
+                </div>
+                <button class="detail-close" onclick="closeDetail()" title="Close">&times;</button>
+            </div>
+            <div class="detail-body" id="detailBody">
+                <div style="text-align:center;padding:40px;color:#95a5a6;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left">
+                    <h1><i class="fas fa-magnet"></i> Checkout Leads</h1>
+                    <p>Customer details captured from BuyGoods checkout pages</p>
+                </div>
+            </div>
+            <div class="snippet-box">
+                <i class="fas fa-code" style="color:#95a5a6;"></i>
+                <code id="snippetCode">&lt;script src="https://shaver.trustednutraproduct.com/checkout-pixel.php"&gt;&lt;/script&gt;</code>
+                <button onclick="copySnippet()"><i class="fas fa-copy"></i> Copy Snippet</button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Leads</h3>
+                <div class="value" id="statTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Form Filled</h3>
+                <div class="value" id="statFilled" style="color:#1e40af;">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Purchase Attempted</h3>
+                <div class="value" id="statAttempted" style="color:#9a3412;">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Completed</h3>
+                <div class="value" id="statCompleted" style="color:#155724;">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Conversion Rate</h3>
+                <div class="value" id="statConversion">0%</div>
+            </div>
+        </div>
+
+        <!-- Leads List -->
+        <div class="card">
+            <h2><i class="fas fa-list"></i> Leads <span id="leadsCount" style="font-weight:400;color:#95a5a6;font-size:0.85rem;"></span></h2>
+            <div class="filters-bar">
+                <input type="text" id="searchInput" placeholder="Search by email, phone, or name..." onkeydown="if(event.key==='Enter')applyFilters()">
+                <select id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="started">Started</option>
+                    <option value="form_filled">Form Filled</option>
+                    <option value="purchase_attempted">Purchase Attempted</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <input type="date" id="dateFrom" title="From date">
+                <input type="date" id="dateTo" title="To date">
+                <button onclick="applyFilters()"><i class="fas fa-search"></i> Search</button>
+                <button class="btn-reset" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
+            </div>
+            <div class="table-responsive" id="leadsTableContainer">
+                <div class="empty-state">
+                    <i class="fas fa-magnet"></i>
+                    <p>No checkout leads yet. Add the snippet to BuyGoods checkout pages to start capturing.</p>
+                </div>
+            </div>
+            <div class="pagination" id="pagination" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=2.8.0"></script>
+    <script>
+        var currentPage = 1;
+        var perPage = 25;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadLeads(1);
+        });
+
+        function copySnippet() {
+            var text = '<script src="https://shaver.trustednutraproduct.com/checkout-pixel.php"><\/script>';
+            navigator.clipboard.writeText(text).then(function() {
+                var btn = document.querySelector('.snippet-box button');
+                var orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.style.background = '#27ae60';
+                setTimeout(function() { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
+            });
+        }
+
+        async function loadStats() {
+            var params = {};
+            var dateFrom = document.getElementById('dateFrom').value;
+            var dateTo = document.getElementById('dateTo').value;
+            if (dateFrom) params.date_from = dateFrom;
+            if (dateTo) params.date_to = dateTo;
+
+            var result = await apiRequest(API_URL, 'get_checkout_stats', params);
+            if (result.success) {
+                var s = result.stats;
+                document.getElementById('statTotal').textContent = formatNumber(s.total_leads);
+                document.getElementById('statFilled').textContent = formatNumber(s.form_filled);
+                document.getElementById('statAttempted').textContent = formatNumber(s.purchase_attempted);
+                document.getElementById('statCompleted').textContent = formatNumber(s.completed);
+                document.getElementById('statConversion').textContent = s.conversion_rate + '%';
+            }
+        }
+
+        function applyFilters() {
+            loadStats();
+            loadLeads(1);
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            applyFilters();
+        }
+
+        async function loadLeads(page) {
+            currentPage = page;
+
+            var params = {
+                page: page,
+                limit: perPage
+            };
+            var search = document.getElementById('searchInput').value.trim();
+            var status = document.getElementById('statusFilter').value;
+            var dateFrom = document.getElementById('dateFrom').value;
+            var dateTo = document.getElementById('dateTo').value;
+
+            if (search) params.search = search;
+            if (status) params.status = status;
+            if (dateFrom) params.date_from = dateFrom;
+            if (dateTo) params.date_to = dateTo;
+
+            var result = await apiRequest(API_URL, 'get_checkout_leads', params);
+
+            if (!result.success || !result.data || result.data.length === 0) {
+                document.getElementById('leadsTableContainer').innerHTML = '<div class="empty-state"><i class="fas fa-magnet"></i><p>No checkout leads found.' + (search || status ? ' Try different filters.' : '') + '</p></div>';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('leadsCount').textContent = '';
+                return;
+            }
+
+            document.getElementById('leadsCount').textContent = '(' + formatNumber(result.total) + ' total)';
+
+            var html = '<table><thead><tr>';
+            html += '<th>Date</th><th>Email</th><th>Phone</th><th>Name</th>';
+            html += '<th>Product</th><th>Aff ID</th><th>Payment</th><th>Country</th><th>Status</th>';
+            html += '</tr></thead><tbody>';
+
+            result.data.forEach(function(lead) {
+                var statusBadge = getStatusBadge(lead.status);
+                var date = lead.started_at ? formatTimeAgo(lead.started_at) : '-';
+                var paymentIcon = getPaymentIcon(lead.payment_method);
+
+                html += '<tr style="cursor:pointer;" onclick="viewLead(' + lead.id + ')">';
+                html += '<td title="' + escapeHtml(lead.started_at || '') + '">' + date + '</td>';
+                html += '<td>' + escapeHtml(lead.email || '-') + '</td>';
+                html += '<td>' + escapeHtml(lead.phone || '-') + '</td>';
+                html += '<td>' + escapeHtml(lead.full_name || '-') + '</td>';
+                html += '<td><strong>' + escapeHtml(lead.product_codename || '-') + '</strong></td>';
+                html += '<td>' + escapeHtml(lead.aff_id || '-') + '</td>';
+                html += '<td>' + paymentIcon + '</td>';
+                html += '<td>' + escapeHtml(lead.country || '-') + '</td>';
+                html += '<td>' + statusBadge + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('leadsTableContainer').innerHTML = html;
+
+            // Pagination
+            var totalPages = Math.ceil(result.total / perPage);
+            if (totalPages > 1) {
+                var pagHtml = '<button onclick="loadLeads(' + (page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + '>&laquo; Prev</button>';
+                pagHtml += '<span>Page ' + page + ' of ' + totalPages + '</span>';
+                pagHtml += '<button onclick="loadLeads(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + '>Next &raquo;</button>';
+                document.getElementById('pagination').innerHTML = pagHtml;
+                document.getElementById('pagination').style.display = 'flex';
+            } else {
+                document.getElementById('pagination').style.display = 'none';
+            }
+        }
+
+        function getStatusBadge(status) {
+            switch (status) {
+                case 'started': return '<span class="badge badge-gray">Started</span>';
+                case 'form_filled': return '<span class="badge badge-blue">Form Filled</span>';
+                case 'purchase_attempted': return '<span class="badge badge-orange">Purchase Attempted</span>';
+                case 'completed': return '<span class="badge badge-green">Completed</span>';
+                default: return '<span class="badge badge-gray">' + escapeHtml(status || 'Unknown') + '</span>';
+            }
+        }
+
+        function getPaymentIcon(method) {
+            switch (method) {
+                case 'credit_card': return '<i class="fas fa-credit-card" style="color:#3498db;" title="Credit Card"></i> Card';
+                case 'paypal': return '<i class="fab fa-paypal" style="color:#003087;" title="PayPal"></i> PayPal';
+                case 'apple_pay': return '<i class="fab fa-apple" style="color:#333;" title="Apple Pay"></i> Apple Pay';
+                default: return '-';
+            }
+        }
+
+        function viewLead(id) {
+            // Find the lead in current data or fetch it
+            var overlay = document.getElementById('detailOverlay');
+            overlay.classList.add('active');
+            document.getElementById('detailName').textContent = 'Lead Details';
+            document.getElementById('detailSub').textContent = 'Loading...';
+
+            // Fetch all leads to find this one (simpler than a separate endpoint)
+            apiRequest(API_URL, 'get_checkout_leads', { search: '', page: 1, limit: 100 }).then(function(result) {
+                if (!result.success) {
+                    document.getElementById('detailBody').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Failed to load lead details.</p></div>';
+                    return;
+                }
+                var lead = null;
+                for (var i = 0; i < result.data.length; i++) {
+                    if (parseInt(result.data[i].id) === id) { lead = result.data[i]; break; }
+                }
+                if (!lead) {
+                    document.getElementById('detailBody').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Lead not found.</p></div>';
+                    return;
+                }
+                renderLeadDetail(lead);
+            });
+        }
+
+        function renderLeadDetail(lead) {
+            document.getElementById('detailName').textContent = lead.full_name || lead.email || 'Unknown';
+            document.getElementById('detailSub').textContent = (lead.product_codename || 'Unknown Product') + ' | ' + getStatusText(lead.status);
+
+            var html = '';
+
+            // Customer Info
+            html += '<div class="dm-section">';
+            html += '<div class="dm-section-head"><i class="fas fa-user"></i> Customer Information</div>';
+            html += '<table class="dm-table">';
+            html += '<tr><th>Full Name</th><td>' + escapeHtml(lead.full_name || '-') + '</td></tr>';
+            html += '<tr><th>Email</th><td>' + (lead.email ? '<a href="mailto:' + escapeHtml(lead.email) + '">' + escapeHtml(lead.email) + '</a>' : '-') + '</td></tr>';
+            html += '<tr><th>Phone</th><td>' + escapeHtml(lead.phone || '-') + '</td></tr>';
+            html += '<tr><th>Address</th><td>' + escapeHtml(lead.address || '-') + '</td></tr>';
+            html += '<tr><th>City</th><td>' + escapeHtml(lead.city || '-') + '</td></tr>';
+            html += '<tr><th>State</th><td>' + escapeHtml(lead.state || '-') + '</td></tr>';
+            html += '<tr><th>Country</th><td>' + escapeHtml(lead.country || '-') + '</td></tr>';
+            html += '<tr><th>Zip</th><td>' + escapeHtml(lead.zip || '-') + '</td></tr>';
+            html += '</table></div>';
+
+            // Order Info
+            html += '<div class="dm-section">';
+            html += '<div class="dm-section-head"><i class="fas fa-shopping-cart"></i> Checkout Details</div>';
+            html += '<table class="dm-table">';
+            html += '<tr><th>Product</th><td><strong>' + escapeHtml(lead.product_codename || '-') + '</strong></td></tr>';
+            html += '<tr><th>Account ID</th><td>' + escapeHtml(lead.account_id || '-') + '</td></tr>';
+            html += '<tr><th>Affiliate ID</th><td>' + escapeHtml(lead.aff_id || '-') + '</td></tr>';
+            html += '<tr><th>Sub ID</th><td>' + escapeHtml(lead.sub_id || '-') + '</td></tr>';
+            html += '<tr><th>Payment Method</th><td>' + getPaymentIcon(lead.payment_method) + '</td></tr>';
+            html += '<tr><th>Session ID</th><td><span style="font-size:0.78rem;color:#95a5a6;">' + escapeHtml(lead.sessid2 || '-') + '</span></td></tr>';
+            html += '<tr><th>Status</th><td>' + getStatusBadge(lead.status) + '</td></tr>';
+            html += '</table></div>';
+
+            // Technical Info
+            html += '<div class="dm-section">';
+            html += '<div class="dm-section-head"><i class="fas fa-info-circle"></i> Technical Details</div>';
+            html += '<table class="dm-table">';
+            html += '<tr><th>IP Address</th><td>' + escapeHtml(lead.ip_address || '-') + '</td></tr>';
+            html += '<tr><th>Started At</th><td>' + escapeHtml(lead.started_at || '-') + '</td></tr>';
+            html += '<tr><th>Last Updated</th><td>' + escapeHtml(lead.last_updated || '-') + '</td></tr>';
+            if (lead.completed_at) {
+                html += '<tr><th>Completed At</th><td>' + escapeHtml(lead.completed_at) + '</td></tr>';
+            }
+            html += '<tr><th>Checkout URL</th><td><span style="font-size:0.78rem;word-break:break-all;">' + escapeHtml(lead.checkout_url || '-') + '</span></td></tr>';
+            html += '<tr><th>Referrer</th><td><span style="font-size:0.78rem;word-break:break-all;">' + escapeHtml(lead.referrer || '-') + '</span></td></tr>';
+            html += '</table></div>';
+
+            document.getElementById('detailBody').innerHTML = html;
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 'started': return 'Started filling form';
+                case 'form_filled': return 'Form filled';
+                case 'purchase_attempted': return 'Clicked Buy Now';
+                case 'completed': return 'Purchase completed';
+                default: return status || 'Unknown';
+            }
+        }
+
+        function closeDetail() {
+            document.getElementById('detailOverlay').classList.remove('active');
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeDetail();
+        });
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+    </script>
+</body>
+</html>

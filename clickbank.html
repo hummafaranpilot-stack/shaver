@@ -1,0 +1,2676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClickBank API Data - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header {
+            padding: 16px 20px 10px; position: relative;
+        }
+        .sidebar-header h2 {
+            font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle {
+            position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title {
+            padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s;
+        }
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s ease;
+            font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); border-left: none;
+        }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 24px; transition: margin-left 0.3s ease; }
+
+        /* Sidebar collapsed */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: #fff; padding: 22px 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: none;
+        }
+        .header-left h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 3px; font-weight: 700; }
+        .header-left h1 i { color: #6c63ff; }
+        .header-left p { color: #999; font-size: 0.85rem; }
+
+        /* Live indicator */
+        .live-dot {
+            display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+            background: #16a34a; margin-right: 6px; animation: livePulse 1.5s infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(22,163,106,0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(22,163,106,0); }
+        }
+        .live-paused .live-dot { background: #94a3b8; animation: none; }
+
+        /* Date preset buttons */
+        .date-presets { display: flex; gap: 4px; margin-left: 8px; }
+        .dp-btn {
+            padding: 4px 10px; font-size: 0.75rem; font-weight: 500;
+            border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;
+            background: #f8fafc; color: #64748b; transition: all 0.15s;
+        }
+        .dp-btn:hover { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+        .dp-btn.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+
+        /* Controls bar */
+        .controls-bar {
+            background: #fff; padding: 16px 24px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+            border: none;
+        }
+        .controls-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .controls-right { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .ctrl-input {
+            padding: 7px 12px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 0.85rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        .ctrl-input:focus { border-color: #6c63ff; outline: none; box-shadow: 0 0 0 3px rgba(108,99,255,0.1); }
+        .ctrl-btn {
+            padding: 7px 16px; border: none; border-radius: 10px; font-weight: 600;
+            cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .ctrl-btn-orange { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; }
+        .ctrl-btn-orange:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(108,99,255,0.3); }
+        .ctrl-btn-gray { background: #e2e8f0; color: #475569; }
+        .ctrl-btn-gray:hover { background: #cbd5e1; }
+        .ctrl-btn-red { background: #fee2e2; color: #dc2626; }
+        .ctrl-btn-red:hover { background: #fecaca; }
+        .ctrl-btn-green { background: #d1fae5; color: #059669; }
+        .ctrl-btn-green:hover { background: #a7f3d0; }
+
+        /* Quick Stats cards */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 20px;
+        }
+        .qs-card {
+            background: #fff; padding: 16px 18px; border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); text-align: center;
+            border-top: 3px solid #6c63ff; transition: transform 0.2s, box-shadow 0.2s;
+            border: none; border-top: 3px solid #6c63ff;
+        }
+        .qs-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+        .qs-card .qs-value { font-size: 1.6rem; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+        .qs-card .qs-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
+        .qs-card.qs-green { border-top-color: #16a34a; }
+        .qs-card.qs-red { border-top-color: #dc2626; }
+        .qs-card.qs-blue { border-top-color: #48c6ef; }
+        .qs-card.qs-purple { border-top-color: #8b5cf6; }
+        .qs-card.qs-yellow { border-top-color: #ca8a04; }
+
+        /* Section cards */
+        .section-card {
+            background: #fff; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px; overflow: hidden;
+            border: none;
+        }
+        .section-header {
+            padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eeeeff; cursor: pointer; user-select: none;
+            transition: background 0.2s;
+        }
+        .section-header:hover { background: #f5f5ff; }
+        .section-header h3 { font-size: 1rem; color: #1a1a2e; display: flex; align-items: center; gap: 8px; }
+        .section-header .section-count {
+            background: #f0f0ff; color: #7b7b8e; padding: 2px 10px; border-radius: 12px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .section-header .section-status {
+            font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;
+        }
+        .section-header .chevron { transition: transform 0.3s; font-size: 0.8rem; color: #94a3b8; }
+        .section-header.collapsed .chevron { transform: rotate(-90deg); }
+        .section-body { max-height: 600px; overflow-x: auto; overflow-y: auto; transition: max-height 0.3s ease; }
+        .section-body.collapsed { max-height: 0; overflow: hidden; }
+
+        /* Recycler-view rows */
+        .rv-row {
+            display: flex; align-items: center; padding: 12px 24px;
+            border-bottom: 1px solid #eeeeff; font-size: 0.85rem;
+            transition: background 0.15s;
+        }
+        .rv-row:hover { background: #f5f5ff; }
+        .rv-row:last-child { border-bottom: none; }
+        .rv-row.rv-new { animation: rvSlideIn 0.4s ease-out; background: #fffbeb; }
+        @keyframes rvSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .rv-cell { flex-shrink: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rv-mono { font-family: monospace; font-size: 0.8rem; }
+        .rv-bold { font-weight: 600; }
+        .rv-right { text-align: right; }
+
+        /* Status badges */
+        .rv-status {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+        }
+        .rv-status-completed { background: #d1fae5; color: #059669; }
+        .rv-status-refunded { background: #fee2e2; color: #dc2626; }
+        .rv-status-cgbk { background: #fef3c7; color: #92400e; }
+        .rv-status-active { background: #dbeafe; color: #2563eb; }
+        .rv-status-cancelled { background: #f1f5f9; color: #64748b; }
+        .rv-status-open { background: #e0e7ff; color: #4338ca; }
+        .rv-status-closed { background: #f1f5f9; color: #64748b; }
+        .rv-status-default { background: #f1f5f9; color: #475569; }
+
+        /* Table header row */
+        .rv-header {
+            display: flex; align-items: center; padding: 10px 24px;
+            background: #f0f0ff; border-bottom: 2px solid #e8e8f0;
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b;
+            position: sticky; top: 0; z-index: 1;
+        }
+        .rv-header .rv-cell { padding: 0 6px; }
+
+        /* Products table: full-width proportional columns with vertical dividers */
+        #productsBody .rv-header,
+        #productsBody .rv-row { padding-left: 0; padding-right: 0; }
+        #productsBody .rv-cell { border-right: 1px solid #e2e2f0; padding: 0 10px; }
+        #productsBody .rv-cell:last-child { border-right: none; }
+        #productsBody .rv-header .rv-cell { border-right: 1px solid #d0d0ea; }
+        #productsBody .rv-header .rv-cell:last-child { border-right: none; }
+
+        /* Shipping table: full-width with vertical dividers */
+        #shippingBody .rv-header,
+        #shippingBody .rv-row { padding-left: 0; padding-right: 0; }
+        #shippingBody .rv-cell { border-right: 1px solid #e2e2f0; padding: 0 10px; }
+        #shippingBody .rv-cell:last-child { border-right: none; }
+        #shippingBody .rv-header .rv-cell { border-right: 1px solid #d0d0ea; }
+        #shippingBody .rv-header .rv-cell:last-child { border-right: none; }
+
+        /* Analytics table: full-width with vertical dividers */
+        #analyticsBody .rv-header,
+        #analyticsBody .rv-row { padding-left: 0; padding-right: 0; }
+        #analyticsBody .rv-cell { border-right: 1px solid #e2e2f0; padding: 0 10px; }
+        #analyticsBody .rv-cell:last-child { border-right: none; }
+        #analyticsBody .rv-header .rv-cell { border-right: 1px solid #d0d0ea; }
+        #analyticsBody .rv-header .rv-cell:last-child { border-right: none; }
+
+        .btn-sm-action { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:2px 7px; cursor:pointer; color:#64748b; font-size:0.78rem; }
+        .btn-sm-action:hover { background:#e2e8f0; color:#1e293b; }
+
+        /* Empty state */
+        .rv-empty {
+            text-align: center; padding: 40px 20px; color: #94a3b8;
+        }
+        .rv-empty i { font-size: 2rem; display: block; margin-bottom: 10px; }
+
+        /* Loading shimmer */
+        .rv-loading { padding: 20px 24px; text-align: center; color: #94a3b8; }
+        .rv-loading i { margin-right: 6px; }
+
+        /* Refresh timer */
+        .refresh-timer {
+            font-size: 0.8rem; color: #94a3b8; font-variant-numeric: tabular-nums;
+        }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+        }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; flex-direction: column; gap: 15px; align-items: flex-start; }
+            .header-left h1 { font-size: 1.4rem; }
+            .ds-dropdown { width: 100%; max-width: 100%; }
+            .stats-row { grid-template-columns: repeat(3, 1fr); }
+            .controls-bar { flex-direction: column; align-items: stretch; }
+            .rv-cell { font-size: 0.78rem; }
+        }
+
+        /* Page Tab Nav */
+        /* Primary category tabs (ClickBank API groupings) */
+        .category-tabs {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            margin-bottom: 14px;
+        }
+        .category-tab {
+            padding: 16px 18px; border: 2px solid #e5e7eb; background: #fff;
+            border-radius: 14px; cursor: pointer; transition: all 0.2s;
+            font-family: 'Poppins', sans-serif; text-align: left;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .category-tab:hover { border-color: #c7c3ff; background: #fafaff; transform: translateY(-1px); }
+        .category-tab.active {
+            border-color: #6c63ff; background: linear-gradient(135deg, #6c63ff 0%, #8b5cf6 100%);
+            box-shadow: 0 6px 18px rgba(108,99,255,0.25);
+        }
+        .category-tab .cat-icon {
+            width: 42px; height: 42px; border-radius: 10px; background: #f0f0ff;
+            color: #6c63ff; display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0; transition: all 0.2s;
+        }
+        .category-tab.active .cat-icon { background: rgba(255,255,255,0.2); color: #fff; }
+        .category-tab .cat-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .category-tab .cat-title {
+            font-size: 0.88rem; font-weight: 700; color: #1a1a2e;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .category-tab .cat-sub { font-size: 0.72rem; color: #94a3b8; font-weight: 500; }
+        .category-tab.active .cat-title { color: #fff; }
+        .category-tab.active .cat-sub { color: rgba(255,255,255,0.85); }
+
+        @media (max-width: 800px) {
+            .category-tabs { grid-template-columns: 1fr; }
+        }
+
+        .page-tabs {
+            display: flex; gap: 0; background: #fff; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px; overflow: hidden;
+            overflow-x: auto; border: none;
+        }
+        .page-tabs.hidden { display: none; }
+        .page-tab {
+            padding: 12px 20px; border: none; background: none; cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; color: #b0b0c0;
+            border-bottom: 3px solid transparent; transition: all 0.2s;
+            white-space: nowrap; display: flex; align-items: center; gap: 6px;
+            font-family: 'Poppins', sans-serif;
+        }
+        .page-tab.hidden { display: none; }
+        .page-tab:hover { color: #7b7b8e; background: #f5f5ff; }
+        .page-tab.active { color: #6c63ff; border-bottom-color: #6c63ff; background: #f0f0ff; }
+        .page-tab .tab-count {
+            background: #f0f0ff; color: #7b7b8e; padding: 1px 7px; border-radius: 10px;
+            font-size: 0.7rem; font-weight: 600;
+        }
+        .page-tab.active .tab-count { background: #e0e0ff; color: #6c63ff; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── API Key Manager Bar ── */
+        .api-key-bar {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b; border-radius: 14px;
+            padding: 14px 18px; margin-bottom: 18px;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .api-key-bar .akb-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.88rem; font-weight: 700; color: #78350f;
+        }
+        .api-key-bar .akb-current {
+            font-family: 'Courier New', monospace; font-size: 0.78rem;
+            color: #78350f; background: rgba(255,255,255,0.6);
+            padding: 4px 10px; border-radius: 6px;
+        }
+        .api-key-bar input.akb-input {
+            flex: 1; min-width: 260px;
+            padding: 9px 12px; border: 1px solid #d97706; border-radius: 8px;
+            font-size: 0.85rem; font-family: 'Courier New', monospace;
+            background: #fff; color: #1a1a2e;
+        }
+        .api-key-bar input.akb-input:focus { outline: none; border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+        .api-key-bar button.akb-save {
+            padding: 9px 18px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 2px 6px rgba(22,163,74,0.3);
+        }
+        .api-key-bar button.akb-save:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(22,163,74,0.4); }
+        .api-key-bar button.akb-save:disabled { opacity: 0.6; cursor: wait; }
+        .api-key-bar .akb-msg { font-size: 0.78rem; font-weight: 600; flex-basis: 100%; }
+        .api-key-bar .akb-msg.ok { color: #15803d; }
+        .api-key-bar .akb-msg.err { color: #b91c1c; }
+
+        /* ── Product KPI Strip ── */
+        .prod-kpi-strip {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+            margin-bottom: 14px;
+        }
+        .prod-kpi {
+            background: #fff; border-radius: 12px; padding: 14px 16px;
+            border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .prod-kpi .pk-val { font-size: 1.45rem; font-weight: 700; color: #1a1a2e; line-height: 1.1; }
+        .prod-kpi .pk-lbl { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .prod-kpi.k-total { border-top: 3px solid #6c63ff; }
+        .prod-kpi.k-active { border-top: 3px solid #16a34a; }
+        .prod-kpi.k-approved { border-top: 3px solid #0ea5e9; }
+        .prod-kpi.k-recurring { border-top: 3px solid #8b5cf6; }
+        .prod-kpi.k-price { border-top: 3px solid #f59e0b; }
+        @media (max-width: 900px) { .prod-kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+
+        /* ── Product Filters Row ── */
+        .prod-filters {
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            background: #f8fafc; border-radius: 10px; padding: 10px 14px;
+            margin-bottom: 10px; border: 1px solid #e5e7eb;
+        }
+        .prod-filters input, .prod-filters select {
+            padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 7px;
+            font-size: 0.82rem; font-family: 'Poppins', sans-serif; background: #fff;
+        }
+        .prod-filters input[type="search"] { flex: 1; min-width: 180px; }
+        .prod-filters label { font-size: 0.82rem; color: #475569; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+        .prod-filters .pf-btn {
+            margin-left: auto; padding: 7px 14px; border: none; border-radius: 7px;
+            background: linear-gradient(135deg, #6c63ff 0%, #8b5cf6 100%);
+            color: #fff; font-weight: 600; font-size: 0.82rem; cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+        }
+        .prod-filters .pf-btn:hover { transform: translateY(-1px); }
+
+        /* ── Badges & Chips for Products ── */
+        .chip {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.3px; white-space: nowrap;
+        }
+        .chip-digital { background: #dbeafe; color: #1e40af; }
+        .chip-physical { background: #fef3c7; color: #92400e; }
+        .chip-recurring { background: #ede9fe; color: #6d28d9; }
+        .chip-dr { background: #ccfbf1; color: #0f766e; }
+        .chip-active { background: #dcfce7; color: #166534; }
+        .chip-inactive { background: #f1f5f9; color: #64748b; }
+        .chip-approved { background: #dcfce7; color: #166534; }
+        .chip-pending { background: #fef3c7; color: #92400e; }
+        .chip-disapproved { background: #fee2e2; color: #991b1b; }
+        .chip-required { background: #fed7aa; color: #9a3412; }
+
+        .prod-row-clickable { cursor: pointer; transition: background 0.15s; }
+        .prod-row-clickable:hover { background: #fafaff !important; }
+
+        /* ── Product Detail Modal ── */
+        .pd-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+            display: none; align-items: flex-start; justify-content: center;
+            z-index: 10000; padding: 40px 20px; overflow-y: auto;
+            backdrop-filter: blur(4px);
+        }
+        .pd-overlay.active { display: flex; }
+        .pd-box {
+            background: #fff; border-radius: 16px; width: 100%;
+            max-width: 820px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 90vh; display: flex; flex-direction: column;
+        }
+        .pd-header {
+            padding: 18px 24px; border-bottom: 1px solid #e5e7eb;
+            display: flex; align-items: center; justify-content: space-between;
+            background: linear-gradient(135deg, #6c63ff 0%, #8b5cf6 100%);
+            color: #fff; border-radius: 16px 16px 0 0;
+        }
+        .pd-header h2 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+        .pd-header .pd-close {
+            background: rgba(255,255,255,0.2); border: none; color: #fff;
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+            font-size: 1rem;
+        }
+        .pd-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+        .pd-section { margin-bottom: 20px; }
+        .pd-section h3 {
+            font-size: 0.82rem; font-weight: 700; color: #6c63ff;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+            padding-bottom: 6px; border-bottom: 2px solid #f0f0ff;
+        }
+        .pd-grid {
+            display: grid; grid-template-columns: 160px 1fr; gap: 8px 16px;
+            font-size: 0.85rem;
+        }
+        .pd-grid .pd-k { color: #64748b; font-weight: 600; }
+        .pd-grid .pd-v { color: #1a1a2e; word-break: break-word; }
+        .pd-grid .pd-v a { color: #6c63ff; text-decoration: none; }
+        .pd-grid .pd-v a:hover { text-decoration: underline; }
+        .pd-copy {
+            background: #f0f0ff; border: none; padding: 2px 8px; border-radius: 5px;
+            font-size: 0.72rem; color: #6c63ff; cursor: pointer; margin-left: 8px;
+            font-family: 'Poppins', sans-serif; font-weight: 600;
+        }
+        .pd-copy:hover { background: #e0e0ff; }
+        .pd-footer {
+            padding: 14px 24px; border-top: 1px solid #e5e7eb;
+            display: flex; gap: 10px; justify-content: flex-end;
+            background: #f8fafc; border-radius: 0 0 16px 16px;
+        }
+        .pd-btn {
+            padding: 9px 18px; border: none; border-radius: 8px; font-weight: 700;
+            font-size: 0.82rem; cursor: pointer; font-family: 'Poppins', sans-serif;
+        }
+        .pd-btn-secondary { background: #e5e7eb; color: #475569; }
+        .pd-btn-danger { background: #dc2626; color: #fff; }
+        .pd-btn-danger:hover { background: #b91c1c; }
+        .pd-btn-primary { background: linear-gradient(135deg, #6c63ff 0%, #8b5cf6 100%); color: #fff; }
+
+        /* ── Create Product Form ── */
+        .cp-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .cp-form .cp-full { grid-column: 1 / -1; }
+        .cp-form label { font-size: 0.78rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; }
+        .cp-form input, .cp-form select, .cp-form textarea {
+            width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 7px;
+            font-size: 0.85rem; font-family: 'Poppins', sans-serif; background: #fff;
+        }
+        .cp-form textarea { min-height: 60px; resize: vertical; }
+        .cp-form .cp-req::after { content: ' *'; color: #dc2626; }
+        .cp-form .cp-flags { display: flex; gap: 14px; flex-wrap: wrap; }
+        .cp-form .cp-flags label { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0; cursor: pointer; }
+
+        @media (max-width: 480px) {
+            .header-left h1 { font-size: 1.2rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .page-tab { padding: 10px 14px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item active"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-shopping-cart"></i> ClickBank API Data</h1>
+                <p id="liveIndicator"><span class="live-dot"></span> Live auto-refresh every <span id="refreshIntervalLabel">30</span>s &mdash; <span class="refresh-timer" id="nextRefreshTimer">30s</span></p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button class="ctrl-btn ctrl-btn-green" id="btnToggleLive" onclick="toggleLive()"><i class="fas fa-pause"></i> Pause</button>
+                <button class="ctrl-btn ctrl-btn-orange" onclick="fetchAllNow()"><i class="fas fa-sync-alt"></i> Refresh Now</button>
+            </div>
+        </div>
+
+        <!-- API Key Manager — update CB_API_KEY at runtime. Does NOT delete any existing data. -->
+        <div class="api-key-bar">
+            <div class="akb-label"><i class="fas fa-key"></i> ClickBank API Key</div>
+            <span class="akb-current" id="akbCurrent" title="Currently active API key (masked)">loading...</span>
+            <input type="text" class="akb-input" id="akbInput" placeholder="API-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
+            <button class="akb-save" id="akbSave" onclick="saveCbApiKey()"><i class="fas fa-save"></i> Save</button>
+            <div class="akb-msg" id="akbMsg"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-bar">
+            <div class="controls-left">
+                <label style="font-size:0.85rem; font-weight:600; color:#475569;">Date Range:</label>
+                <input type="date" id="cbDateFrom" class="ctrl-input" onchange="document.querySelectorAll('.dp-btn').forEach(function(b){b.classList.remove('active');})">
+                <span style="color:#94a3b8; font-size:0.85rem;">to</span>
+                <input type="date" id="cbDateTo" class="ctrl-input" onchange="document.querySelectorAll('.dp-btn').forEach(function(b){b.classList.remove('active');})">
+                <div class="date-presets" id="datePresets">
+                    <button class="dp-btn" onclick="setDatePreset('today')">Today</button>
+                    <button class="dp-btn" onclick="setDatePreset('yesterday')">Yesterday</button>
+                    <button class="dp-btn" onclick="setDatePreset('7d')">Last 7 days</button>
+                    <button class="dp-btn active" onclick="setDatePreset('30d')">Last 30 days</button>
+                    <button class="dp-btn" onclick="setDatePreset('all')">All time</button>
+                </div>
+            </div>
+            <div class="controls-right">
+                <label style="font-size:0.85rem; color:#64748b;">Interval:</label>
+                <select id="refreshInterval" class="ctrl-input" onchange="changeInterval()">
+                    <option value="10">10s</option>
+                    <option value="30" selected>30s</option>
+                    <option value="60">1 min</option>
+                    <option value="120">2 min</option>
+                    <option value="300">5 min</option>
+                </select>
+                <span id="lastFetchTime" style="font-size:0.8rem; color:#94a3b8;"></span>
+            </div>
+        </div>
+
+        <!-- Primary Category Tabs: ClickBank official API groupings -->
+        <div class="category-tabs" id="categoryTabs">
+            <button class="category-tab active" onclick="switchCategory('analytics-api')" data-category="analytics-api">
+                <div class="cat-icon"><i class="fas fa-chart-bar"></i></div>
+                <div class="cat-text">
+                    <div class="cat-title">Analytics</div>
+                    <div class="cat-sub">Daily sales &amp; stats</div>
+                </div>
+            </button>
+            <button class="category-tab" onclick="switchCategory('shipping-api')" data-category="shipping-api">
+                <div class="cat-icon"><i class="fas fa-truck"></i></div>
+                <div class="cat-text">
+                    <div class="cat-title">Shipping Details</div>
+                    <div class="cat-sub">Physical goods orders</div>
+                </div>
+            </button>
+            <button class="category-tab" onclick="switchCategory('products-api')" data-category="products-api">
+                <div class="cat-icon"><i class="fas fa-box"></i></div>
+                <div class="cat-text">
+                    <div class="cat-title">Products API</div>
+                    <div class="cat-sub">Catalog &amp; SKUs</div>
+                </div>
+            </button>
+            <button class="category-tab" onclick="switchCategory('orders-ticket-api')" data-category="orders-ticket-api">
+                <div class="cat-icon"><i class="fas fa-receipt"></i></div>
+                <div class="cat-text">
+                    <div class="cat-title">Orders Ticket API Read</div>
+                    <div class="cat-sub">Orders, refunds, tickets</div>
+                </div>
+            </button>
+            <button class="category-tab" onclick="switchCategory('subscription-api')" data-category="subscription-api">
+                <div class="cat-icon"><i class="fas fa-sync"></i></div>
+                <div class="cat-text">
+                    <div class="cat-title">Subscription Modification</div>
+                    <div class="cat-sub">Recurring billing</div>
+                </div>
+            </button>
+        </div>
+
+        <!-- Secondary (sub-category) tabs — filtered by active category -->
+        <div class="page-tabs" id="pageTabs">
+            <button class="page-tab" onclick="switchTab('analytics')" data-tab="analytics" data-category="analytics-api">
+                <i class="fas fa-chart-bar"></i> Analytics <span class="tab-count" id="tabCountAnalytics">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('orders')" data-tab="orders" data-category="orders-ticket-api">
+                <i class="fas fa-receipt"></i> Orders <span class="tab-count" id="tabCountOrders">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('refunds')" data-tab="refunds" data-category="orders-ticket-api">
+                <i class="fas fa-undo"></i> Refunds <span class="tab-count" id="tabCountRefunds">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('chargebacks')" data-tab="chargebacks" data-category="orders-ticket-api">
+                <i class="fas fa-exclamation-triangle"></i> Chargebacks <span class="tab-count" id="tabCountChargebacks">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('subscriptions')" data-tab="subscriptions" data-category="subscription-api">
+                <i class="fas fa-sync"></i> Subscriptions <span class="tab-count" id="tabCountSubscriptions">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('tickets')" data-tab="tickets" data-category="orders-ticket-api">
+                <i class="fas fa-ticket-alt"></i> Tickets <span class="tab-count" id="tabCountTickets">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('shipping')" data-tab="shipping" data-category="shipping-api">
+                <i class="fas fa-truck"></i> Shipping <span class="tab-count" id="tabCountShipping">0</span>
+            </button>
+            <button class="page-tab" onclick="switchTab('products')" data-tab="products" data-category="products-api">
+                <i class="fas fa-box"></i> Products <span class="tab-count" id="tabCountProducts">0</span>
+            </button>
+        </div>
+
+        <!-- TAB: Analytics -->
+        <div class="tab-panel" id="panelAnalytics">
+
+        <!-- Analytics KPI Strip -->
+        <div class="prod-kpi-strip">
+            <div class="prod-kpi k-total"><div class="pk-val" id="anGross">--</div><div class="pk-lbl">Gross Sales</div></div>
+            <div class="prod-kpi k-active"><div class="pk-val" id="anRefunds">--</div><div class="pk-lbl">Refunds</div></div>
+            <div class="prod-kpi k-approved"><div class="pk-val" id="anChargebacks">--</div><div class="pk-lbl">Chargebacks</div></div>
+            <div class="prod-kpi k-recurring"><div class="pk-val" id="anNet">--</div><div class="pk-lbl">Net Revenue</div></div>
+            <div class="prod-kpi k-price"><div class="pk-val" id="anCount">--</div><div class="pk-lbl">Transactions</div></div>
+        </div>
+
+        <!-- Analytics table -->
+        <div class="content-section" id="sectionAnalytics">
+            <div class="section-header" onclick="toggleSection('analytics')">
+                <div class="section-title">
+                    <i class="fas fa-chart-bar" style="color:#8b5cf6;"></i>
+                    <span>Daily Breakdown</span>
+                    <span class="badge" id="analyticsCount">0</span>
+                </div>
+                <div class="section-status">
+                    <span id="analyticsStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="analyticsBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:12%;">Date</div>
+                    <div class="rv-cell" style="width:12%;">Account</div>
+                    <div class="rv-cell rv-right" style="width:12%;">Gross Sales</div>
+                    <div class="rv-cell rv-right" style="width:10%;">Refunds</div>
+                    <div class="rv-cell rv-right" style="width:10%;">Chargebacks</div>
+                    <div class="rv-cell rv-right" style="width:12%;">Net Revenue</div>
+                    <div class="rv-cell rv-right" style="width:9%;">Txn Count</div>
+                    <div class="rv-cell rv-right" style="width:9%;">Refund Cnt</div>
+                    <div class="rv-cell rv-right" style="width:9%;">CB Cnt</div>
+                    <div class="rv-cell rv-right" style="width:5%;">Curr</div>
+                </div>
+                <div id="analyticsRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+
+        </div><!-- /panelAnalytics -->
+
+        <!-- TAB: Orders -->
+        <div class="tab-panel" id="panelOrders">
+        <!-- Orders Section -->
+        <div class="section-card" id="sectionOrders">
+            <div class="section-header" onclick="toggleSection('orders')">
+                <h3><i class="fas fa-receipt" style="color:#16a34a;"></i> Orders <span class="section-count" id="ordersCount">0</span></h3>
+                <div class="section-status">
+                    <span id="ordersStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="ordersBody">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:8px 12px;background:#f8fafc;border-radius:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#475569;cursor:pointer;user-select:none;">
+                        <input type="checkbox" id="hideTestOrders" onchange="applyOrderFilter()" checked style="accent-color:#ef4444;width:15px;height:15px;">
+                        <span>Hide Test Orders</span>
+                    </label>
+                    <span id="orderFilterInfo" style="font-size:0.78rem;color:#94a3b8;"></span>
+                </div>
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:120px;">Receipt</div>
+                    <div class="rv-cell" style="width:150px;">Date</div>
+                    <div class="rv-cell" style="width:100px;">Affiliate</div>
+                    <div class="rv-cell" style="width:100px;">Vendor</div>
+                    <div class="rv-cell" style="flex:1; min-width:120px;">Product</div>
+                    <div class="rv-cell rv-right" style="width:90px;">Amount</div>
+                    <div class="rv-cell rv-right" style="width:90px;">Vendor Net</div>
+                    <div class="rv-cell" style="width:100px;">Status</div>
+                    <div class="rv-cell" style="width:140px;">Customer</div>
+                    <div class="rv-cell" style="width:160px;">Email</div>
+                    <div class="rv-cell" style="width:60px;">Country</div>
+                    <div class="rv-cell" style="width:80px;">Pay Method</div>
+                </div>
+                <div id="ordersRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+        </div><!-- /panelOrders -->
+
+        <!-- TAB: Refunds -->
+        <div class="tab-panel" id="panelRefunds">
+        <!-- Refunds Section -->
+        <div class="section-card" id="sectionRefunds">
+            <div class="section-header" onclick="toggleSection('refunds')">
+                <h3><i class="fas fa-undo" style="color:#dc2626;"></i> Refunds <span class="section-count" id="refundsCount">0</span></h3>
+                <div class="section-status">
+                    <span id="refundsStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="refundsBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:120px;">Receipt</div>
+                    <div class="rv-cell" style="width:150px;">Date</div>
+                    <div class="rv-cell" style="width:100px;">Affiliate</div>
+                    <div class="rv-cell" style="flex:1; min-width:120px;">Product</div>
+                    <div class="rv-cell rv-right" style="width:90px;">Amount</div>
+                    <div class="rv-cell" style="width:140px;">Customer</div>
+                    <div class="rv-cell" style="width:160px;">Email</div>
+                    <div class="rv-cell" style="width:60px;">Country</div>
+                </div>
+                <div id="refundsRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+        </div><!-- /panelRefunds -->
+
+        <!-- TAB: Chargebacks -->
+        <div class="tab-panel" id="panelChargebacks">
+        <!-- Chargebacks Section -->
+        <div class="section-card" id="sectionChargebacks">
+            <div class="section-header" onclick="toggleSection('chargebacks')">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#ca8a04;"></i> Chargebacks <span class="section-count" id="chargebacksCount">0</span></h3>
+                <div class="section-status">
+                    <span id="chargebacksStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="chargebacksBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:120px;">Receipt</div>
+                    <div class="rv-cell" style="width:150px;">Date</div>
+                    <div class="rv-cell" style="width:100px;">Affiliate</div>
+                    <div class="rv-cell" style="flex:1; min-width:120px;">Product</div>
+                    <div class="rv-cell rv-right" style="width:90px;">Amount</div>
+                    <div class="rv-cell" style="width:140px;">Customer</div>
+                    <div class="rv-cell" style="width:160px;">Email</div>
+                    <div class="rv-cell" style="width:60px;">Country</div>
+                </div>
+                <div id="chargebacksRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+        </div><!-- /panelChargebacks -->
+
+        <!-- TAB: Subscriptions -->
+        <div class="tab-panel" id="panelSubscriptions">
+        <!-- Subscriptions Section -->
+        <div class="section-card" id="sectionSubscriptions">
+            <div class="section-header" onclick="toggleSection('subscriptions')">
+                <h3><i class="fas fa-sync" style="color:#3498db;"></i> Subscriptions <span class="section-count" id="subscriptionsCount">0</span></h3>
+                <div class="section-status">
+                    <span id="subscriptionsStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="subscriptionsBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:120px;">Receipt</div>
+                    <div class="rv-cell" style="width:150px;">Date</div>
+                    <div class="rv-cell" style="width:100px;">Affiliate</div>
+                    <div class="rv-cell" style="flex:1; min-width:120px;">Product</div>
+                    <div class="rv-cell rv-right" style="width:90px;">Amount</div>
+                    <div class="rv-cell" style="width:100px;">Status</div>
+                    <div class="rv-cell" style="width:100px;">Next Payment</div>
+                    <div class="rv-cell" style="width:140px;">Customer</div>
+                    <div class="rv-cell" style="width:60px;">Country</div>
+                </div>
+                <div id="subscriptionsRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+        </div><!-- /panelSubscriptions -->
+
+        <!-- TAB: Tickets -->
+        <div class="tab-panel" id="panelTickets">
+        <!-- Tickets Section -->
+        <div class="section-card" id="sectionTickets">
+            <div class="section-header" onclick="toggleSection('tickets')">
+                <h3><i class="fas fa-ticket-alt" style="color:#8b5cf6;"></i> Tickets <span class="section-count" id="ticketsCount">0</span></h3>
+                <div class="section-status">
+                    <span id="ticketsStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="ticketsBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:100px;">Ticket ID</div>
+                    <div class="rv-cell" style="width:120px;">Receipt</div>
+                    <div class="rv-cell" style="width:150px;">Date</div>
+                    <div class="rv-cell" style="width:120px;">Type</div>
+                    <div class="rv-cell" style="width:100px;">Status</div>
+                    <div class="rv-cell" style="flex:1; min-width:180px;">Email</div>
+                    <div class="rv-cell" style="width:100px;">Affiliate</div>
+                </div>
+                <div id="ticketsRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+        </div><!-- /panelTickets -->
+
+        <!-- TAB: Shipping -->
+        <div class="tab-panel" id="panelShipping">
+
+        <!-- Shipping KPI strip -->
+        <div class="prod-kpi-strip" id="shKpiStrip">
+            <div class="prod-kpi k-total"><div class="pk-val" id="shTotal">--</div><div class="pk-lbl">Total Orders</div></div>
+            <div class="prod-kpi k-active"><div class="pk-val" id="shNotShipped">--</div><div class="pk-lbl">Not Shipped</div></div>
+            <div class="prod-kpi k-approved"><div class="pk-val" id="shShipped">--</div><div class="pk-lbl">Shipped</div></div>
+        </div>
+
+        <!-- Shipping filters -->
+        <div class="prod-filters" style="margin-bottom:8px;">
+            <label>Status:
+                <select id="sfStatus" onchange="fetchAllNow()">
+                    <option value="all">All</option>
+                    <option value="notshipped">Not Shipped</option>
+                    <option value="shipped">Shipped</option>
+                </select>
+            </label>
+            <span id="sfInfo" style="font-size:0.78rem; color:#64748b; margin-left:auto;"></span>
+        </div>
+
+        <!-- Shipping table -->
+        <div class="content-section" id="sectionShipping">
+            <div class="section-header" onclick="toggleSection('shipping')">
+                <div class="section-title">
+                    <i class="fas fa-truck" style="color:#0ea5e9;"></i>
+                    <span>Shipping Orders</span>
+                    <span class="badge" id="shippingCount">0</span>
+                </div>
+                <div class="section-status">
+                    <span id="shippingStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="shippingBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:9%;">Receipt</div>
+                    <div class="rv-cell" style="width:11%;">Date</div>
+                    <div class="rv-cell" style="width:12%;">Customer</div>
+                    <div class="rv-cell" style="width:18%;">Ship To</div>
+                    <div class="rv-cell" style="width:12%;">Product</div>
+                    <div class="rv-cell rv-right" style="width:5%;">Qty</div>
+                    <div class="rv-cell" style="width:10%;">Method</div>
+                    <div class="rv-cell rv-right" style="width:9%;">Amount</div>
+                    <div class="rv-cell" style="width:8%;">Status</div>
+                    <div class="rv-cell" style="width:6%;">Action</div>
+                </div>
+                <div id="shippingRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+
+        </div><!-- /panelShipping -->
+
+        <!-- TAB: Products -->
+        <div class="tab-panel" id="panelProducts">
+
+        <!-- Products KPI Strip -->
+        <div class="prod-kpi-strip">
+            <div class="prod-kpi k-total"><div class="pk-val" id="pkTotal">--</div><div class="pk-lbl">Total Products</div></div>
+            <div class="prod-kpi k-active"><div class="pk-val" id="pkActive">--</div><div class="pk-lbl">Active</div></div>
+            <div class="prod-kpi k-approved"><div class="pk-val" id="pkApproved">--</div><div class="pk-lbl">Approved</div></div>
+            <div class="prod-kpi k-recurring"><div class="pk-val" id="pkRecurring">--</div><div class="pk-lbl">Recurring</div></div>
+            <div class="prod-kpi k-price"><div class="pk-val" id="pkAvgPrice">--</div><div class="pk-lbl">Avg Price (USD)</div></div>
+        </div>
+
+        <!-- Products Filters Row -->
+        <div class="prod-filters">
+            <input type="search" id="pfSearch" placeholder="Search by SKU or title..." oninput="applyProductFilter()">
+            <label>Nickname:
+                <select id="pfNickname" onchange="applyProductFilter()">
+                    <option value="">All sites</option>
+                </select>
+            </label>
+            <label>Type:
+                <select id="pfType" onchange="fetchAllNow()">
+                    <option value="">All</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="RECURRING">Recurring</option>
+                </select>
+            </label>
+            <label><input type="checkbox" id="pfActiveOnly" onchange="applyProductFilter()" checked> Active only</label>
+            <span id="pfSitesInfo" style="font-size:0.78rem; color:#64748b; margin-left:auto;"></span>
+            <button class="pf-btn" onclick="openCreateProductModal()"><i class="fas fa-plus"></i> New Product</button>
+        </div>
+
+        <!-- Products Section -->
+        <div class="section-card" id="sectionProducts">
+            <div class="section-header" onclick="toggleSection('products')">
+                <h3><i class="fas fa-box" style="color:#e67e22;"></i> Products <span class="section-count" id="productsCount">0</span></h3>
+                <div class="section-status">
+                    <span id="productsStatus"></span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            </div>
+            <div class="section-body" id="productsBody">
+                <div class="rv-header">
+                    <div class="rv-cell" style="width:9%;">Nickname</div>
+                    <div class="rv-cell" style="width:8%;">SKU</div>
+                    <div class="rv-cell" style="width:18%;">Title</div>
+                    <div class="rv-cell" style="width:9%;">Type</div>
+                    <div class="rv-cell rv-right" style="width:8%;">Price</div>
+                    <div class="rv-cell rv-right" style="width:8%;">Price (USD)</div>
+                    <div class="rv-cell rv-right" style="width:9%;">Commission</div>
+                    <div class="rv-cell" style="width:7%;">Category</div>
+                    <div class="rv-cell" style="width:9%;">Recurring</div>
+                    <div class="rv-cell" style="width:7%;">Status</div>
+                    <div class="rv-cell" style="width:8%;">Approval</div>
+                </div>
+                <div id="productsRows"><div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+            </div>
+        </div>
+        </div><!-- /panelProducts -->
+
+        <!-- Product Detail Modal -->
+        <div class="pd-overlay" id="pdOverlay" onclick="if(event.target===this)closeProductDetail()">
+            <div class="pd-box">
+                <div class="pd-header">
+                    <h2 id="pdTitle"><i class="fas fa-box"></i> Product Detail</h2>
+                    <button class="pd-close" onclick="closeProductDetail()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="pd-body" id="pdBody">
+                    <div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading product detail...</div>
+                </div>
+                <div class="pd-footer" id="pdFooter">
+                    <button class="pd-btn pd-btn-secondary" onclick="closeProductDetail()">Close</button>
+                    <button class="pd-btn pd-btn-danger" id="pdDeleteBtn" onclick="confirmDeleteProduct()" style="display:none;"><i class="fas fa-trash"></i> Delete Product</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Product Modal -->
+        <div class="pd-overlay" id="cpOverlay" onclick="if(event.target===this)closeCreateProductModal()">
+            <div class="pd-box">
+                <div class="pd-header">
+                    <h2><i class="fas fa-plus-circle"></i> Create New Product</h2>
+                    <button class="pd-close" onclick="closeCreateProductModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="pd-body">
+                    <div style="background:#fef3c7; border-left:3px solid #f59e0b; padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:0.82rem; color:#78350f;">
+                        <i class="fas fa-exclamation-triangle"></i> Creating a product submits it to ClickBank for approval. This action cannot be easily undone — double-check all fields.
+                    </div>
+                    <form id="cpForm" class="cp-form" onsubmit="event.preventDefault();submitCreateProduct();">
+                        <div class="cp-full">
+                            <label class="cp-req">Nickname (Site)</label>
+                            <select name="site" id="cpNickname" required></select>
+                        </div>
+                        <div>
+                            <label class="cp-req">SKU</label>
+                            <input type="text" name="sku" id="cpSku" required pattern="[A-Za-z0-9_]{1,20}" maxlength="20" placeholder="e.g. PRODUCT1">
+                        </div>
+                        <div>
+                            <label class="cp-req">Title</label>
+                            <input type="text" name="title" id="cpTitle" required maxlength="100">
+                        </div>
+                        <div>
+                            <label class="cp-req">Price</label>
+                            <input type="number" name="price" id="cpPrice" required step="0.01" min="0" placeholder="49.95">
+                        </div>
+                        <div>
+                            <label class="cp-req">Currency</label>
+                            <select name="currency" id="cpCurrency" required>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="CAD">CAD</option>
+                                <option value="AUD">AUD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="cp-req">Language</label>
+                            <select name="language" id="cpLanguage" required>
+                                <option value="EN">English</option>
+                                <option value="ES">Spanish</option>
+                                <option value="FR">French</option>
+                                <option value="DE">German</option>
+                                <option value="IT">Italian</option>
+                                <option value="PT">Portuguese</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Category (digital only)</label>
+                            <select name="categories" id="cpCategories">
+                                <option value="">—</option>
+                                <option value="EBOOK">eBook</option>
+                                <option value="SOFTWARE">Software</option>
+                                <option value="GAMES">Games</option>
+                                <option value="AUDIO">Audio</option>
+                                <option value="VIDEO">Video</option>
+                                <option value="MEMBER_SITE">Member Site</option>
+                            </select>
+                        </div>
+                        <div class="cp-full">
+                            <label class="cp-req">Pitch Page URL</label>
+                            <input type="url" name="pitchPage" id="cpPitchPage" required placeholder="https://...">
+                        </div>
+                        <div class="cp-full">
+                            <label class="cp-req">Thank You Page URL</label>
+                            <input type="url" name="thankYouPage" id="cpThankYouPage" required placeholder="https://...">
+                        </div>
+                        <div class="cp-full">
+                            <label>Description</label>
+                            <textarea name="description" id="cpDescription" maxlength="500"></textarea>
+                        </div>
+                        <div class="cp-full">
+                            <label>Product Components (at least one)</label>
+                            <div class="cp-flags">
+                                <label><input type="checkbox" id="cpDigital" checked> Digital</label>
+                                <label><input type="checkbox" id="cpPhysical"> Physical</label>
+                                <label><input type="checkbox" id="cpDigitalRec" onchange="toggleRecurringFields()"> Digital Recurring</label>
+                                <label><input type="checkbox" id="cpPhysicalRec" onchange="toggleRecurringFields()"> Physical Recurring</label>
+                            </div>
+                        </div>
+                        <div id="cpRecurringFields" style="display:none; grid-column:1 / -1;">
+                            <div class="cp-form" style="background:#f8fafc; padding:12px; border-radius:8px; margin-top:6px;">
+                                <div>
+                                    <label class="cp-req">Frequency</label>
+                                    <select id="cpFrequency">
+                                        <option value="WEEKLY">Weekly</option>
+                                        <option value="BI_WEEKLY">Bi-Weekly</option>
+                                        <option value="MONTHLY" selected>Monthly</option>
+                                        <option value="QUARTERLY">Quarterly</option>
+                                        <option value="YEARLY">Yearly</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="cp-req">Duration (rebills)</label>
+                                    <input type="number" id="cpDuration" min="0" value="0" placeholder="0 = unlimited">
+                                </div>
+                                <div>
+                                    <label class="cp-req">Rebill Price</label>
+                                    <input type="number" id="cpRebillPrice" step="0.01" min="0">
+                                </div>
+                                <div>
+                                    <label class="cp-req">Rebill Commission %</label>
+                                    <input type="number" id="cpRebillCommission" min="1" max="75" value="50">
+                                </div>
+                                <div>
+                                    <label>Trial Period (0 or 3-31 days)</label>
+                                    <input type="number" id="cpTrialPeriod" min="0" max="31" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label>Purchase Commission %</label>
+                            <input type="number" id="cpPurchaseCommission" min="1" max="75" placeholder="default">
+                        </div>
+                    </form>
+                </div>
+                <div class="pd-footer">
+                    <button class="pd-btn pd-btn-secondary" onclick="closeCreateProductModal()">Cancel</button>
+                    <button class="pd-btn pd-btn-primary" id="cpSubmitBtn" onclick="submitCreateProduct()"><i class="fas fa-save"></i> Create Product</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/config.js?v=2.7.0"></script>
+    <script>
+        // escapeHtml utility (not in config.js)
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ============================================================
+        // STATE
+        // ============================================================
+        var cbLive = true;
+        var cbInterval = 30;
+        var cbTimer = null;
+        var cbCountdown = 30;
+        var cbCountdownTimer = null;
+        var cbFetching = false;
+        var cbPrevData = {}; // for diff detection
+
+        // ============================================================
+        // DATE PRESETS
+        // ============================================================
+        function setDatePreset(preset) {
+            var today = new Date();
+            var from, to = today;
+            if (preset === 'today') {
+                from = new Date(today);
+            } else if (preset === 'yesterday') {
+                from = new Date(today); from.setDate(from.getDate() - 1);
+                to   = new Date(from);
+            } else if (preset === '7d') {
+                from = new Date(today); from.setDate(from.getDate() - 6);
+            } else if (preset === '30d') {
+                from = new Date(today); from.setDate(from.getDate() - 29);
+            } else { // all time
+                from = new Date('2010-01-01');
+            }
+            document.getElementById('cbDateFrom').value = from.toISOString().split('T')[0];
+            document.getElementById('cbDateTo').value   = to.toISOString().split('T')[0];
+            // Highlight active preset button
+            document.querySelectorAll('.dp-btn').forEach(function(b) { b.classList.remove('active'); });
+            var map = { today: 0, yesterday: 1, '7d': 2, '30d': 3, all: 4 };
+            var btns = document.querySelectorAll('.dp-btn');
+            if (btns[map[preset]]) btns[map[preset]].classList.add('active');
+            fetchAllNow();
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        (function init() {
+            var today = new Date();
+            var weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 30);
+            document.getElementById('cbDateTo').value = today.toISOString().split('T')[0];
+            document.getElementById('cbDateFrom').value = weekAgo.toISOString().split('T')[0];
+
+            // Initialize primary category (Analytics) — hides sub-tab row
+            // for single-sub-tab categories and activates the default sub-tab.
+            switchCategory('analytics-api');
+
+            // Start auto-fetch
+            fetchAllNow();
+            startLiveTimer();
+        })();
+
+        // ============================================================
+        // LIVE TIMER
+        // ============================================================
+        function startLiveTimer() {
+            clearInterval(cbTimer);
+            clearInterval(cbCountdownTimer);
+            cbCountdown = cbInterval;
+            updateCountdownDisplay();
+
+            cbCountdownTimer = setInterval(function() {
+                if (!cbLive) return;
+                cbCountdown--;
+                if (cbCountdown <= 0) cbCountdown = 0;
+                updateCountdownDisplay();
+            }, 1000);
+
+            cbTimer = setInterval(function() {
+                if (!cbLive) return;
+                cbCountdown = cbInterval;
+                fetchAllNow();
+            }, cbInterval * 1000);
+        }
+
+        function updateCountdownDisplay() {
+            document.getElementById('nextRefreshTimer').textContent = cbCountdown + 's';
+        }
+
+        function toggleLive() {
+            cbLive = !cbLive;
+            var btn = document.getElementById('btnToggleLive');
+            var indicator = document.getElementById('liveIndicator');
+            if (cbLive) {
+                btn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+                btn.className = 'ctrl-btn ctrl-btn-green';
+                indicator.classList.remove('live-paused');
+                cbCountdown = cbInterval;
+                startLiveTimer();
+            } else {
+                btn.innerHTML = '<i class="fas fa-play"></i> Resume';
+                btn.className = 'ctrl-btn ctrl-btn-red';
+                indicator.classList.add('live-paused');
+            }
+        }
+
+        function changeInterval() {
+            cbInterval = parseInt(document.getElementById('refreshInterval').value) || 30;
+            document.getElementById('refreshIntervalLabel').textContent = cbInterval;
+            if (cbLive) startLiveTimer();
+        }
+
+        // ============================================================
+        // FETCH ALL SECTIONS
+        // ============================================================
+        async function fetchAllNow() {
+            if (cbFetching) return;
+            cbFetching = true;
+            cbCountdown = cbInterval;
+
+            var startDate = document.getElementById('cbDateFrom').value;
+            var endDate = document.getElementById('cbDateTo').value;
+            if (!startDate || !endDate) { cbFetching = false; return; }
+
+            document.getElementById('lastFetchTime').textContent = 'Fetching...';
+
+            // For Products, forward the selected type filter to the backend so CB does server-side filtering
+            var productTypeFilter = '';
+            var pfTypeEl = document.getElementById('pfType');
+            if (pfTypeEl) productTypeFilter = pfTypeEl.value || '';
+
+            // Fire all requests in parallel
+            var fetches = [
+                fetchSection('analytics', startDate, endDate),
+                fetchSection('orders', startDate, endDate),
+                fetchSection('refunds', startDate, endDate),
+                fetchSection('chargebacks', startDate, endDate),
+                fetchSection('subscriptions', startDate, endDate),
+                fetchSection('tickets', startDate, endDate),
+                fetchSection('products', startDate, endDate, { product_type: productTypeFilter }),
+                fetchSection('shipping', startDate, endDate, { status: (document.getElementById('sfStatus') ? document.getElementById('sfStatus').value : 'all') })
+            ];
+
+            await Promise.all(fetches);
+
+            var now = new Date();
+            document.getElementById('lastFetchTime').textContent = 'Last: ' + now.toLocaleTimeString();
+            cbFetching = false;
+        }
+
+        // ============================================================
+        // FETCH SINGLE SECTION
+        // ============================================================
+        async function fetchSection(type, startDate, endDate, extraParams) {
+            var statusEl = document.getElementById(type + 'Status');
+            if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#e67e22;"></i>';
+
+            var params = {
+                type: type,
+                start_date: startDate,
+                end_date: endDate
+            };
+            if (extraParams && typeof extraParams === 'object') {
+                for (var k in extraParams) { if (extraParams.hasOwnProperty(k)) params[k] = extraParams[k]; }
+            }
+            var result = await apiRequest(API_URL, 'cb_api_data', params);
+
+            if (!result.success) {
+                var errMsg = result.error || 'Error';
+                var errDetail = result.response ? ' — ' + String(result.response).substring(0, 150) : '';
+                var errRaw = result.raw ? '\nRaw: ' + String(result.raw).substring(0, 300) : '';
+                if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626; font-size:0.75rem;" title="' + escapeHtml(errMsg + errDetail + errRaw) + '"><i class="fas fa-exclamation-circle"></i> ' + escapeHtml(errMsg) + '</span>';
+                // Show error in section body too
+                var rowsEl = document.getElementById(type + 'Rows');
+                if (rowsEl) rowsEl.innerHTML = '<div class="rv-empty" style="color:#dc2626;"><i class="fas fa-exclamation-triangle"></i><br>' + escapeHtml(errMsg) + (errDetail ? '<br><small style="color:#94a3b8;">' + escapeHtml(errDetail) + '</small>' : '') + (errRaw ? '<br><small style="color:#64748b; word-break:break-all;">' + escapeHtml(errRaw) + '</small>' : '') + '</div>';
+                return;
+            }
+
+            // Show success tick + optional "N sites" info for multi-nickname types
+            var siteChip = '';
+            if (result.nicknames && result.nicknames.length > 0) {
+                var errCount = Object.keys(result.errors || {}).length;
+                siteChip = ' <small style="color:' + (errCount > 0 ? '#b45309' : '#64748b') + '; font-weight:400;">'
+                    + result.nicknames.length + ' site' + (result.nicknames.length > 1 ? 's' : '')
+                    + (errCount > 0 ? ' · ' + errCount + ' ⚠' : '') + '</small>';
+            }
+            if (statusEl) statusEl.innerHTML = '<span style="color:#16a34a;"><i class="fas fa-check-circle"></i></span>' + siteChip;
+
+            console.log('[CB ' + type + ']', JSON.stringify(result.data).substring(0, 500));
+            // Pass full result envelope for multi-nickname types so metadata is available;
+            // renderSection unwraps result.data internally for order/ticket types.
+            var multiNickTypes = ['analytics', 'products', 'orders', 'refunds', 'chargebacks', 'tickets', 'shipping'];
+            renderSection(type, multiNickTypes.indexOf(type) !== -1 ? result : result.data);
+        }
+
+        // ============================================================
+        // RENDER SECTIONS (Recycler View)
+        // ============================================================
+        // Keep a copy of last-fetched orders so applyOrderFilter() can re-render
+        // without triggering a full network refresh.
+        var cbLastOrders = [];
+
+        function renderSection(type, data) {
+            // For multi-nickname types fetchSection passes the full result envelope.
+            // Unwrap .data for extractors that expect the raw CB payload.
+            var payload = (data && data.data !== undefined) ? data.data : data;
+            var rows;
+            switch (type) {
+                case 'analytics': rows = extractAnalytics(payload); renderAnalyticsRows(rows, data); break;
+                case 'orders': rows = extractOrders(payload); cbLastOrders = rows; renderOrderRows('ordersRows', rows, 'ordersCount'); break;
+                case 'refunds': rows = extractOrders(payload); renderOrderRows('refundsRows', rows, 'refundsCount'); break;
+                case 'chargebacks': rows = extractOrders(payload); renderOrderRows('chargebacksRows', rows, 'chargebacksCount'); break;
+                case 'subscriptions': rows = extractSubscriptions(data); renderSubscriptionRows(rows); break;
+                case 'tickets': rows = extractTickets(payload); renderTicketRows(rows); break;
+                case 'shipping': rows = extractShipping(payload); renderShippingRows(rows); break;
+                case 'products':
+                    // `data` here is the full result envelope (see fetchSection callsite).
+                    rows = extractProducts(data && data.data ? data.data : data);
+                    renderProductRows(rows, data);
+                    break;
+            }
+        }
+
+        // ---- DATA EXTRACTORS ----
+
+        function extractOrders(data) {
+            var orders = [];
+            if (!data) return orders;
+            if (data.orderData) {
+                orders = Array.isArray(data.orderData) ? data.orderData : [data.orderData];
+            } else if (Array.isArray(data)) {
+                orders = data;
+            } else if (data.orderList && data.orderList.orderData) {
+                orders = Array.isArray(data.orderList.orderData) ? data.orderList.orderData : [data.orderList.orderData];
+            }
+            return orders;
+        }
+
+        function extractSubscriptions(data) {
+            if (!data) return [];
+            // Analytics subscription/details returns { totalCount, data: [...] }
+            if (data.data && Array.isArray(data.data)) return data.data;
+            if (data.subscriptionDetailResult && data.subscriptionDetailResult.data)
+                return Array.isArray(data.subscriptionDetailResult.data) ? data.subscriptionDetailResult.data : [data.subscriptionDetailResult.data];
+            if (data.subscriptionData) return Array.isArray(data.subscriptionData) ? data.subscriptionData : [data.subscriptionData];
+            if (Array.isArray(data)) return data;
+            return extractOrders(data);
+        }
+
+        function extractTickets(data) {
+            if (!data) return [];
+            if (data.ticketData) return Array.isArray(data.ticketData) ? data.ticketData : [data.ticketData];
+            if (data.ticketList && data.ticketList.ticketData)
+                return Array.isArray(data.ticketList.ticketData) ? data.ticketList.ticketData : [data.ticketList.ticketData];
+            if (Array.isArray(data)) return data;
+            return [];
+        }
+
+        function extractShipping(data) {
+            if (!data) return [];
+            var keys = ['orderShipData', 'shipData', 'orderData'];
+            for (var i = 0; i < keys.length; i++) {
+                if (data[keys[i]]) {
+                    var d = data[keys[i]];
+                    return Array.isArray(d) ? d : [d];
+                }
+            }
+            return Array.isArray(data) ? data : [];
+        }
+
+        function extractAnalytics(data) {
+            if (!data) return [];
+            if (data.analyticsData) {
+                var d = data.analyticsData;
+                return Array.isArray(d) ? d : [d];
+            }
+            // legacy fallback
+            if (data.quickStatsList && data.quickStatsList.quickStatsData) {
+                var d2 = data.quickStatsList.quickStatsData;
+                return Array.isArray(d2) ? d2 : [d2];
+            }
+            if (data.quickStatsData) {
+                var d3 = data.quickStatsData;
+                return Array.isArray(d3) ? d3 : [d3];
+            }
+            if (Array.isArray(data)) return data;
+            return [];
+        }
+
+        function renderAnalyticsRows(rows, envelope) {
+            var container = document.getElementById('analyticsRows');
+            var countEl   = document.getElementById('analyticsCount');
+            if (!rows || rows.length === 0) {
+                container.innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> No analytics data for this period</div>';
+                countEl.textContent = '0';
+                updateTabCount('analytics', 0);
+                ['anGross','anRefunds','anChargebacks','anNet','anCount'].forEach(function(id) {
+                    document.getElementById(id).textContent = '--';
+                });
+                return;
+            }
+            if (rows.length > 0) console.log('[Analytics row0]', JSON.stringify(rows[0]).substring(0, 400));
+            // Compute KPI totals
+            var totGross = 0, totRefunds = 0, totCB = 0, totCount = 0;
+            rows.forEach(function(r) {
+                totGross   += parseFloat(r.gross        || r.grossSales   || r.totalSales  || 0);
+                totRefunds += parseFloat(r.refunds      || r.totalRefunds || r.refundTotal || 0);
+                totCB      += parseFloat(r.chargebacks  || r.totalChargebacks || r.cbTotal || 0);
+                totCount   += parseInt(r.count          || r.salesCount   || r.transactions|| 0, 10);
+            });
+            var totNet = totGross - totRefunds - totCB;
+            document.getElementById('anGross').textContent      = '$' + totGross.toFixed(2);
+            document.getElementById('anRefunds').textContent    = '$' + totRefunds.toFixed(2);
+            document.getElementById('anChargebacks').textContent= '$' + totCB.toFixed(2);
+            document.getElementById('anNet').textContent        = '$' + totNet.toFixed(2);
+            document.getElementById('anCount').textContent      = totCount;
+
+            // Nickname colour palette (same as products table)
+            var _nickPaletteAn = [
+                {bg:'#e0e7ff',fg:'#3730a3'},{bg:'#d1fae5',fg:'#065f46'},{bg:'#fef3c7',fg:'#92400e'},
+                {bg:'#fce7f3',fg:'#9d174d'},{bg:'#dbeafe',fg:'#1e40af'},{bg:'#f3e8ff',fg:'#6b21a8'},
+                {bg:'#ffedd5',fg:'#9a3412'},{bg:'#ecfccb',fg:'#3f6212'},{bg:'#e0f2fe',fg:'#075985'}
+            ];
+            var _nickColorMapAn = {}, _nickColorIdxAn = 0;
+            function nickColorAn(nick) {
+                if (!_nickColorMapAn[nick]) {
+                    _nickColorMapAn[nick] = _nickPaletteAn[_nickColorIdxAn % _nickPaletteAn.length];
+                    _nickColorIdxAn++;
+                }
+                return _nickColorMapAn[nick];
+            }
+
+            var html = '';
+            rows.forEach(function(r) {
+                var date      = esc(r.date || '-');
+                var nick      = r.vendor || r._nickname || r.account || '-';
+                var nc        = nickColorAn(nick);
+                var gross     = parseFloat(r.gross        || r.grossSales   || r.totalSales  || 0);
+                var refunds   = parseFloat(r.refunds      || r.totalRefunds || r.refundTotal || 0);
+                var cb        = parseFloat(r.chargebacks  || r.totalChargebacks || r.cbTotal || 0);
+                var net       = parseFloat(r.net)  || (gross - refunds - cb);
+                var count     = parseInt(r.count          || r.salesCount   || r.transactions|| 0, 10);
+                var refCnt    = parseInt(r.refCount       || r.refundCount  || 0, 10);
+                var cbCnt     = parseInt(r.cbCount        || r.chargebackCount || 0, 10);
+                var curr      = r.currency || r.currencyCode || 'USD';
+
+                html += '<div class="rv-row">';
+                html += '<div class="rv-cell" style="width:12%;">' + date + '</div>';
+                html += '<div class="rv-cell" style="width:12%;"><span class="chip" style="background:' + nc.bg + ';color:' + nc.fg + ';font-weight:600;">' + esc(nick) + '</span></div>';
+                html += '<div class="rv-cell rv-right rv-bold" style="width:12%;">$' + gross.toFixed(2) + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:10%; color:#dc2626;">$' + refunds.toFixed(2) + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:10%; color:#b45309;">$' + cb.toFixed(2) + '</div>';
+                html += '<div class="rv-cell rv-right rv-bold" style="width:12%; color:' + (net >= 0 ? '#16a34a' : '#dc2626') + ';">$' + net.toFixed(2) + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:9%;">' + count + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:9%; color:#dc2626;">' + refCnt + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:9%; color:#b45309;">' + cbCnt + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:5%; font-size:0.72rem; color:#64748b;">' + esc(curr) + '</div>';
+                html += '</div>';
+            });
+            container.innerHTML = html;
+            countEl.textContent = rows.length;
+            updateTabCount('analytics', rows.length);
+        }
+
+        function renderShippingRows(rows) {
+            var container = document.getElementById('shippingRows');
+            var countEl   = document.getElementById('shippingCount');
+            if (!rows || rows.length === 0) {
+                container.innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> No shipping orders found</div>';
+                countEl.textContent = '0';
+                updateTabCount('shipping', 0);
+                document.getElementById('shTotal').textContent = '0';
+                document.getElementById('shNotShipped').textContent = '0';
+                document.getElementById('shShipped').textContent = '0';
+                return;
+            }
+            var totalShipped = 0, totalNot = 0;
+            // Filter out test orders (isTestTransaction = "true" or true)
+            rows = rows.filter(function(r) {
+                return r.isTestTransaction !== true && r.isTestTransaction !== 'true';
+            });
+
+            var html = '';
+            rows.forEach(function(r) {
+                var receipt   = r.receipt || r.receiptId || '-';
+                // CB /shipping2/list uses transactionTime (confirmed from live response)
+                var date      = fmtDate(r.transactionTime || r.date || r.orderTime);
+
+                // CB flat fields: fullName at root, or firstName+lastName
+                var custName  = r.fullName || ((r.firstName || '') + ' ' + (r.lastName || '')).trim() || '-';
+
+                // Address — CB uses `state` (not province), all flat at row root
+                var addr = [
+                    r.address1,
+                    r.city,
+                    r.state || r.province,
+                    r.country || r.countryCode
+                ].filter(Boolean).join(', ');
+
+                // lineItemShipData is a plain object for single-item orders (not array)
+                var lineItems = r.lineItemShipData || r.lineItemData || r.lineItems || [];
+                if (!Array.isArray(lineItems)) lineItems = lineItems ? [lineItems] : [];
+                if (lineItems.length === 0) lineItems = [{}];
+                var li = lineItems[0] || {};
+
+                var product   = li.productTitle || li.itemTitle || li.sku || li.itemNo || r.sku || '-';
+                var qty       = li.quantity || li.qty || r.quantity || 1;
+                var method    = li.shippingMethod || r.shippingMethod || '-';
+                var amount    = li.customerAmount || r.totalOrderAmount || r.amount || li.amount || '';
+                var amountStr = amount ? ('$' + parseFloat(amount).toFixed(2)) : '-';
+
+                // Status: li.shippingStatus or r.shippingStatus ("notshipped"/"shipped")
+                var statusVal = String(li.shippingStatus || r.shippingStatus || li.status || r.status || '').toLowerCase();
+                var isShipped = statusVal === 'shipped';
+
+                if (isShipped) totalShipped++; else totalNot++;
+
+                var statusChip = isShipped
+                    ? '<span class="chip chip-active" style="font-size:0.72rem;">Shipped</span>'
+                    : '<span class="chip chip-pending" style="font-size:0.72rem;">Not Shipped</span>';
+
+                html += '<div class="rv-row">';
+                html += '<div class="rv-cell rv-mono rv-bold" style="width:9%;">' + esc(receipt) + '</div>';
+                html += '<div class="rv-cell" style="width:11%; font-size:0.78rem;">' + esc(date) + '</div>';
+                html += '<div class="rv-cell" style="width:12%;" title="' + esc(custName) + '">' + esc(custName) + '</div>';
+                html += '<div class="rv-cell" style="width:18%; font-size:0.75rem;" title="' + esc(addr) + '">' + esc(addr) + '</div>';
+                html += '<div class="rv-cell rv-mono" style="width:12%;">' + esc(product) + '</div>';
+                html += '<div class="rv-cell rv-right" style="width:5%;">' + esc(String(qty)) + '</div>';
+                html += '<div class="rv-cell" style="width:10%; font-size:0.75rem;">' + esc(method) + '</div>';
+                html += '<div class="rv-cell rv-right rv-bold" style="width:9%;">' + esc(amountStr) + '</div>';
+                html += '<div class="rv-cell" style="width:8%;">' + statusChip + '</div>';
+                html += '<div class="rv-cell" style="width:6%;"><button class="btn-sm-action" onclick="viewShipNotice(\'' + esc(receipt).replace(/'/g, "\\'") + '\')" title="Ship notice"><i class="fas fa-paper-plane"></i></button></div>';
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+            countEl.textContent = rows.length;
+            updateTabCount('shipping', rows.length);
+            document.getElementById('shTotal').textContent = rows.length;
+            document.getElementById('shNotShipped').textContent = totalNot;
+            document.getElementById('shShipped').textContent = totalShipped;
+        }
+
+        function viewShipNotice(receipt) {
+            // Placeholder for future ship-notice modal
+            alert('Ship notice for: ' + receipt);
+        }
+
+        // ---- PRODUCTS: extract + normalize against real CB Products API fields ----
+        // CB returns XML by default; our backend converts via SimpleXML→JSON.
+        // Fields per official docs (https://support.clickbank.com/en/articles/10535408):
+        //   sku (XML attribute → may land as @attributes.sku or merged), id, status (ACTIVE/INACTIVE),
+        //   digital, physical, digitalRecurring, physicalRecurring (booleans),
+        //   site, language, title, description, created, updated,
+        //   approval_status { status, ticket_id }, commission { purchase, rebill },
+        //   pricings.pricing { @currency, standard.price.{ native_price, usd, usd_with_fees },
+        //                      recurring.{ price, frequency, duration, trial_days } },
+        //   categories.category[], thank_you_pages, pitch_pages,
+        //   sale_refund_days_limit, rebill_refund_days_limit.
+        function extractProducts(data) {
+            if (!data) return [];
+            var raw;
+            // CB real format: {"products":{"product":[...]}} (confirmed 2026-04-09)
+            if (data.products && data.products.product) raw = data.products.product;
+            else if (data.productList && data.productList.product) raw = data.productList.product;
+            else if (data.product) raw = data.product;
+            else if (Array.isArray(data)) raw = data;
+            // CB single-product endpoint returns the product object directly
+            else if (data.sku || data['@sku'] || (data.site && data.status)) raw = data;
+            else return [];
+            var arr = Array.isArray(raw) ? raw : [raw];
+            return arr.map(normalizeProduct);
+        }
+
+        // Pull values tolerating SimpleXML→JSON shapes ({@attributes}, nested objects, single-child→object vs array).
+        function _v(o, path, fallback) {
+            if (o === null || o === undefined) return fallback;
+            var parts = path.split('.');
+            var cur = o;
+            for (var i = 0; i < parts.length; i++) {
+                if (cur === null || cur === undefined) return fallback;
+                if (typeof cur !== 'object') return fallback;
+                cur = cur[parts[i]];
+            }
+            return (cur === undefined || cur === null || cur === '') ? fallback : cur;
+        }
+        function _bool(v) {
+            if (v === true || v === 'true' || v === 1 || v === '1') return true;
+            return false;
+        }
+        function _num(v) {
+            if (v === null || v === undefined || v === '') return 0;
+            var n = parseFloat(v);
+            return isNaN(n) ? 0 : n;
+        }
+        function _asArray(v) {
+            if (v === null || v === undefined) return [];
+            return Array.isArray(v) ? v : [v];
+        }
+
+        function normalizeProduct(p) {
+            if (!p || typeof p !== 'object') return null;
+            // CB's JSON API wraps list items in a single-key envelope.
+            // Observed: {"product":{...}} and {"0":{...}}.
+            // _nickname may also be present alongside the wrapper key — exclude it
+            // from the key count so the unwrap still triggers correctly.
+            var _realKeys = Object.keys(p).filter(function(k) { return k !== '_nickname'; });
+            if (_realKeys.length === 1) {
+                var _k = _realKeys[0];
+                if ((_k === 'product' || !isNaN(Number(_k))) && p[_k] && typeof p[_k] === 'object') {
+                    var _saved = p._nickname;
+                    p = p[_k];
+                    if (_saved && !p._nickname) p._nickname = _saved;
+                }
+            }
+            // SKU: CB native JSON uses "@sku" (attribute notation), SimpleXML→JSON uses "@attributes.sku"
+            var sku = _v(p, '@attributes.sku') || p['@sku'] || p.sku || p.SKU || '';
+            // ID + top-level flags
+            var id      = _v(p, 'id', '');
+            var status  = String(_v(p, 'status', 'INACTIVE')).toUpperCase();
+            var digital = _bool(p.digital);
+            var physical = _bool(p.physical);
+            var digitalRec = _bool(p.digitalRecurring);
+            var physicalRec = _bool(p.physicalRecurring);
+            var title = _v(p, 'title', '');
+            var description = _v(p, 'description', '');
+            // Backend tags each product with _nickname = the cb_vendor site it came from.
+            // Fall back to p.site (returned by CB single-detail endpoint) so the detail
+            // modal also renders a site chip correctly.
+            var nickname = _v(p, '_nickname', '') || _v(p, 'site', '');
+            var site = _v(p, 'site', '') || nickname;
+            var language = _v(p, 'language', '');
+            var created = _v(p, 'created', '');
+            var updated = _v(p, 'updated', '');
+
+            // Approval status (nested)
+            var apStatus = String(_v(p, 'approval_status.status', '') || _v(p, 'approvalStatus.status', '')).toUpperCase();
+
+            // Commission (nested)
+            var commPurchase = _num(_v(p, 'commission.purchase', 0));
+            var commRebill   = _num(_v(p, 'commission.rebill', 0));
+            var noRebillComm = _bool(_v(p, 'commission.no_rebill_commission'));
+
+            // Pricing — CB nests under pricings.pricing (may be object or array)
+            // Currency is an XML attribute on <pricing>
+            var pricings = _v(p, 'pricings.pricing') || _v(p, 'pricings') || _v(p, 'pricing');
+            var pricingArr = _asArray(pricings);
+            var firstPricing = pricingArr[0] || {};
+            var currency = _v(firstPricing, '@attributes.currency') || firstPricing.currency || _v(p, 'pricings.pricing.@attributes.currency') || 'USD';
+
+            var nativePrice = _num(_v(firstPricing, 'standard.price.native_price'));
+            var usdPrice    = _num(_v(firstPricing, 'standard.price.usd'));
+            var usdWithFees = _num(_v(firstPricing, 'standard.price.usd_with_fees'));
+
+            var recurringPrice = _num(_v(firstPricing, 'recurring.price.native_price') || _v(firstPricing, 'recurring.price'));
+            var recurringFreq  = String(_v(firstPricing, 'recurring.frequency', '') || '').toUpperCase();
+            var recurringDur   = parseInt(_v(firstPricing, 'recurring.duration', 0)) || 0;
+            var recurringTrial = parseInt(_v(firstPricing, 'recurring.trial_days', 0)) || 0;
+
+            // Categories (array or single)
+            var catsRaw = _v(p, 'categories.category') || _v(p, 'categories');
+            var categories = _asArray(catsRaw).map(function(c) {
+                return (typeof c === 'string') ? c : (c && c._) ? c._ : '';
+            }).filter(Boolean);
+
+            // Refund windows
+            var saleRefundDays   = parseInt(_v(p, 'sale_refund_days_limit', 0)) || 0;
+            var rebillRefundDays = parseInt(_v(p, 'rebill_refund_days_limit', 0)) || 0;
+
+            // Pitch / thank you pages
+            var pitchDesktop   = _v(p, 'pitch_pages.desktop', '');
+            var pitchMobile    = _v(p, 'pitch_pages.mobile', '');
+            var thankYouDesktop= _v(p, 'thank_you_pages.desktop', '');
+            var thankYouMobile = _v(p, 'thank_you_pages.mobile', '');
+
+            // Derived helpers
+            var isRecurring = digitalRec || physicalRec;
+            var typeLabel;
+            if (digitalRec) typeLabel = 'Digital Recurring';
+            else if (physicalRec) typeLabel = 'Physical Recurring';
+            else if (physical) typeLabel = 'Physical';
+            else typeLabel = 'Digital';
+
+            return {
+                _raw: p,
+                sku: String(sku || '-'),
+                id: id,
+                title: String(title || '-'),
+                description: String(description || ''),
+                status: status,
+                active: status === 'ACTIVE',
+                digital: digital, physical: physical,
+                digitalRecurring: digitalRec, physicalRecurring: physicalRec,
+                isRecurring: isRecurring,
+                typeLabel: typeLabel,
+                nickname: String(nickname || ''),
+                site: site,
+                language: language,
+                created: created, updated: updated,
+                approvalStatus: apStatus,
+                commissionPurchase: commPurchase,
+                commissionRebill: commRebill,
+                noRebillCommission: noRebillComm,
+                currency: currency,
+                nativePrice: nativePrice,
+                usdPrice: usdPrice,
+                usdWithFees: usdWithFees,
+                recurringPrice: recurringPrice,
+                recurringFrequency: recurringFreq,
+                recurringDuration: recurringDur,
+                recurringTrialDays: recurringTrial,
+                categories: categories,
+                saleRefundDays: saleRefundDays,
+                rebillRefundDays: rebillRefundDays,
+                pitchPageDesktop: pitchDesktop,
+                pitchPageMobile: pitchMobile,
+                thankYouDesktop: thankYouDesktop,
+                thankYouMobile: thankYouMobile
+            };
+        }
+
+        // ---- ROW RENDERERS ----
+
+        function fmtShortDate(d) {
+            if (!d || d === '-') return '-';
+            try {
+                var dt = new Date(d);
+                if (isNaN(dt.getTime())) return esc(d);
+                return dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+            } catch(e) { return esc(d); }
+        }
+
+        function formatNum(n) {
+            if (n === null || n === undefined) return '0';
+            return Number(n).toLocaleString();
+        }
+
+        // Safely extract a string from a value that may be an object
+        function safeStr(val, fallback) {
+            if (!val) return fallback || '-';
+            if (typeof val === 'string') return val;
+            if (typeof val === 'number') return String(val);
+            // CB API sometimes wraps strings in objects like {value: "...", ...}
+            if (typeof val === 'object') {
+                if (val.value) return String(val.value);
+                if (val.fullName) return safeStr(val.fullName);
+                if (val.email) return safeStr(val.email);
+                // Try common key patterns
+                var keys = Object.keys(val);
+                if (keys.length === 1) return safeStr(val[keys[0]]);
+                return fallback || '-';
+            }
+            return String(val);
+        }
+
+        function renderOrderRows(containerId, orders, countId) {
+            var container = document.getElementById(containerId);
+            var countEl = document.getElementById(countId);
+
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> No data found</div>';
+                if (countEl) countEl.textContent = '0';
+                return;
+            }
+
+            // Check if test orders should be hidden (only for orders tab)
+            var hideTest = false;
+            var hideTestEl = document.getElementById('hideTestOrders');
+            if (hideTestEl && containerId === 'ordersRows') hideTest = hideTestEl.checked;
+
+            // Build new receipt set for diff
+            var prevReceipts = cbPrevData[containerId] || {};
+            var newReceipts = {};
+
+            var html = '';
+            var rowCount = 0;
+            var totalCount = 0;
+            var hiddenCount = 0;
+
+            orders.forEach(function(o) {
+                var lineItems = o.lineItemData || o.lineItems || [];
+                if (!Array.isArray(lineItems)) lineItems = lineItems.lineItemData ? (Array.isArray(lineItems.lineItemData) ? lineItems.lineItemData : [lineItems.lineItemData]) : [lineItems];
+                if (lineItems.length === 0) lineItems = [{}]; // Still render order row
+
+                // Detect test order: txnType starts with TEST_ or role is TEST
+                var txnType = safeStr(o.txnType || o.transactionType, '').toUpperCase();
+                var isTestOrder = txnType.indexOf('TEST') !== -1 || safeStr(o.role, '').toUpperCase() === 'TEST';
+
+                lineItems.forEach(function(li) {
+                    totalCount++;
+                    var liStatus = safeStr(li.status, '').toUpperCase();
+                    var isTestLine = isTestOrder || liStatus.indexOf('TEST') !== -1;
+
+                    if (hideTest && isTestLine) {
+                        hiddenCount++;
+                        return;
+                    }
+
+                    rowCount++;
+                    var receipt = safeStr(o.receipt, '-');
+                    newReceipts[receipt + '_' + safeStr(li.itemNo, '')] = true;
+                    var isNew = !prevReceipts[receipt + '_' + safeStr(li.itemNo, '')];
+
+                    var billing = (o.customer && o.customer.billing) ? o.customer.billing : {};
+                    var shipping = (o.customer && o.customer.shipping) ? o.customer.shipping : {};
+                    var name = safeStr(billing.fullName) !== '-' ? safeStr(billing.fullName) : (safeStr(shipping.fullName) !== '-' ? safeStr(shipping.fullName) : safeStr(o.fullName, '-'));
+                    var email = safeStr(billing.email) !== '-' ? safeStr(billing.email) : safeStr(o.email, '-');
+                    var country = safeStr(billing.country) !== '-' ? safeStr(billing.country) : (safeStr(shipping.country) !== '-' ? safeStr(shipping.country) : safeStr(o.country, '-'));
+                    var payMethod = safeStr(li.paymentMethod) !== '-' ? safeStr(li.paymentMethod) : safeStr(o.paymentMethod, '-');
+                    var vendor = safeStr(o.vendor) !== '-' ? safeStr(o.vendor) : safeStr(o.vendorNickname, '-');
+                    var affiliate = safeStr(o.affiliate) !== '-' ? safeStr(o.affiliate) : safeStr(o.affi, '-');
+                    var displayStatus = safeStr(li.status) !== '-' ? safeStr(li.status) : safeStr(o.txnType, '-');
+
+                    html += '<div class="rv-row' + (isNew ? ' rv-new' : '') + '">';
+                    html += '<div class="rv-cell rv-mono" style="width:120px;">' + esc(receipt) + '</div>';
+                    html += '<div class="rv-cell" style="width:150px;">' + fmtDate(o.transactionTime || o.date) + '</div>';
+                    html += '<div class="rv-cell rv-bold" style="width:100px;">' + esc(affiliate) + '</div>';
+                    html += '<div class="rv-cell" style="width:100px;">' + esc(vendor) + '</div>';
+                    html += '<div class="rv-cell" style="flex:1; min-width:120px;">' + esc(safeStr(li.itemNo) !== '-' ? safeStr(li.itemNo) : safeStr(li.productTitle, '-')) + '</div>';
+                    html += '<div class="rv-cell rv-right rv-bold" style="width:90px;">$' + esc(String(li.customerAmount || li.amount || o.totalOrderAmount || '0')) + '</div>';
+                    var vendorNet = li.accountAmount || o.vendorAmount || '';
+                    html += '<div class="rv-cell rv-right" style="width:90px; color:#16a34a; font-weight:600;">' + (vendorNet ? '$' + esc(String(vendorNet)) : '-') + '</div>';
+                    html += '<div class="rv-cell" style="width:100px;">' + statusBadge(displayStatus) + '</div>';
+                    html += '<div class="rv-cell" style="width:140px;">' + esc(name) + '</div>';
+                    html += '<div class="rv-cell" style="width:160px; font-size:0.8rem;">' + esc(email) + '</div>';
+                    html += '<div class="rv-cell" style="width:60px;">' + esc(country) + '</div>';
+                    html += '<div class="rv-cell" style="width:80px; font-size:0.78rem;">' + esc(payMethod) + '</div>';
+                    html += '</div>';
+                });
+            });
+
+            cbPrevData[containerId] = newReceipts;
+            container.innerHTML = html || '<div class="rv-empty"><i class="fas fa-inbox"></i> No data found</div>';
+            if (countEl) countEl.textContent = rowCount;
+
+            // Show filter info
+            if (containerId === 'ordersRows') {
+                var filterInfo = document.getElementById('orderFilterInfo');
+                if (filterInfo) {
+                    filterInfo.textContent = hiddenCount > 0 ? '(' + hiddenCount + ' test order' + (hiddenCount > 1 ? 's' : '') + ' hidden)' : '';
+                }
+            }
+
+            // Update tab counts
+            if (containerId === 'ordersRows') updateTabCount('orders', rowCount);
+            if (containerId === 'refundsRows') updateTabCount('refunds', rowCount);
+            if (containerId === 'chargebacksRows') updateTabCount('chargebacks', rowCount);
+        }
+
+        // Re-render orders with current filter setting
+        function applyOrderFilter() {
+            if (cbLastOrders) renderOrderRows('ordersRows', cbLastOrders, 'ordersCount');
+        }
+
+        function renderSubscriptionRows(subs) {
+            var container = document.getElementById('subscriptionsRows');
+            var countEl = document.getElementById('subscriptionsCount');
+
+            if (!subs || subs.length === 0) {
+                container.innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> No subscriptions found</div>';
+                countEl.textContent = '0';
+                return;
+            }
+
+            var prevKeys = cbPrevData['subscriptionsRows'] || {};
+            var newKeys = {};
+            var html = '';
+
+            subs.forEach(function(s) {
+                // Subscription may come as order-style or subscription-detail-style
+                var receipt = s.receipt || '-';
+                var key = receipt;
+                newKeys[key] = true;
+                var isNew = !prevKeys[key];
+
+                var lineItems = s.lineItemData || s.lineItems || [];
+                if (!Array.isArray(lineItems)) lineItems = lineItems.lineItemData ? (Array.isArray(lineItems.lineItemData) ? lineItems.lineItemData : [lineItems.lineItemData]) : [lineItems];
+                if (lineItems.length === 0) lineItems = [{}];
+
+                lineItems.forEach(function(li) {
+                    var billing = (s.customer && s.customer.billing) ? s.customer.billing : {};
+                    var subStatus = s.status || li.status || s.subscriptionStatus || '-';
+                    var nextPayment = s.nextPaymentDate || s.processedPayments || li.nextBillDate || '-';
+
+                    html += '<div class="rv-row' + (isNew ? ' rv-new' : '') + '">';
+                    html += '<div class="rv-cell rv-mono" style="width:120px;">' + esc(receipt) + '</div>';
+                    html += '<div class="rv-cell" style="width:150px;">' + fmtDate(s.transactionTime || s.date) + '</div>';
+                    html += '<div class="rv-cell rv-bold" style="width:100px;">' + esc(s.affiliate || s.affi || '-') + '</div>';
+                    html += '<div class="rv-cell" style="flex:1; min-width:120px;">' + esc(li.itemNo || li.productTitle || '-') + '</div>';
+                    html += '<div class="rv-cell rv-right rv-bold" style="width:90px;">$' + esc(String(li.customerAmount || li.amount || s.totalOrderAmount || '0')) + '</div>';
+                    html += '<div class="rv-cell" style="width:100px;">' + statusBadge(subStatus) + '</div>';
+                    html += '<div class="rv-cell" style="width:100px; font-size:0.78rem;">' + fmtDate(nextPayment) + '</div>';
+                    html += '<div class="rv-cell" style="width:140px;">' + esc(billing.fullName || s.fullName || '-') + '</div>';
+                    html += '<div class="rv-cell" style="width:60px;">' + esc(billing.country || s.country || '-') + '</div>';
+                    html += '</div>';
+                });
+            });
+
+            cbPrevData['subscriptionsRows'] = newKeys;
+            container.innerHTML = html;
+            countEl.textContent = subs.length;
+            updateTabCount('subscriptions', subs.length);
+        }
+
+        function renderTicketRows(tickets) {
+            var container = document.getElementById('ticketsRows');
+            var countEl = document.getElementById('ticketsCount');
+
+            if (!tickets || tickets.length === 0) {
+                container.innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> No tickets found</div>';
+                countEl.textContent = '0';
+                return;
+            }
+
+            var prevKeys = cbPrevData['ticketsRows'] || {};
+            var newKeys = {};
+            var html = '';
+
+            tickets.forEach(function(t) {
+                var tid = t.ticketId || t.ticketid || '-';
+                newKeys[tid] = true;
+                var isNew = !prevKeys[tid];
+
+                html += '<div class="rv-row' + (isNew ? ' rv-new' : '') + '">';
+                html += '<div class="rv-cell rv-mono" style="width:100px;">' + esc(tid) + '</div>';
+                html += '<div class="rv-cell rv-mono" style="width:120px;">' + esc(t.receipt || '-') + '</div>';
+                html += '<div class="rv-cell" style="width:150px;">' + fmtDate(t.openedDate || t.date) + '</div>';
+                html += '<div class="rv-cell" style="width:120px;">' + esc(t.type || t.ticketType || '-') + '</div>';
+                html += '<div class="rv-cell" style="width:100px;">' + statusBadge(t.status || '-') + '</div>';
+                html += '<div class="rv-cell" style="flex:1; min-width:180px; font-size:0.8rem;">' + esc(t.email || t.customerEmail || '-') + '</div>';
+                html += '<div class="rv-cell" style="width:100px;">' + esc(t.affiliate || '-') + '</div>';
+                html += '</div>';
+            });
+
+            cbPrevData['ticketsRows'] = newKeys;
+            container.innerHTML = html;
+            countEl.textContent = tickets.length;
+            updateTabCount('tickets', tickets.length);
+        }
+
+        // Last-fetched normalized products kept for client-side filtering + KPI recompute.
+        var cbLastProducts = [];
+        // Last-seen envelope metadata: { nicknames: [...], perNickname: {nick: count}, errors: {nick: msg} }
+        var cbLastProductsMeta = { nicknames: [], perNickname: {}, errors: {} };
+
+        function renderProductRows(products, envelope) {
+            // Drop any nulls from normalizeProduct
+            products = (products || []).filter(function(p) { return p !== null; });
+            cbLastProducts = products;
+            if (envelope) {
+                cbLastProductsMeta.nicknames   = envelope.nicknames   || [];
+                cbLastProductsMeta.perNickname = envelope.perNickname || {};
+                cbLastProductsMeta.errors      = envelope.errors      || {};
+                cbLastProductsMeta.debug       = envelope.debug       || {};
+            }
+            // If no products came back, dump raw CB responses to console so
+            // we can diagnose permission / structure issues.
+            if (products.length === 0 && envelope && envelope.debug) {
+                console.warn('[CB products] Zero products returned. Raw CB responses per nickname:');
+                var dbg = envelope.debug || {};
+                Object.keys(dbg).forEach(function(nick) {
+                    console.warn('  [' + nick + ']', dbg[nick]);
+                });
+                if (envelope.errors && Object.keys(envelope.errors).length > 0) {
+                    console.error('[CB products] Errors:', envelope.errors);
+                }
+            }
+            updateNicknameFilter(cbLastProductsMeta);
+            updateSitesInfo(cbLastProductsMeta);
+            updateProductKpis(products);
+            applyProductFilter();
+        }
+
+        // Sync the Nickname filter dropdown options with the list the server returned.
+        // Preserves the current selection if it's still valid.
+        function updateNicknameFilter(meta) {
+            var sel = document.getElementById('pfNickname');
+            if (!sel) return;
+            var current = sel.value;
+            var nicks = meta.nicknames || [];
+            // Also accept any nicknames discovered directly on products (single-site fallback)
+            cbLastProducts.forEach(function(p) {
+                if (p.nickname && nicks.indexOf(p.nickname) === -1) nicks.push(p.nickname);
+            });
+            var html = '<option value="">All sites (' + nicks.length + ')</option>';
+            nicks.forEach(function(n) {
+                var count = meta.perNickname && meta.perNickname[n] != null ? meta.perNickname[n] : null;
+                var err = meta.errors && meta.errors[n];
+                var label = n + (count != null ? ' (' + count + ')' : '') + (err ? ' ⚠' : '');
+                html += '<option value="' + esc(n) + '"' + (n === current ? ' selected' : '') + '>' + esc(label) + '</option>';
+            });
+            sel.innerHTML = html;
+        }
+
+        // Small info strip showing how many sites were hit and any partial errors.
+        function updateSitesInfo(meta) {
+            var el = document.getElementById('pfSitesInfo');
+            if (!el) return;
+            var nicks = meta.nicknames || [];
+            if (nicks.length === 0) { el.textContent = ''; return; }
+            var errKeys = Object.keys(meta.errors || {});
+            var txt = nicks.length + ' site' + (nicks.length > 1 ? 's' : '') + ' fetched';
+            if (errKeys.length > 0) {
+                txt += ' · ' + errKeys.length + ' failed';
+                el.title = errKeys.map(function(k){return k + ': ' + meta.errors[k];}).join('\n');
+                el.style.color = '#b45309';
+            } else {
+                el.title = '';
+                el.style.color = '#64748b';
+            }
+            el.textContent = txt;
+        }
+
+        // Compute + render the KPI strip above the Products table.
+        function updateProductKpis(products) {
+            var total = products.length;
+            var active = 0, approved = 0, recurring = 0, sumUsd = 0, priceCount = 0;
+            products.forEach(function(p) {
+                if (p.active) active++;
+                if (p.approvalStatus === 'APPROVED') approved++;
+                if (p.isRecurring) recurring++;
+                if (p.usdPrice > 0) { sumUsd += p.usdPrice; priceCount++; }
+                else if (p.nativePrice > 0 && p.currency === 'USD') { sumUsd += p.nativePrice; priceCount++; }
+            });
+            var avgUsd = priceCount > 0 ? (sumUsd / priceCount) : 0;
+            document.getElementById('pkTotal').textContent = total;
+            document.getElementById('pkActive').textContent = active;
+            document.getElementById('pkApproved').textContent = approved;
+            document.getElementById('pkRecurring').textContent = recurring;
+            document.getElementById('pkAvgPrice').textContent = priceCount > 0 ? ('$' + avgUsd.toFixed(2)) : '--';
+        }
+
+        // Filter + render the table rows from cbLastProducts based on current filter inputs.
+        function applyProductFilter() {
+            var container = document.getElementById('productsRows');
+            var countEl = document.getElementById('productsCount');
+            if (!container) return;
+
+            var q = (document.getElementById('pfSearch').value || '').trim().toLowerCase();
+            var typeFilter = document.getElementById('pfType').value;
+            var activeOnly = document.getElementById('pfActiveOnly').checked;
+            var nickFilter = (document.getElementById('pfNickname') && document.getElementById('pfNickname').value || '').toLowerCase();
+
+            var filtered = cbLastProducts.filter(function(p) {
+                if (activeOnly && !p.active) return false;
+                if (typeFilter === 'STANDARD' && p.isRecurring) return false;
+                if (typeFilter === 'RECURRING' && !p.isRecurring) return false;
+                if (nickFilter && String(p.nickname || '').toLowerCase() !== nickFilter) return false;
+                if (q) {
+                    var hay = (p.sku + ' ' + p.title + ' ' + (p.description||'') + ' ' + (p.nickname||'')).toLowerCase();
+                    if (hay.indexOf(q) === -1) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> No products match current filters</div>';
+                countEl.textContent = '0';
+                updateTabCount('products', 0);
+                return;
+            }
+
+            // Colour palette for nickname chips — each unique nickname gets a stable colour
+            var _nickPalette = [
+                {bg:'#e0e7ff',fg:'#3730a3'}, // indigo
+                {bg:'#d1fae5',fg:'#065f46'}, // emerald
+                {bg:'#fef3c7',fg:'#92400e'}, // amber
+                {bg:'#fce7f3',fg:'#9d174d'}, // pink
+                {bg:'#dbeafe',fg:'#1e40af'}, // blue
+                {bg:'#f3e8ff',fg:'#6b21a8'}, // purple
+                {bg:'#ffedd5',fg:'#9a3412'}, // orange
+                {bg:'#ecfccb',fg:'#3f6212'}, // lime
+                {bg:'#e0f2fe',fg:'#075985'}, // sky
+                {bg:'#fdf2f8',fg:'#be185d'}, // rose
+            ];
+            var _nickColorMap = {};
+            var _nickColorIdx = 0;
+            function nickColor(nick) {
+                if (!nick) return _nickPalette[0];
+                if (!_nickColorMap[nick]) {
+                    _nickColorMap[nick] = _nickPalette[_nickColorIdx % _nickPalette.length];
+                    _nickColorIdx++;
+                }
+                return _nickColorMap[nick];
+            }
+
+            var html = '';
+            filtered.forEach(function(p, idx) {
+                var skuEsc = esc(p.sku).replace(/'/g, "\\'");
+                var nickEsc = esc(p.nickname || '').replace(/'/g, "\\'");
+                var nc = nickColor(p.nickname);
+                html += '<div class="rv-row prod-row-clickable" onclick="openProductDetail(\'' + skuEsc + '\', \'' + nickEsc + '\')">';
+                // Nickname chip
+                html += '<div class="rv-cell" style="width:9%;"><span class="chip" style="background:' + nc.bg + '; color:' + nc.fg + '; font-weight:600;">' + esc(p.nickname || '—') + '</span></div>';
+                // SKU
+                html += '<div class="rv-cell rv-mono rv-bold" style="width:8%;">' + esc(p.sku) + '</div>';
+                // Title
+                html += '<div class="rv-cell" style="width:18%;" title="' + esc(p.description).substring(0, 200) + '">' + esc(p.title) + '</div>';
+                // Type chip
+                var chipClass = 'chip-digital';
+                if (p.digitalRecurring) chipClass = 'chip-recurring';
+                else if (p.physicalRecurring) chipClass = 'chip-dr';
+                else if (p.physical) chipClass = 'chip-physical';
+                html += '<div class="rv-cell" style="width:9%;"><span class="chip ' + chipClass + '">' + esc(p.typeLabel) + '</span></div>';
+                // Price (native)
+                var priceStr = p.nativePrice > 0 ? (fmtCurSymbol(p.currency) + p.nativePrice.toFixed(2)) : '--';
+                html += '<div class="rv-cell rv-right rv-bold" style="width:8%;">' + priceStr + '</div>';
+                // Price USD
+                var usdStr = p.usdPrice > 0 ? ('$' + p.usdPrice.toFixed(2)) : (p.currency === 'USD' && p.nativePrice > 0 ? ('$' + p.nativePrice.toFixed(2)) : '--');
+                html += '<div class="rv-cell rv-right" style="width:8%; color:#64748b;">' + usdStr + '</div>';
+                // Commission
+                var commStr = p.commissionPurchase > 0 ? (p.commissionPurchase + '%') : '--';
+                if (p.isRecurring && p.commissionRebill > 0) commStr += ' / ' + p.commissionRebill + '%';
+                html += '<div class="rv-cell rv-right" style="width:9%; font-size:0.78rem;">' + esc(commStr) + '</div>';
+                // Category
+                var catStr = p.categories.length > 0 ? p.categories[0].replace(/_/g, ' ') : '--';
+                html += '<div class="rv-cell" style="width:7%; font-size:0.75rem; text-transform:capitalize;">' + esc(catStr.toLowerCase()) + '</div>';
+                // Recurring detail
+                var recStr = '--';
+                if (p.isRecurring && p.recurringFrequency) {
+                    recStr = p.recurringFrequency.charAt(0) + p.recurringFrequency.slice(1).toLowerCase().replace('_', ' ');
+                    if (p.recurringTrialDays > 0) recStr += ' +' + p.recurringTrialDays + 'd trial';
+                }
+                html += '<div class="rv-cell" style="width:9%; font-size:0.75rem;">' + esc(recStr) + '</div>';
+                // Status badge
+                var statusChip = p.active
+                    ? '<span class="chip chip-active">Active</span>'
+                    : '<span class="chip chip-inactive">Inactive</span>';
+                html += '<div class="rv-cell" style="width:7%;">' + statusChip + '</div>';
+                // Approval badge
+                var apChip = '<span class="chip chip-inactive">—</span>';
+                if (p.approvalStatus === 'APPROVED') apChip = '<span class="chip chip-approved">Approved</span>';
+                else if (p.approvalStatus === 'PENDING_APPROVAL') apChip = '<span class="chip chip-pending">Pending</span>';
+                else if (p.approvalStatus === 'DISAPPROVED') apChip = '<span class="chip chip-disapproved">Rejected</span>';
+                else if (p.approvalStatus === 'APPROVAL_REQUIRED') apChip = '<span class="chip chip-required">Required</span>';
+                html += '<div class="rv-cell" style="width:8%;">' + apChip + '</div>';
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+            countEl.textContent = filtered.length + (filtered.length !== cbLastProducts.length ? ' / ' + cbLastProducts.length : '');
+            updateTabCount('products', filtered.length);
+        }
+
+        function fmtCurSymbol(c) {
+            switch ((c||'USD').toUpperCase()) {
+                case 'USD': return '$';
+                case 'EUR': return '€';
+                case 'GBP': return '£';
+                case 'CAD': return 'C$';
+                case 'AUD': return 'A$';
+                default: return c + ' ';
+            }
+        }
+
+        // ============================================================
+        // PAGE TAB SWITCHING
+        // ============================================================
+        var currentTab = 'analytics';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            // Update tab buttons
+            var tabs = document.querySelectorAll('#pageTabs .page-tab');
+            tabs.forEach(function(t) {
+                if (t.dataset.tab === tab) {
+                    t.classList.add('active');
+                } else {
+                    t.classList.remove('active');
+                }
+            });
+            // Show/hide panels
+            var panels = document.querySelectorAll('.tab-panel');
+            panels.forEach(function(p) {
+                if (p.id === 'panel' + capitalize(tab)) {
+                    p.classList.add('active');
+                } else {
+                    p.classList.remove('active');
+                }
+            });
+        }
+
+        // Primary category switch: filters which sub-tabs are visible, then
+        // auto-activates the first sub-tab in that category.
+        var currentCategory = 'analytics-api';
+        function switchCategory(cat) {
+            currentCategory = cat;
+            // Highlight active category button
+            var catBtns = document.querySelectorAll('#categoryTabs .category-tab');
+            catBtns.forEach(function(b) {
+                if (b.dataset.category === cat) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+            // Filter sub-tabs: show only those belonging to this category
+            var subTabs = document.querySelectorAll('#pageTabs .page-tab');
+            var visibleSubs = [];
+            subTabs.forEach(function(t) {
+                if (t.dataset.category === cat) {
+                    t.classList.remove('hidden');
+                    visibleSubs.push(t);
+                } else {
+                    t.classList.add('hidden');
+                }
+            });
+            // Hide the sub-tab bar entirely if only one sub-tab in this category
+            var pageTabsEl = document.getElementById('pageTabs');
+            if (visibleSubs.length <= 1) {
+                pageTabsEl.classList.add('hidden');
+            } else {
+                pageTabsEl.classList.remove('hidden');
+            }
+            // Auto-activate the first visible sub-tab
+            if (visibleSubs.length > 0) {
+                switchTab(visibleSubs[0].dataset.tab);
+            }
+        }
+
+        function updateTabCount(name, count) {
+            var el = document.getElementById('tabCount' + capitalize(name));
+            if (el) el.textContent = count;
+        }
+
+        // ============================================================
+        // SECTION TOGGLE (Accordion)
+        // ============================================================
+        function toggleSection(name) {
+            var header = document.querySelector('#section' + capitalize(name) + ' .section-header');
+            var body = document.getElementById(name + 'Body');
+            header.classList.toggle('collapsed');
+            body.classList.toggle('collapsed');
+        }
+
+        function capitalize(s) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        // ============================================================
+        // HELPERS
+        // ============================================================
+        function esc(s) {
+            if (s === null || s === undefined) return '-';
+            return escapeHtml(String(s));
+        }
+
+        function fmtDate(d) {
+            if (!d || d === '-') return '-';
+            try {
+                var dt = new Date(d);
+                if (isNaN(dt.getTime())) return esc(d);
+                return dt.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + ' ' + dt.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+            } catch(e) { return esc(d); }
+        }
+
+        function statusBadge(status) {
+            if (!status || status === '-') return '<span class="rv-status rv-status-default">-</span>';
+            var s = String(status).toUpperCase();
+            var cls = 'rv-status-default';
+            if (s === 'COMPLETED' || s === 'SALE' || s === 'TEST_SALE') cls = 'rv-status-completed';
+            else if (s === 'REFUNDED' || s === 'RFND' || s === 'TEST_RFND') cls = 'rv-status-refunded';
+            else if (s === 'CGBK' || s === 'CHARGEBACK' || s === 'TEST_CGBK') cls = 'rv-status-cgbk';
+            else if (s === 'ACTIVE' || s === 'RECURRING') cls = 'rv-status-active';
+            else if (s === 'CANCELLED' || s === 'CANCELED' || s === 'COMPLETED_CANCELLED') cls = 'rv-status-cancelled';
+            else if (s === 'OPEN' || s === 'REOPENED') cls = 'rv-status-open';
+            else if (s === 'CLOSED') cls = 'rv-status-closed';
+            return '<span class="rv-status ' + cls + '">' + esc(status) + '</span>';
+        }
+
+        // Date change triggers immediate re-fetch
+        document.getElementById('cbDateFrom').addEventListener('change', function() { if (cbLive) fetchAllNow(); });
+        document.getElementById('cbDateTo').addEventListener('change', function() { if (cbLive) fetchAllNow(); });
+
+        // ============================================================
+        // CLICKBANK API KEY MANAGEMENT (runtime-overridable via .cb_key)
+        // ============================================================
+        async function loadCbApiKeyMasked() {
+            try {
+                var r = await apiRequest(API_URL, 'cb_get_api_key_masked', {});
+                var el = document.getElementById('akbCurrent');
+                if (el) el.textContent = r && r.masked ? r.masked : 'not configured';
+            } catch (e) {
+                var el2 = document.getElementById('akbCurrent');
+                if (el2) el2.textContent = 'error loading';
+            }
+        }
+
+        async function saveCbApiKey() {
+            var input = document.getElementById('akbInput');
+            var btn = document.getElementById('akbSave');
+            var msg = document.getElementById('akbMsg');
+            var newKey = (input.value || '').trim();
+
+            msg.className = 'akb-msg';
+            msg.textContent = '';
+
+            if (!newKey) {
+                msg.className = 'akb-msg err';
+                msg.textContent = 'Please enter an API key.';
+                return;
+            }
+            if (!/^API-[A-Z0-9]{16,}$/.test(newKey)) {
+                msg.className = 'akb-msg err';
+                msg.textContent = 'Invalid format. Expected: API-XXXX... (uppercase letters & digits, 20+ chars).';
+                return;
+            }
+            if (!confirm('Update the ClickBank API key?\n\nExisting data (orders, products, settings) will be preserved. Only the auth credential changes.')) return;
+
+            btn.disabled = true;
+            var originalBtn = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                var r = await apiRequest(API_URL, 'cb_update_api_key', { api_key: newKey });
+                if (r && r.success) {
+                    msg.className = 'akb-msg ok';
+                    msg.textContent = '✓ ' + (r.message || 'API key updated.') + ' New key: ' + (r.masked || '');
+                    input.value = '';
+                    document.getElementById('akbCurrent').textContent = r.masked || '';
+                    // Refresh data with the new key
+                    setTimeout(function() { fetchAllNow(); }, 400);
+                } else {
+                    msg.className = 'akb-msg err';
+                    msg.textContent = '✗ ' + (r && r.error ? r.error : 'Unknown error');
+                }
+            } catch (e) {
+                msg.className = 'akb-msg err';
+                msg.textContent = '✗ Network error: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtn;
+            }
+        }
+
+        // ============================================================
+        // PRODUCT DETAIL MODAL — calls GET /products/{sku} for full info
+        // ============================================================
+        var _pdCurrentSku = null;
+        var _pdCurrentNickname = null;
+
+        async function openProductDetail(sku, nickname) {
+            _pdCurrentSku = sku;
+            _pdCurrentNickname = nickname || '';
+            document.getElementById('pdOverlay').classList.add('active');
+            var titleBits = '<i class="fas fa-box"></i> ' + esc(sku);
+            if (nickname) titleBits += ' <span style="font-size:0.7em; color:#64748b; font-weight:500; margin-left:8px;">@ ' + esc(nickname) + '</span>';
+            document.getElementById('pdTitle').innerHTML = titleBits;
+            document.getElementById('pdBody').innerHTML = '<div class="rv-loading"><i class="fas fa-spinner fa-spin"></i> Loading product detail...</div>';
+            document.getElementById('pdDeleteBtn').style.display = 'none';
+
+            try {
+                // site is REQUIRED by CB for the detail endpoint; pass the nickname we know
+                // the product was fetched from. Fall back to the first known nickname if caller
+                // didn't supply one (shouldn't happen with the new row-click signature).
+                var siteParam = nickname || (cbLastProductsMeta.nicknames && cbLastProductsMeta.nicknames[0]) || '';
+                var r = await apiRequest(API_URL, 'cb_product_detail', { sku: sku, site: siteParam });
+                if (!r || !r.success) {
+                    document.getElementById('pdBody').innerHTML = '<div class="rv-empty" style="color:#dc2626;"><i class="fas fa-exclamation-triangle"></i><br>' + esc(r && r.error ? r.error : 'Failed to load') + '</div>';
+                    return;
+                }
+                // Normalize the single-product response (CB wraps in productList.product or product)
+                console.log('[PD raw]', JSON.stringify(r.data).substring(0, 400));
+                var products = extractProducts(r.data);
+                if (!products || products.length === 0) {
+                    document.getElementById('pdBody').innerHTML = '<div class="rv-empty"><i class="fas fa-inbox"></i> Product not found</div>';
+                    return;
+                }
+                // Stamp the nickname onto the normalized product so the detail view shows it.
+                if (siteParam && !products[0].nickname) products[0].nickname = siteParam;
+                renderProductDetail(products[0]);
+                document.getElementById('pdDeleteBtn').style.display = 'inline-block';
+            } catch (e) {
+                document.getElementById('pdBody').innerHTML = '<div class="rv-empty" style="color:#dc2626;">' + esc(e.message) + '</div>';
+            }
+        }
+
+        function renderProductDetail(p) {
+            function row(k, v) {
+                if (v === undefined || v === null || v === '' || v === '--') return '';
+                return '<div class="pd-k">' + esc(k) + '</div><div class="pd-v">' + v + '</div>';
+            }
+            function copyBtn(text) {
+                if (!text) return '';
+                return ' <button class="pd-copy" onclick="navigator.clipboard.writeText(' + JSON.stringify(text) + ');this.textContent=\'copied!\'"><i class="fas fa-copy"></i> copy</button>';
+            }
+            function link(url) {
+                if (!url) return '';
+                return '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a>';
+            }
+
+            var html = '';
+
+            // Core
+            html += '<div class="pd-section"><h3>Overview</h3><div class="pd-grid">';
+            html += row('SKU', esc(p.sku) + copyBtn(p.sku));
+            html += row('Title', esc(p.title));
+            if (p.description) html += row('Description', esc(p.description));
+            if (p.nickname) html += row('Nickname', '<span class="chip chip-digital" style="background:#e0e7ff; color:#3730a3;">' + esc(p.nickname) + '</span>');
+            html += row('Site (Vendor)', esc(p.site));
+            html += row('Language', esc(p.language));
+            html += row('Internal ID', esc(String(p.id)));
+            html += row('Created', esc(p.created));
+            html += row('Updated', esc(p.updated));
+            html += '</div></div>';
+
+            // Status
+            var statusBadge = p.active ? '<span class="chip chip-active">Active</span>' : '<span class="chip chip-inactive">Inactive</span>';
+            var approvalBadge = '—';
+            if (p.approvalStatus === 'APPROVED') approvalBadge = '<span class="chip chip-approved">Approved</span>';
+            else if (p.approvalStatus === 'PENDING_APPROVAL') approvalBadge = '<span class="chip chip-pending">Pending Approval</span>';
+            else if (p.approvalStatus === 'DISAPPROVED') approvalBadge = '<span class="chip chip-disapproved">Disapproved</span>';
+            else if (p.approvalStatus === 'APPROVAL_REQUIRED') approvalBadge = '<span class="chip chip-required">Approval Required</span>';
+            html += '<div class="pd-section"><h3>Status</h3><div class="pd-grid">';
+            html += row('Status', statusBadge);
+            html += row('Approval', approvalBadge);
+            html += row('Type', '<span class="chip chip-' + (p.digitalRecurring ? 'recurring' : p.physicalRecurring ? 'dr' : p.physical ? 'physical' : 'digital') + '">' + esc(p.typeLabel) + '</span>');
+            if (p.categories.length) html += row('Categories', p.categories.map(function(c){return esc(c);}).join(', '));
+            html += '</div></div>';
+
+            // Pricing
+            html += '<div class="pd-section"><h3>Pricing</h3><div class="pd-grid">';
+            html += row('Price (native)', p.nativePrice > 0 ? (fmtCurSymbol(p.currency) + p.nativePrice.toFixed(2) + ' ' + esc(p.currency)) : '—');
+            html += row('Price (USD)', p.usdPrice > 0 ? ('$' + p.usdPrice.toFixed(2)) : '—');
+            html += row('Price + CB Fees (USD)', p.usdWithFees > 0 ? ('$' + p.usdWithFees.toFixed(2)) : '—');
+            html += '</div></div>';
+
+            // Commission
+            html += '<div class="pd-section"><h3>Commission</h3><div class="pd-grid">';
+            html += row('Purchase %', p.commissionPurchase > 0 ? (p.commissionPurchase + '%') : '—');
+            if (p.isRecurring) html += row('Rebill %', p.commissionRebill > 0 ? (p.commissionRebill + '%') : '—');
+            if (p.noRebillCommission) html += row('No Rebill Commission', 'Yes');
+            html += '</div></div>';
+
+            // Recurring
+            if (p.isRecurring) {
+                html += '<div class="pd-section"><h3>Recurring</h3><div class="pd-grid">';
+                html += row('Frequency', esc(p.recurringFrequency));
+                html += row('Duration (rebills)', p.recurringDuration > 0 ? p.recurringDuration : 'Unlimited');
+                html += row('Trial Days', p.recurringTrialDays > 0 ? p.recurringTrialDays : 'None');
+                if (p.recurringPrice > 0) html += row('Recurring Price', fmtCurSymbol(p.currency) + p.recurringPrice.toFixed(2));
+                html += '</div></div>';
+            }
+
+            // Refund windows
+            if (p.saleRefundDays > 0 || p.rebillRefundDays > 0) {
+                html += '<div class="pd-section"><h3>Refund Policy</h3><div class="pd-grid">';
+                if (p.saleRefundDays > 0) html += row('Sale Refund Window', p.saleRefundDays + ' days');
+                if (p.rebillRefundDays > 0) html += row('Rebill Refund Window', p.rebillRefundDays + ' days');
+                html += '</div></div>';
+            }
+
+            // Pages
+            if (p.pitchPageDesktop || p.thankYouDesktop) {
+                html += '<div class="pd-section"><h3>Pages</h3><div class="pd-grid">';
+                if (p.pitchPageDesktop) html += row('Pitch Page', link(p.pitchPageDesktop) + copyBtn(p.pitchPageDesktop));
+                if (p.pitchPageMobile) html += row('Pitch (Mobile)', link(p.pitchPageMobile));
+                if (p.thankYouDesktop) html += row('Thank You Page', link(p.thankYouDesktop) + copyBtn(p.thankYouDesktop));
+                if (p.thankYouMobile) html += row('Thank You (Mobile)', link(p.thankYouMobile));
+                html += '</div></div>';
+            }
+
+            document.getElementById('pdBody').innerHTML = html;
+        }
+
+        function closeProductDetail() {
+            document.getElementById('pdOverlay').classList.remove('active');
+            _pdCurrentSku = null;
+            _pdCurrentNickname = null;
+        }
+
+        async function confirmDeleteProduct() {
+            if (!_pdCurrentSku) return;
+            var sku = _pdCurrentSku;
+            var nick = _pdCurrentNickname || '';
+            if (!nick) { alert('Cannot delete: nickname missing. Reopen the product from the list.'); return; }
+            // Double-confirm because DELETE is hard to reverse on CB side
+            if (!confirm('⚠ DELETE product "' + sku + '" from ClickBank nickname "' + nick + '"?\n\nThis removes the SKU from that CB vendor account and CANNOT be undone. Historical orders and analytics data for this product will remain in ClickBank reports but the product itself will no longer exist.')) return;
+            var typed = prompt('Type the SKU exactly to confirm deletion:');
+            if (typed !== sku) {
+                alert('SKU did not match. Deletion cancelled.');
+                return;
+            }
+            try {
+                var r = await apiRequest(API_URL, 'cb_product_delete', { sku: sku, site: nick });
+                if (r && r.success) {
+                    alert('Product "' + sku + '" deleted from ClickBank nickname "' + nick + '".');
+                    closeProductDetail();
+                    fetchAllNow();
+                } else {
+                    alert('Delete failed: ' + (r && r.error ? r.error : 'unknown error'));
+                }
+            } catch (e) {
+                alert('Delete failed: ' + e.message);
+            }
+        }
+
+        // ============================================================
+        // CREATE PRODUCT MODAL (PUT /products/{sku})
+        // ============================================================
+        function openCreateProductModal() {
+            document.getElementById('cpForm').reset();
+            document.getElementById('cpDigital').checked = true;
+            toggleRecurringFields();
+            populateCreateNicknameDropdown();
+            document.getElementById('cpOverlay').classList.add('active');
+        }
+
+        // Fill the create form's Nickname dropdown from last-seen metadata, falling
+        // back to a fresh cb_get_nicknames call if nothing has been fetched yet.
+        async function populateCreateNicknameDropdown() {
+            var sel = document.getElementById('cpNickname');
+            if (!sel) return;
+            var nicks = (cbLastProductsMeta.nicknames || []).slice();
+            if (nicks.length === 0) {
+                try {
+                    var r = await apiRequest(API_URL, 'cb_get_nicknames', {});
+                    if (r && r.success && Array.isArray(r.nicknames)) nicks = r.nicknames;
+                } catch (e) {}
+            }
+            if (nicks.length === 0) {
+                sel.innerHTML = '<option value="">(none configured)</option>';
+                return;
+            }
+            var html = '';
+            nicks.forEach(function(n) {
+                html += '<option value="' + esc(n) + '">' + esc(n) + '</option>';
+            });
+            sel.innerHTML = html;
+        }
+
+        function closeCreateProductModal() {
+            document.getElementById('cpOverlay').classList.remove('active');
+        }
+
+        function toggleRecurringFields() {
+            var digRec = document.getElementById('cpDigitalRec').checked;
+            var phyRec = document.getElementById('cpPhysicalRec').checked;
+            document.getElementById('cpRecurringFields').style.display = (digRec || phyRec) ? 'block' : 'none';
+        }
+
+        async function submitCreateProduct() {
+            var btn = document.getElementById('cpSubmitBtn');
+            var site = document.getElementById('cpNickname').value;
+            var sku = document.getElementById('cpSku').value.trim();
+            var title = document.getElementById('cpTitle').value.trim();
+            var price = document.getElementById('cpPrice').value;
+            var currency = document.getElementById('cpCurrency').value;
+            var language = document.getElementById('cpLanguage').value;
+            var pitchPage = document.getElementById('cpPitchPage').value.trim();
+            var thankYouPage = document.getElementById('cpThankYouPage').value.trim();
+            var description = document.getElementById('cpDescription').value.trim();
+            var categories = document.getElementById('cpCategories').value;
+            var purchaseCommission = document.getElementById('cpPurchaseCommission').value;
+
+            if (!site) { alert('Please pick a Nickname (site) to create the product under.'); return; }
+            if (!sku || !title || !price || !pitchPage || !thankYouPage) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            var payload = {
+                site: site,
+                sku: sku,
+                title: title,
+                price: price,
+                currency: currency,
+                language: language,
+                pitchPage: pitchPage,
+                thankYouPage: thankYouPage,
+                description: description,
+                categories: categories,
+                digital: document.getElementById('cpDigital').checked,
+                physical: document.getElementById('cpPhysical').checked,
+                digitalRecurring: document.getElementById('cpDigitalRec').checked,
+                physicalRecurring: document.getElementById('cpPhysicalRec').checked
+            };
+            if (purchaseCommission) payload.purchaseCommission = purchaseCommission;
+
+            // Recurring block
+            if (payload.digitalRecurring || payload.physicalRecurring) {
+                payload.frequency = document.getElementById('cpFrequency').value;
+                payload.duration = document.getElementById('cpDuration').value;
+                payload.rebillPrice = document.getElementById('cpRebillPrice').value;
+                payload.rebillCommission = document.getElementById('cpRebillCommission').value;
+                payload.trialPeriod = document.getElementById('cpTrialPeriod').value;
+                if (!payload.rebillPrice) { alert('Rebill Price is required for recurring products.'); return; }
+            }
+
+            if (!confirm('Submit product "' + sku + '" to ClickBank?\n\nThis will create the product and submit it for CB approval. Creation is hard to reverse.')) return;
+
+            btn.disabled = true;
+            var original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+            try {
+                var r = await apiRequest(API_URL, 'cb_product_create', payload);
+                if (r && r.success) {
+                    alert('Product "' + sku + '" submitted to ClickBank.');
+                    closeCreateProductModal();
+                    fetchAllNow();
+                } else {
+                    alert('Create failed: ' + (r && r.error ? r.error : 'unknown error') + (r && r.response ? '\n\n' + r.response : ''));
+                }
+            } catch (e) {
+                alert('Create failed: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        }
+
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+
+        // Load the masked API key on page load
+        loadCbApiKeyMasked();
+    </script>
+</body>
+</html>

@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowChart - Before vs After Comparison</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header {
+            padding: 16px 20px 10px; position: relative;
+        }
+        .sidebar-header h2 {
+            font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+
+        .sidebar-toggle {
+            position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title {
+            padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s;
+        }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s ease;
+            font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); border-left: none;
+        }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 24px; transition: margin-left 0.3s ease; }
+
+        /* Sidebar collapsed */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; border-left: none; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: #fff; padding: 22px 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: none;
+        }
+        .header-left h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 3px; font-weight: 700; }
+        .header-left h1 i { color: #6c63ff; }
+        .header-left p { color: #999; font-size: 0.85rem; }
+
+        /* Mobile */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none; padding: 10px 12px;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+        }
+        .mobile-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding: 15px; padding-top: 60px; }
+            .header { flex-direction: column; gap: 15px; align-items: flex-start; padding: 15px 20px; }
+        }
+
+        /* Period Banner */
+        .period-banner {
+            display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap;
+        }
+        .period-card {
+            flex: 1; min-width: 280px; background: #fff; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); padding: 20px 25px;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .period-card.before { border-left: 5px solid #3498db; }
+        .period-card.after { border-left: 5px solid #27ae60; }
+        .period-icon {
+            width: 50px; height: 50px; border-radius: 12px; display: flex;
+            align-items: center; justify-content: center; font-size: 1.3rem; color: white;
+        }
+        .period-card.before .period-icon { background: #3498db; }
+        .period-card.after .period-icon { background: #27ae60; }
+        .period-info h3 { font-size: 0.85rem; text-transform: uppercase; color: #999; font-weight: 600; margin-bottom: 4px; }
+        .period-info p { font-size: 1rem; color: #1a1a2e; font-weight: 600; }
+        .period-info .hours { font-size: 0.8rem; color: #999; margin-top: 2px; }
+
+        /* Comparison Cards */
+        .comparison-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 20px; margin-bottom: 30px;
+        }
+
+        .comparison-card {
+            background: #fff; border-radius: 16px; padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); position: relative; overflow: hidden;
+        }
+        .comparison-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: #e0e0e0;
+        }
+        .comparison-card.improved::before { background: #27ae60; }
+        .comparison-card.worsened::before { background: #e74c3c; }
+        .comparison-card.is-new::before { background: #f39c12; }
+
+        .card-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+        }
+        .card-header i { color: #6c63ff; font-size: 1rem; }
+        .card-header h3 { font-size: 0.85rem; color: #1a1a2e; font-weight: 700; text-transform: uppercase; }
+        .card-desc { font-size: 0.78rem; color: #999; margin-bottom: 16px; line-height: 1.4; }
+
+        .card-values {
+            display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;
+        }
+        .val-col { text-align: center; flex: 1; }
+        .val-col .label { font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+        .val-col .number { font-size: 1.6rem; font-weight: 700; color: #1a1a2e; }
+        .val-col.before-col .number { color: #3498db; }
+        .val-col.after-col .number { color: #27ae60; }
+        .val-separator { width: 1px; height: 40px; background: #e0e0e0; margin: 0 8px; flex-shrink: 0; }
+
+        .change-row {
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .change-badge {
+            display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px;
+            border-radius: 20px; font-size: 0.82rem; font-weight: 700;
+        }
+        .change-badge.positive { background: #d4edda; color: #155724; }
+        .change-badge.negative { background: #f8d7da; color: #721c24; }
+        .change-badge.neutral { background: #e2e8f0; color: #64748b; }
+        .change-badge.new-metric { background: #fff3cd; color: #856404; }
+
+        .per-hour {
+            font-size: 0.72rem; color: #999; text-align: center; margin-top: 6px;
+        }
+
+        /* Chart Cards */
+        .chart-section {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 20px; margin-bottom: 30px;
+        }
+        .chart-card {
+            background: #fff; border-radius: 16px; padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card h3 { font-size: 1rem; color: #1a1a2e; margin-bottom: 6px; }
+        .chart-card h3 i { color: #6c63ff; }
+        .chart-card .chart-desc { font-size: 0.82rem; color: #999; margin-bottom: 16px; line-height: 1.4; }
+        .chart-container { position: relative; height: 280px; }
+
+        /* Breakdown section */
+        .breakdown-section {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 20px; margin-bottom: 30px;
+        }
+        .breakdown-card {
+            background: #fff; border-radius: 16px; padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .breakdown-card h3 { font-size: 1rem; color: #1a1a2e; margin-bottom: 6px; }
+        .breakdown-card h3 i { color: #6c63ff; }
+        .breakdown-card .chart-desc { font-size: 0.82rem; color: #999; margin-bottom: 16px; }
+        .breakdown-chart-row { display: flex; gap: 20px; }
+        .breakdown-chart-col { flex: 1; text-align: center; }
+        .breakdown-chart-col h4 { font-size: 0.78rem; color: #999; text-transform: uppercase; margin-bottom: 10px; }
+        .doughnut-container { position: relative; height: 180px; }
+
+        /* Verdict */
+        .verdict-card {
+            background: #fff; border-radius: 16px; padding: 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 30px;
+        }
+        .verdict-card.positive { border-left: 5px solid #27ae60; }
+        .verdict-card.mixed { border-left: 5px solid #f39c12; }
+        .verdict-card.negative { border-left: 5px solid #e74c3c; }
+        .verdict-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+        }
+        .verdict-header i { font-size: 1.5rem; }
+        .verdict-header.positive i { color: #27ae60; }
+        .verdict-header.mixed i { color: #f39c12; }
+        .verdict-header.negative i { color: #e74c3c; }
+        .verdict-header h2 { font-size: 1.2rem; color: #1a1a2e; }
+        .verdict-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        }
+        .verdict-item {
+            display: flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 6px 10px;
+            border-radius: 10px; background: #f5f5ff;
+        }
+        .verdict-item i.fa-check-circle { color: #27ae60; }
+        .verdict-item i.fa-times-circle { color: #e74c3c; }
+        .verdict-item i.fa-star { color: #f39c12; }
+
+        /* Converter Behavior Cards */
+        .converter-section { margin-bottom: 30px; }
+        .converter-title {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+        }
+        .converter-title i { color: #d97706; font-size: 1.2rem; }
+        .converter-title h2 { font-size: 1.1rem; color: #1a1a2e; font-weight: 700; }
+        .converter-title .cv-desc { font-size: 0.82rem; color: #999; margin-left: 6px; }
+        .converter-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+        }
+        .converter-period {
+            background: #fff; border-radius: 16px; padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-top: 3px solid #f59e0b;
+        }
+        .converter-period h3 {
+            font-size: 0.85rem; text-transform: uppercase; color: #92400e; font-weight: 700;
+            margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+        }
+        .converter-period .cv-subtitle { font-size: 0.78rem; color: #b45309; margin-bottom: 16px; }
+        .cv-cards {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        }
+        .cv-card {
+            background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .cv-card .cv-label { font-size: 0.68rem; color: #92400e; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.4px; }
+        .cv-card .cv-value { font-size: 1.3rem; font-weight: 800; color: #78350f; }
+        .cv-card .cv-unit { font-size: 0.72rem; color: #b45309; margin-top: 2px; }
+        .cv-empty { text-align: center; padding: 20px; color: #d97706; font-size: 0.85rem; }
+
+        @media (max-width: 768px) {
+            .converter-grid { grid-template-columns: 1fr; }
+            .cv-cards { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .cv-cards { grid-template-columns: 1fr; }
+        }
+
+        /* Landing Pages List */
+        .lp-list { }
+        .lp-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem;
+        }
+        .lp-item:last-child { border-bottom: none; }
+        .lp-item:hover { background: #f5f5ff; }
+        .lp-rank { width: 24px; height: 24px; border-radius: 6px; background: #e2e8f0; color: #64748b;
+            display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; }
+        .lp-url { flex: 1; margin: 0 12px; color: #334155; font-family: 'Courier New', monospace; font-size: 0.8rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lp-count { font-weight: 700; color: #1a1a2e; font-size: 0.85rem; white-space: nowrap; }
+        .lp-bar { height: 3px; background: #e2e8f0; border-radius: 2px; margin-top: 6px; }
+        .lp-bar-fill { height: 3px; border-radius: 2px; }
+        .lp-bar-fill.before { background: #3498db; }
+        .lp-bar-fill.after { background: #27ae60; }
+        .lp-empty { text-align: center; padding: 30px; color: #999; font-size: 0.85rem; }
+
+        #loadingMsg {
+            text-align: center; padding: 60px; color: #999; font-size: 1.1rem;
+        }
+
+        .btn-refresh {
+            padding: 10px 14px; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            cursor: pointer; font-size: 0.95rem; transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(108, 99, 255, 0.25);
+        }
+        .btn-refresh:hover { box-shadow: 0 6px 18px rgba(108, 99, 255, 0.35); transform: translateY(-1px); }
+
+        @media (max-width: 1200px) {
+            .comparison-grid { grid-template-columns: repeat(2, 1fr); }
+            .verdict-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .comparison-grid { grid-template-columns: 1fr; }
+            .chart-section { grid-template-columns: 1fr; }
+            .breakdown-section { grid-template-columns: 1fr; }
+            .verdict-grid { grid-template-columns: repeat(2, 1fr); }
+            .period-banner { flex-direction: column; }
+        }
+        @media (max-width: 480px) {
+            .verdict-grid { grid-template-columns: 1fr; }
+            .breakdown-chart-row { flex-direction: column; }
+            .val-col .number { font-size: 1.3rem; }
+        }
+
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item active"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-exchange-alt"></i> FlowChart</h1>
+                <p>All-time before vs after landing page update &mdash; Cutoff: March 23, 2026 at 1:00 PM PKT</p>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <button class="btn-refresh" onclick="loadFlowchart()" title="Refresh data"><i class="fas fa-sync-alt"></i></button>
+                <div id="domainSelector"></div>
+            </div>
+        </div>
+
+        <div id="loadingMsg"><i class="fas fa-spinner fa-spin"></i> Loading comparison data...</div>
+        <div id="contentArea" style="display:none;">
+
+            <!-- Period Banner -->
+            <div class="period-banner">
+                <div class="period-card before">
+                    <div class="period-icon"><i class="fas fa-arrow-left"></i></div>
+                    <div class="period-info">
+                        <h3>Before Update</h3>
+                        <p id="beforeLabel">All Time &ndash; Mar 23 1:00 PM</p>
+                        <div class="hours" id="beforeHours">Loading...</div>
+                    </div>
+                </div>
+                <div class="period-card after">
+                    <div class="period-icon"><i class="fas fa-arrow-right"></i></div>
+                    <div class="period-info">
+                        <h3>After Update</h3>
+                        <p id="afterLabel">Mar 23 1:00 PM &ndash; Now</p>
+                        <div class="hours" id="afterHours">-- hours of data</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Cards -->
+            <div class="comparison-grid" id="comparisonGrid"></div>
+
+            <!-- Converter Behavior -->
+            <div class="converter-section">
+                <div class="converter-title">
+                    <i class="fas fa-trophy"></i>
+                    <h2>Converter Behavior</h2>
+                    <span class="cv-desc">— Average behavior of visitors who ended up ordering</span>
+                </div>
+                <div class="converter-grid" id="converterGrid"></div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-section">
+                <div class="chart-card">
+                    <h3><i class="fas fa-hand-pointer"></i> Engagement Metrics</h3>
+                    <p class="chart-desc">Compares user interaction with new page elements (video clips, CTA bars, VSL links). Higher values indicate better engagement after the update.</p>
+                    <div class="chart-container"><canvas id="engagementChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-tachometer-alt"></i> Quality Metrics</h3>
+                    <p class="chart-desc">Bounce rate should decrease (lower is better), while scroll depth and checkout rate should increase after adding engaging content.</p>
+                    <div class="chart-container"><canvas id="qualityChart"></canvas></div>
+                </div>
+                <div class="chart-card full-width">
+                    <h3><i class="fas fa-clock"></i> Hourly Rates (Normalized)</h3>
+                    <p class="chart-desc">Since the AFTER period is ongoing and may differ in length, these per-hour rates provide a fair apples-to-apples comparison between the two periods.</p>
+                    <div class="chart-container"><canvas id="hourlyChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Breakdowns -->
+            <div class="breakdown-section">
+                <div class="breakdown-card">
+                    <h3><i class="fas fa-mobile-alt"></i> Device Split</h3>
+                    <p class="chart-desc">How the device distribution changed after the landing page update.</p>
+                    <div class="breakdown-chart-row">
+                        <div class="breakdown-chart-col">
+                            <h4>Before</h4>
+                            <div class="doughnut-container"><canvas id="deviceBefore"></canvas></div>
+                        </div>
+                        <div class="breakdown-chart-col">
+                            <h4>After</h4>
+                            <div class="doughnut-container"><canvas id="deviceAfter"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="breakdown-card">
+                    <h3><i class="fas fa-globe-americas"></i> Top Countries</h3>
+                    <p class="chart-desc">Geographic traffic distribution before vs after the update.</p>
+                    <div class="chart-container"><canvas id="countryChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Landing Pages -->
+            <div class="breakdown-section">
+                <div class="breakdown-card">
+                    <h3><i class="fas fa-file-alt"></i> Landing Pages — Before</h3>
+                    <p class="chart-desc">Top landing pages visitors arrived at before the update.</p>
+                    <div id="landingPagesBefore" class="lp-list"></div>
+                </div>
+                <div class="breakdown-card">
+                    <h3><i class="fas fa-file-alt"></i> Landing Pages — After</h3>
+                    <p class="chart-desc">Top landing pages visitors arrived at after the update.</p>
+                    <div id="landingPagesAfter" class="lp-list"></div>
+                </div>
+            </div>
+
+            <!-- Verdict -->
+            <div class="verdict-card" id="verdictCard">
+                <div class="verdict-header" id="verdictHeader">
+                    <i class="fas fa-clipboard-check"></i>
+                    <h2 id="verdictTitle">Summary</h2>
+                </div>
+                <div class="verdict-grid" id="verdictGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        var charts = {};
+        var METRICS = [
+            { key: 'avgScrollDepth', label: 'Avg Scroll Depth', icon: 'fa-arrows-alt-v', desc: 'How far down the page visitors scroll on average (%). Higher means content is keeping them engaged.', better: 'higher', format: 'pct' },
+            { key: 'avgSessionDuration', label: 'Avg Session Duration', icon: 'fa-clock', desc: 'Average time spent on page in seconds. Longer sessions suggest more engaging content.', better: 'higher', format: 'duration' },
+            { key: 'bounceRate', label: 'Bounce Rate', icon: 'fa-door-open', desc: 'Percentage of visitors who left without any interaction. Lower is better after adding engaging elements.', better: 'lower', format: 'pct' },
+            { key: 'videoPlays', label: 'Video Plays', icon: 'fa-play-circle', desc: 'Number of inline video clip plays. This is a new element added with the update.', better: 'higher', format: 'number' },
+            { key: 'ctaBarClicks', label: 'CTA Bar Clicks', icon: 'fa-bullhorn', desc: 'Clicks on the sticky/toast CTA bar. This is a new element added with the update.', better: 'higher', format: 'number' },
+            { key: 'vslClicks', label: 'VSL Clicks', icon: 'fa-video', desc: 'Video Sales Letter redirect clicks. These drive visitors to watch the full sales video.', better: 'higher', format: 'number' },
+            { key: 'buynowClicks', label: 'BuyNow Clicks', icon: 'fa-shopping-cart', desc: 'Checkout/buy link clicks. The most direct indicator of purchase intent.', better: 'higher', format: 'number' },
+            { key: 'checkoutRate', label: 'Checkout Rate', icon: 'fa-cash-register', desc: 'Percentage of qualified visitors (>5s on page) who clicked a buy link.', better: 'higher', format: 'pct' },
+            { key: 'redirectClicks', label: 'Redirect Clicks', icon: 'fa-external-link-alt', desc: 'Affiliate redirect link clicks. Shows how many visitors followed through on CTAs.', better: 'higher', format: 'number' },
+            { key: 'totalClicks', label: 'Total Clicks', icon: 'fa-mouse-pointer', desc: 'All click events combined across the page. General indicator of page interactivity.', better: 'higher', format: 'number' }
+        ];
+
+        function formatVal(val, fmt) {
+            if (fmt === 'pct') return val + '%';
+            if (fmt === 'duration') return formatDuration(val);
+            return formatNumber(val);
+        }
+
+        function calcChange(before, after, lowerIsBetter) {
+            if (before === 0 && after === 0) return { pct: '0%', improved: true, isNew: false, cls: 'neutral' };
+            if (before === 0 && after > 0) return { pct: 'NEW', improved: true, isNew: true, cls: 'new-metric' };
+            var pct = ((after - before) / Math.abs(before) * 100).toFixed(1);
+            var improved = lowerIsBetter ? (after < before) : (after > before);
+            var same = Math.abs(pct) < 0.1;
+            return {
+                pct: (same ? '0' : (pct > 0 ? '+' : '') + pct) + '%',
+                improved: same ? true : improved,
+                isNew: false,
+                cls: same ? 'neutral' : (improved ? 'positive' : 'negative')
+            };
+        }
+
+        function renderCards(before, after) {
+            var grid = document.getElementById('comparisonGrid');
+            var html = '';
+            var beforeHrs = before.hours || 24;
+            var afterHrs = after.hours || 1;
+
+            METRICS.forEach(function(m) {
+                var bVal = before[m.key] || 0;
+                var aVal = after[m.key] || 0;
+                var change = calcChange(bVal, aVal, m.better === 'lower');
+                var cardClass = change.isNew ? 'is-new' : (change.cls === 'positive' ? 'improved' : (change.cls === 'negative' ? 'worsened' : ''));
+                var arrow = change.cls === 'positive' ? '<i class="fas fa-arrow-up"></i>' : (change.cls === 'negative' ? '<i class="fas fa-arrow-down"></i>' : '');
+
+                var perHour = '';
+                if (m.format === 'number') {
+                    var bph = (bVal / beforeHrs).toFixed(1);
+                    var aph = (aVal / afterHrs).toFixed(1);
+                    perHour = '<div class="per-hour">per hour: ' + bph + ' &rarr; ' + aph + '</div>';
+                }
+
+                html += '<div class="comparison-card ' + cardClass + '">'
+                    + '<div class="card-header"><i class="fas ' + m.icon + '"></i><h3>' + m.label + '</h3></div>'
+                    + '<div class="card-desc">' + m.desc + '</div>'
+                    + '<div class="card-values">'
+                    + '<div class="val-col before-col"><div class="label">Before</div><div class="number">' + formatVal(bVal, m.format) + '</div></div>'
+                    + '<div class="val-separator"></div>'
+                    + '<div class="val-col after-col"><div class="label">After</div><div class="number">' + formatVal(aVal, m.format) + '</div></div>'
+                    + '</div>'
+                    + '<div class="change-row"><span class="change-badge ' + change.cls + '">' + arrow + ' ' + change.pct + '</span></div>'
+                    + perHour
+                    + '</div>';
+            });
+            grid.innerHTML = html;
+        }
+
+        function destroyChart(id) {
+            if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+        }
+
+        function renderEngagementChart(before, after) {
+            destroyChart('engagement');
+            var labels = ['Video Plays', 'CTA Clicks', 'VSL Clicks', 'BuyNow Clicks', 'Redirect Clicks'];
+            var bData = [before.videoPlays, before.ctaBarClicks, before.vslClicks, before.buynowClicks, before.redirectClicks];
+            var aData = [after.videoPlays, after.ctaBarClicks, after.vslClicks, after.buynowClicks, after.redirectClicks];
+
+            charts['engagement'] = new Chart(document.getElementById('engagementChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Before', data: bData, backgroundColor: 'rgba(52,152,219,0.7)', borderColor: '#3498db', borderWidth: 1 },
+                        { label: 'After', data: aData, backgroundColor: 'rgba(39,174,96,0.7)', borderColor: '#27ae60', borderWidth: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderQualityChart(before, after) {
+            destroyChart('quality');
+            var labels = ['Bounce Rate (%)', 'Avg Scroll Depth (%)', 'Checkout Rate (%)'];
+            var bData = [before.bounceRate, before.avgScrollDepth, before.checkoutRate];
+            var aData = [after.bounceRate, after.avgScrollDepth, after.checkoutRate];
+
+            charts['quality'] = new Chart(document.getElementById('qualityChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Before', data: bData, backgroundColor: 'rgba(52,152,219,0.7)', borderColor: '#3498db', borderWidth: 1 },
+                        { label: 'After', data: aData, backgroundColor: 'rgba(39,174,96,0.7)', borderColor: '#27ae60', borderWidth: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderHourlyChart(before, after) {
+            destroyChart('hourly');
+            var bHrs = before.hours || 24;
+            var aHrs = after.hours || 1;
+            var labels = ['Visits / hr', 'Total Clicks / hr', 'BuyNow / hr', 'Video Plays / hr', 'CTA Clicks / hr'];
+            var bData = [
+                (before.totalVisits / bHrs).toFixed(1),
+                (before.totalClicks / bHrs).toFixed(1),
+                (before.buynowClicks / bHrs).toFixed(1),
+                (before.videoPlays / bHrs).toFixed(1),
+                (before.ctaBarClicks / bHrs).toFixed(1)
+            ];
+            var aData = [
+                (after.totalVisits / aHrs).toFixed(1),
+                (after.totalClicks / aHrs).toFixed(1),
+                (after.buynowClicks / aHrs).toFixed(1),
+                (after.videoPlays / aHrs).toFixed(1),
+                (after.ctaBarClicks / aHrs).toFixed(1)
+            ];
+
+            charts['hourly'] = new Chart(document.getElementById('hourlyChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Before (per hr)', data: bData, backgroundColor: 'rgba(52,152,219,0.7)', borderColor: '#3498db', borderWidth: 1 },
+                        { label: 'After (per hr)', data: aData, backgroundColor: 'rgba(39,174,96,0.7)', borderColor: '#27ae60', borderWidth: 1 }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderDoughnut(canvasId, chartKey, data, title) {
+            destroyChart(chartKey);
+            var labels = data.map(function(d) { return d.device || 'Unknown'; });
+            var counts = data.map(function(d) { return parseInt(d.count); });
+            var colors = ['#3498db','#27ae60','#e74c3c','#f39c12','#9b59b6','#1abc9c','#e67e22','#95a5a6'];
+
+            charts[chartKey] = new Chart(document.getElementById(canvasId), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{ data: counts, backgroundColor: colors.slice(0, labels.length) }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        }
+
+        function renderCountryChart(before, after) {
+            destroyChart('country');
+            // Merge country lists
+            var countryMap = {};
+            (before.topCountries || []).forEach(function(c) { countryMap[c.country] = { before: parseInt(c.count), after: 0 }; });
+            (after.topCountries || []).forEach(function(c) {
+                if (!countryMap[c.country]) countryMap[c.country] = { before: 0, after: 0 };
+                countryMap[c.country].after = parseInt(c.count);
+            });
+            var sorted = Object.entries(countryMap).sort(function(a, b) { return (b[1].before + b[1].after) - (a[1].before + a[1].after); }).slice(0, 8);
+            var labels = sorted.map(function(e) { return e[0]; });
+            var bData = sorted.map(function(e) { return e[1].before; });
+            var aData = sorted.map(function(e) { return e[1].after; });
+
+            charts['country'] = new Chart(document.getElementById('countryChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Before', data: bData, backgroundColor: 'rgba(52,152,219,0.7)' },
+                        { label: 'After', data: aData, backgroundColor: 'rgba(39,174,96,0.7)' }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderVerdict(before, after) {
+            var improved = 0, worsened = 0, newOnes = 0;
+            var items = '';
+
+            METRICS.forEach(function(m) {
+                var bVal = before[m.key] || 0;
+                var aVal = after[m.key] || 0;
+                var change = calcChange(bVal, aVal, m.better === 'lower');
+
+                if (change.isNew) {
+                    newOnes++;
+                    items += '<div class="verdict-item"><i class="fas fa-star"></i> ' + m.label + ' <small style="color:#856404">(NEW)</small></div>';
+                } else if (change.cls === 'positive') {
+                    improved++;
+                    items += '<div class="verdict-item"><i class="fas fa-check-circle"></i> ' + m.label + '</div>';
+                } else if (change.cls === 'negative') {
+                    worsened++;
+                    items += '<div class="verdict-item"><i class="fas fa-times-circle"></i> ' + m.label + '</div>';
+                } else {
+                    improved++;
+                    items += '<div class="verdict-item"><i class="fas fa-check-circle"></i> ' + m.label + ' <small style="color:#95a5a6">(no change)</small></div>';
+                }
+            });
+
+            var card = document.getElementById('verdictCard');
+            var header = document.getElementById('verdictHeader');
+            var total = METRICS.length;
+            var good = improved + newOnes;
+
+            if (good >= total * 0.7) {
+                card.className = 'verdict-card positive';
+                header.className = 'verdict-header positive';
+                document.getElementById('verdictTitle').textContent = good + ' of ' + total + ' metrics improved after the landing page update';
+                header.querySelector('i').className = 'fas fa-trophy';
+            } else if (good >= total * 0.4) {
+                card.className = 'verdict-card mixed';
+                header.className = 'verdict-header mixed';
+                document.getElementById('verdictTitle').textContent = good + ' of ' + total + ' metrics improved — mixed results';
+                header.querySelector('i').className = 'fas fa-exclamation-triangle';
+            } else {
+                card.className = 'verdict-card negative';
+                header.className = 'verdict-header negative';
+                document.getElementById('verdictTitle').textContent = 'Only ' + good + ' of ' + total + ' metrics improved — needs attention';
+                header.querySelector('i').className = 'fas fa-exclamation-circle';
+            }
+
+            document.getElementById('verdictGrid').innerHTML = items;
+        }
+
+        function renderConverters(before, after) {
+            var grid = document.getElementById('converterGrid');
+            var html = '';
+            var periods = [
+                { data: before.converters || {}, label: 'Before Update', total: before.totalVisits },
+                { data: after.converters || {}, label: 'After Update', total: after.totalVisits }
+            ];
+
+            periods.forEach(function(p) {
+                var cv = p.data;
+                if (!cv.count) {
+                    html += '<div class="converter-period"><h3><i class="fas fa-shopping-bag"></i> ' + p.label + '</h3>'
+                        + '<div class="cv-empty"><i class="fas fa-inbox"></i> No orders in this period</div></div>';
+                    return;
+                }
+                html += '<div class="converter-period">'
+                    + '<h3><i class="fas fa-shopping-bag"></i> ' + p.label + '</h3>'
+                    + '<div class="cv-subtitle">' + cv.count + ' orders from ' + formatNumber(p.total) + ' visits (' + cv.conversionRate + '% conversion)</div>'
+                    + '<div class="cv-cards">'
+                    + '<div class="cv-card"><div class="cv-label">Avg Scroll</div><div class="cv-value">' + cv.avgScroll + '%</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">Avg Time</div><div class="cv-value">' + formatDuration(cv.avgDuration) + '</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">Avg Clicks</div><div class="cv-value">' + cv.avgClicks + '</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">Conv. Rate</div><div class="cv-value">' + cv.conversionRate + '%</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">Video / User</div><div class="cv-value">' + cv.videoPlays + '</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">CTA / User</div><div class="cv-value">' + cv.ctaClicks + '</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">VSL / User</div><div class="cv-value">' + cv.vslClicks + '</div></div>'
+                    + '<div class="cv-card"><div class="cv-label">BuyNow / User</div><div class="cv-value">' + cv.buynowClicks + '</div></div>'
+                    + '</div></div>';
+            });
+            grid.innerHTML = html;
+        }
+
+        function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        function renderLandingPages(pages, containerId, period) {
+            var el = document.getElementById(containerId);
+            if (!pages.length) { el.innerHTML = '<div class="lp-empty"><i class="fas fa-file-alt"></i> No landing pages</div>'; return; }
+            var max = parseInt(pages[0].count) || 1;
+            var html = '';
+            pages.forEach(function(p, i) {
+                var count = parseInt(p.count);
+                var pct = Math.round((count / max) * 100);
+                var url = p.landing_page || '';
+                // Show last 2 path segments
+                try { var parts = new URL(url).pathname.split('/').filter(Boolean); url = '/' + parts.slice(-2).join('/'); } catch(e) {}
+                html += '<div class="lp-item">'
+                    + '<div class="lp-rank">' + (i + 1) + '</div>'
+                    + '<div style="flex:1;margin:0 12px;min-width:0;">'
+                    + '<div class="lp-url" title="' + escapeHtml(p.landing_page || '') + '">' + escapeHtml(url) + '</div>'
+                    + '<div class="lp-bar"><div class="lp-bar-fill ' + period + '" style="width:' + pct + '%"></div></div>'
+                    + '</div>'
+                    + '<div class="lp-count">' + formatNumber(count) + '</div>'
+                    + '</div>';
+            });
+            el.innerHTML = html;
+        }
+
+        async function loadFlowchart() {
+            document.getElementById('loadingMsg').style.display = 'block';
+            document.getElementById('contentArea').style.display = 'none';
+
+            try {
+                var result = await apiRequest(API_URL, 'get_flowchart_comparison', { domain_id: currentDomainId });
+                if (!result || !result.success) {
+                    document.getElementById('loadingMsg').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Failed to load data';
+                    return;
+                }
+
+                var before = result.before;
+                var after = result.after;
+
+                // Update period labels
+                document.getElementById('beforeLabel').textContent = before.periodLabel;
+                document.getElementById('afterLabel').textContent = after.periodLabel;
+                document.getElementById('beforeHours').textContent = before.hours + ' hours of data';
+                document.getElementById('afterHours').textContent = after.hours + ' hours of data';
+
+                renderCards(before, after);
+                renderConverters(before, after);
+                renderEngagementChart(before, after);
+                renderQualityChart(before, after);
+                renderHourlyChart(before, after);
+                renderDoughnut('deviceBefore', 'deviceBefore', before.topDevices || [], 'Before');
+                renderDoughnut('deviceAfter', 'deviceAfter', after.topDevices || [], 'After');
+                renderCountryChart(before, after);
+                renderLandingPages(before.topLandingPages || [], 'landingPagesBefore', 'before');
+                renderLandingPages(after.topLandingPages || [], 'landingPagesAfter', 'after');
+                renderVerdict(before, after);
+
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.getElementById('contentArea').style.display = 'block';
+            } catch (e) {
+                document.getElementById('loadingMsg').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Error: ' + (e.message || 'Failed to load data');
+            }
+        }
+
+        // Init
+        initDomainSelector(loadFlowchart);
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+    </script>
+</body>
+</html>

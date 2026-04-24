@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping Setup - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; }
+
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+            background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000;
+            transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0;
+        }
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 {
+            font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle {
+            position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; }
+        .nav-section-title {
+            padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s;
+        }
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s ease;
+            font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+        }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+        .main-content { margin-left: 240px; padding: 24px; transition: margin-left 0.3s ease; }
+
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: #fff; padding: 22px 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 3px; font-weight: 700; }
+        .header-left h1 i { color: #6c63ff; }
+        .header-left p { color: #999; font-size: 0.85rem; }
+
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .card h2 { font-size: 1.15rem; color: #1a1a2e; margin-bottom: 18px; font-weight: 700; }
+
+        .form-row { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-end; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input {
+            width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-family: 'Poppins', sans-serif; font-size: 0.9rem; transition: border-color 0.2s;
+        }
+        .form-group input:focus { border-color: #6c63ff; outline: none; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 20px; border: none; border-radius: 8px;
+            font-family: 'Poppins', sans-serif; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white;
+            box-shadow: 0 4px 15px rgba(108,99,255,0.25);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(108,99,255,0.35); }
+        .btn-danger { background: #fee; color: #e74c3c; padding: 8px 14px; }
+        .btn-danger:hover { background: #fdd; }
+        .btn-ghost { background: #f0f0ff; color: #6c63ff; padding: 8px 14px; }
+        .btn-ghost:hover { background: #e0e0ff; }
+
+        /* Snippet output */
+        .snippet-box {
+            margin-top: 18px; padding: 20px; background: #f0fdf4; border: 2px solid #86efac;
+            border-radius: 12px; display: none;
+        }
+        .snippet-box.show { display: block; }
+        .snippet-box h3 { font-size: 1rem; color: #166534; margin-bottom: 8px; }
+        .snippet-box p { font-size: 0.85rem; color: #555; margin-bottom: 10px; }
+        .snippet-code {
+            display: flex; gap: 8px; align-items: center; background: #fff;
+            padding: 10px 14px; border-radius: 8px; border: 1px solid #d1d5db;
+        }
+        .snippet-code input {
+            flex: 1; border: none; font-family: 'Courier New', monospace; font-size: 0.85rem;
+            color: #1a1a2e; background: transparent; outline: none;
+        }
+        .snippet-code button {
+            padding: 6px 14px; background: #6c63ff; color: white; border: none;
+            border-radius: 6px; font-family: 'Poppins', sans-serif; font-size: 0.8rem;
+            font-weight: 600; cursor: pointer;
+        }
+        .snippet-actions { margin-top: 12px; display: flex; gap: 10px; }
+
+        /* Domain table */
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px 14px; background: #f8f9fa;
+            color: #666; font-size: 0.78rem; font-weight: 600;
+            text-transform: uppercase; border-bottom: 2px solid #eee;
+        }
+        td { padding: 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.88rem; vertical-align: middle; }
+        tr:hover td { background: #f8f9fa; }
+        td .domain-label { font-weight: 600; color: #1a1a2e; }
+        td .domain-url { font-size: 0.8rem; color: #888; margin-top: 2px; }
+
+        .info-box {
+            padding: 14px 18px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+            font-size: 0.85rem; color: #1e40af; margin-bottom: 18px; line-height: 1.5;
+        }
+        .info-box i { margin-right: 6px; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #95a5a6; }
+        .empty-state i { font-size: 2rem; margin-bottom: 10px; display: block; }
+
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; padding: 14px 22px;
+            background: #1a1a2e; color: #fff; border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.2); font-size: 0.9rem;
+            z-index: 9999; opacity: 0; transform: translateY(20px); transition: all 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background: #c0392b; }
+
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white; border: none; border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+        }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px 15px; width: 100%; }
+            .header { padding: 20px 15px; flex-direction: column; gap: 15px; align-items: flex-start; }
+            .form-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item active"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-truck-loading"></i> Shipping Setup</h1>
+                <p>Register domains for shipping-only tracking &mdash; no BuyGoods script needed</p>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="card">
+            <h2><i class="fas fa-plus-circle" style="color:#6c63ff;"></i> Register New Domain</h2>
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                Use this for domains that only need the <b>country selector + dynamic shipping</b>.
+                Paste the <code>s.js</code> script on your page. When you later get full shaver tracking (<code>t.js</code>),
+                remove <code>s.js</code> &mdash; <code>t.js</code> already includes shipping.
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Domain Label</label>
+                    <input type="text" id="regLabel" placeholder="e.g. PowerX Pro V4">
+                </div>
+                <div class="form-group">
+                    <label>Domain URL</label>
+                    <input type="text" id="regUrl" placeholder="e.g. powerxpro.trustednutraproduct.com/v4/">
+                </div>
+                <button class="btn btn-primary" onclick="registerDomain()">
+                    <i class="fas fa-plus"></i> Register
+                </button>
+            </div>
+
+            <!-- Snippet output (shown after registration) -->
+            <div id="snippetBox" class="snippet-box">
+                <h3><i class="fas fa-check-circle"></i> Domain Registered!</h3>
+                <p>Add this script to your landing pages in the <code>&lt;head&gt;</code> section:</p>
+                <div class="snippet-code">
+                    <input type="text" id="snippetCode" readonly>
+                    <button onclick="copySnippet()">Copy</button>
+                </div>
+                <div class="snippet-actions">
+                    <a href="shipping.html" class="btn btn-ghost"><i class="fas fa-truck"></i> Configure Shipping Rates</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registered Shipping Domains -->
+        <div class="card">
+            <h2><i class="fas fa-list" style="color:#6c63ff;"></i> Registered Shipping Domains</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>CDN Script</th>
+                        <th style="width:100px; text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="domainTableBody">
+                    <tr><td colspan="3" class="empty-state"><i class="fas fa-spinner fa-spin"></i>Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/config.js?v=2.7.0"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadDomains);
+
+        async function registerDomain() {
+            var label = document.getElementById('regLabel').value.trim();
+            var url = document.getElementById('regUrl').value.trim();
+            if (!label || !url) { showToast('Enter both label and URL', true); return; }
+
+            var result = await apiRequest(API_URL, 'register_shipping_domain', {
+                label: label,
+                domain_url: url
+            });
+
+            if (result && result.success) {
+                showSnippet(result.domain_key);
+                document.getElementById('regLabel').value = '';
+                document.getElementById('regUrl').value = '';
+                loadDomains();
+                showToast('Domain registered');
+            } else {
+                showToast('Failed: ' + (result && result.error ? result.error : 'unknown'), true);
+            }
+        }
+
+        function showSnippet(domainKey) {
+            var box = document.getElementById('snippetBox');
+            var code = document.getElementById('snippetCode');
+            code.value = '<script src="https://cdn.trustednutraproduct.com/s.js?v=' + domainKey + '"><\/script>';
+            box.classList.add('show');
+        }
+
+        function copySnippet() {
+            var input = document.getElementById('snippetCode');
+            input.select();
+            document.execCommand('copy');
+            showToast('Copied to clipboard');
+        }
+
+        async function loadDomains() {
+            var result = await apiRequest(API_URL, 'get_shipping_domains', {});
+            var tbody = document.getElementById('domainTableBody');
+
+            if (!result || !result.success || !result.domains || result.domains.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="empty-state"><i class="fas fa-globe"></i>No shipping-only domains registered yet.</td></tr>';
+                return;
+            }
+
+            var html = '';
+            result.domains.forEach(function(d) {
+                var snippet = '<script src="https://cdn.trustednutraproduct.com/s.js?v=' + escapeHtml(d.domain_key) + '"><\/script>';
+                html += '<tr>';
+                html += '<td><div class="domain-label">' + escapeHtml(d.label) + '</div><div class="domain-url">' + escapeHtml(d.domain_url) + '</div></td>';
+                html += '<td><div class="snippet-code" style="font-size:0.8rem;padding:6px 10px;"><input type="text" value=\'' + snippet + '\' readonly style="font-size:0.78rem;"><button onclick="this.previousElementSibling.select();document.execCommand(\'copy\');showToast(\'Copied\')">Copy</button></div></td>';
+                html += '<td style="text-align:right;"><button class="btn btn-danger" onclick="deleteDomain(' + d.id + ')"><i class="fas fa-trash"></i></button></td>';
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function deleteDomain(id) {
+            if (!confirm('Delete this shipping domain? This will stop the s.js script from working on its pages.')) return;
+            var result = await apiRequest(API_URL, 'delete_shipping_domain', { id: id });
+            if (result && result.success) {
+                showToast('Deleted');
+                loadDomains();
+            } else {
+                showToast('Failed: ' + (result && result.error ? result.error : 'unknown'), true);
+            }
+        }
+
+        function showToast(msg, isError) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(function() { t.className = 'toast'; }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('mobile-open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        }
+    </script>
+</body>
+</html>

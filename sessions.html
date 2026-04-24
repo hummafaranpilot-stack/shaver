@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shaver - Active Sessions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e8f5e9;
+            color: #1a1a2e;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 240px;
+            background: #fff;
+            color: #1a1a2e;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: width 0.3s ease;
+            border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04);
+            padding: 4px 0;
+        }
+
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: #1a1a2e; font-weight: 700; }
+        .sidebar-header h2 .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px;
+        }
+        .sidebar-header p { font-size: 0.85rem; color: #999; margin-left: 48px; }
+
+        .sidebar-toggle {
+            position: absolute; top: 18px; right: 12px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px;
+            color: #6c63ff; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 14px; transition: background 0.2s, transform 0.3s; z-index: 10;
+        }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+
+        .nav-section { padding: 2px 0; border-bottom: none; }
+        .nav-section-title { padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s; }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px;
+            color: #7b7b8e; text-decoration: none; transition: all 0.3s; font-size: 0.84rem; font-weight: 500; border-radius: 12px;
+        }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); border-left: none; }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+
+        .main-content { margin-left: 240px; padding: 20px; transition: margin-left 0.3s ease; }
+
+        /* Sidebar collapsed state */
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; }
+        body.sidebar-collapsed .sidebar-header h2,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 20px 10px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 1px 6px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .nav-item.active { padding-left: 0; }
+        body.sidebar-collapsed .nav-item:hover { padding-left: 0; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header {
+            background: white; padding: 25px 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left h1 { font-size: 1.8rem; color: #1a1a2e; margin-bottom: 5px; }
+        .header-left p { color: #7f8c8d; font-size: 0.95rem; }
+
+        /* ── Alert ── */
+        .alert {
+            padding: 14px 20px; border-radius: 8px; margin-bottom: 20px;
+            font-weight: 500; font-size: 0.9rem; display: none;
+        }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* ── Stats Grid ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .stat-card {
+            background: white; padding: 24px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; position: relative; overflow: hidden;
+        }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        }
+        .stat-red::before { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .stat-blue::before { background: linear-gradient(90deg, #3498db, #2980b9); }
+        .stat-green::before { background: linear-gradient(90deg, #27ae60, #1e8449); }
+        .stat-orange::before { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 800; color: #1a1a2e; }
+        .stat-card .stat-label { font-size: 0.82rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+        /* ── Card ── */
+        .card {
+            background: white; padding: 30px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: none; margin-bottom: 25px;
+        }
+        .card-title {
+            font-size: 1.15rem; font-weight: 700; color: #1a1a2e;
+            margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+        }
+        .card-title i { color: #6c63ff; }
+
+        /* ── Create Form ── */
+        .create-card {
+            background: linear-gradient(135deg, #fafaff 0%, #f0f0ff 100%);
+            border: 2px solid #e8e8f0; border-radius: 16px;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block; font-weight: 600; margin-bottom: 6px;
+            color: #1a1a2e; font-size: 0.85rem;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 0.92rem; font-family: 'Poppins', sans-serif; transition: all 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #6c63ff; outline: none; box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        /* ── Shave Mode Selector ── */
+        .shave-mode-selector {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px;
+        }
+        .shave-mode-btn {
+            position: relative; padding: 20px 18px; border: 2px solid #e0e0e0; border-radius: 12px;
+            background: white; cursor: pointer; transition: all 0.25s; text-align: left;
+        }
+        .shave-mode-btn:hover { border-color: #b8b0d4; box-shadow: 0 4px 12px rgba(108,99,255,0.08); }
+        .shave-mode-btn.active {
+            border-color: #6c63ff; background: linear-gradient(135deg, #f8f6ff, #eeeeff);
+            box-shadow: 0 4px 16px rgba(108,99,255,0.15);
+        }
+        .shave-mode-btn .mode-icon {
+            width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center;
+            justify-content: center; font-size: 1.1rem; margin-bottom: 10px;
+        }
+        .shave-mode-btn.active .mode-icon { opacity: 1; }
+        .mode-instant .mode-icon { background: #fde8e8; color: #e74c3c; }
+        .mode-smart .mode-icon { background: #e8f5e9; color: #27ae60; }
+        .shave-mode-btn .mode-title {
+            font-size: 0.95rem; font-weight: 700; color: #1a1a2e; margin-bottom: 4px;
+        }
+        .shave-mode-btn .mode-desc {
+            font-size: 0.78rem; color: #7f8c8d; line-height: 1.4;
+        }
+        .shave-mode-btn .mode-check {
+            position: absolute; top: 12px; right: 12px; width: 22px; height: 22px;
+            border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center;
+            justify-content: center; font-size: 0.7rem; color: transparent; transition: all 0.2s;
+        }
+        .shave-mode-btn.active .mode-check {
+            background: #6c63ff; border-color: #6c63ff; color: white;
+        }
+        .shave-mode-btn .mode-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem;
+            font-weight: 700; letter-spacing: 0.5px; margin-top: 6px;
+        }
+        .mode-instant .mode-badge { background: #fee2e2; color: #dc2626; }
+        .mode-smart .mode-badge { background: #dcfce7; color: #166534; }
+
+        /* ── Action Mode (Remove/Replace) ── */
+        .action-mode-row {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px;
+        }
+        .action-mode-btn {
+            padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px;
+            background: white; cursor: pointer; transition: all 0.2s; text-align: center;
+            font-weight: 600; font-size: 0.85rem; color: #666;
+        }
+        .action-mode-btn:hover { border-color: #aaa; }
+        .action-mode-btn.active-remove { border-color: #e74c3c; background: #fef2f2; color: #dc2626; }
+        .action-mode-btn.active-replace { border-color: #3498db; background: #eff6ff; color: #2563eb; }
+        .action-mode-btn.active-cb_replace { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
+        .action-mode-btn .btn-sub { font-size: 0.72rem; font-weight: 400; color: #999; display: block; margin-top: 2px; }
+
+        .replace-fields { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e0e0e0; }
+        .replace-fields.show { display: block; }
+        .btn-browse-aff {
+            width: 100%; margin-top: 6px; padding: 9px 14px; border: 2px dashed #d4d0e8;
+            border-radius: 8px; font-size: 0.84rem; font-family: inherit; background: #fafaff;
+            cursor: pointer; color: #6c63ff; font-weight: 600; transition: all 0.2s; text-align: center;
+        }
+        .btn-browse-aff:hover { background: #f0f0ff; border-color: #6c63ff; }
+        .btn-browse-aff i { margin-right: 4px; }
+
+        /* Affiliate Picker Modal */
+        .aff-picker-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15,23,42,0.5); z-index: 2000; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .aff-picker-overlay.active { display: flex; }
+        .aff-picker-box {
+            background: #fff; border-radius: 16px; width: 94%; max-width: 720px;
+            max-height: 85vh; display: flex; flex-direction: column;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+            animation: detailIn 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes detailIn { from { opacity:0; transform:translateY(20px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .aff-picker-header {
+            padding: 18px 24px; border-bottom: 2px solid #f0f0f5;
+            display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        .aff-picker-header-left { display: flex; align-items: center; gap: 12px; }
+        .aff-picker-header-left .aph-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem;
+        }
+        .aff-picker-header h3 { font-size: 1.05rem; color: #1e293b; font-weight: 700; }
+        .aff-picker-header .aph-sub { font-size: 0.78rem; color: #94a3b8; }
+        .aff-picker-close {
+            width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 10px;
+            cursor: pointer; font-size: 1.1rem; color: #64748b; display: flex; align-items: center; justify-content: center;
+        }
+        .aff-picker-close:hover { background: #f1f5f9; color: #334155; }
+        .aff-picker-search {
+            padding: 12px 24px; border-bottom: 1px solid #f0f0f5; flex-shrink: 0;
+        }
+        .aff-picker-search input {
+            width: 100%; padding: 9px 14px 9px 36px; border: 2px solid #e2e8f0; border-radius: 8px;
+            font-size: 0.88rem; font-family: inherit; outline: none; transition: border-color 0.2s;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 16 16' width='14' height='14'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85zm-5.242.156a5 5 0 110-10 5 5 0 010 10z'/%3E%3C/svg%3E") no-repeat 12px center;
+        }
+        .aff-picker-search input:focus { border-color: #6c63ff; }
+        .aff-picker-body { flex: 1; overflow-y: auto; padding: 0; }
+        .aff-picker-table { width: 100%; border-collapse: collapse; }
+        .aff-picker-table thead { position: sticky; top: 0; z-index: 1; }
+        .aff-picker-table th {
+            padding: 10px 16px; font-size: 0.7rem; font-weight: 700; color: #64748b;
+            text-transform: uppercase; text-align: left; background: #f8f9fc;
+            border-bottom: 2px solid #e2e8f0; letter-spacing: 0.4px;
+        }
+        .aff-picker-table th:first-child { width: 40px; text-align: center; }
+        .aff-picker-table td { padding: 10px 16px; border-bottom: 1px solid #f0f0f5; font-size: 0.88rem; }
+        .aff-picker-table tr:hover td { background: #f8f6ff; }
+        .aff-picker-table tr.ap-selected td { background: #f0f0ff; }
+        .aff-picker-table td:first-child { text-align: center; }
+        .aff-picker-table .ap-check {
+            width: 18px; height: 18px; accent-color: #6c63ff; cursor: pointer;
+        }
+        .aff-picker-table .ap-id {
+            font-weight: 700; color: #6c63ff; font-family: 'Courier New', monospace; font-size: 0.88rem;
+        }
+        .aff-picker-table .ap-name { color: #475569; font-weight: 500; }
+        .aff-picker-table .ap-visits {
+            font-weight: 700; color: #1e293b; font-size: 0.88rem;
+        }
+        .aff-picker-table .ap-bar {
+            height: 4px; background: #e8e8f0; border-radius: 2px; margin-top: 4px; min-width: 60px;
+        }
+        .aff-picker-table .ap-bar-fill { height: 4px; border-radius: 2px; background: #6c63ff; }
+        .ap-orders-pill {
+            display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px;
+            background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b;
+            border-radius: 12px; font-size: 0.72rem; font-weight: 700; color: #92400e;
+            margin-top: 4px; font-family: -apple-system, sans-serif;
+        }
+        .ap-orders-pill i { font-size: 0.65rem; }
+        .ap-orders-zero {
+            display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px;
+            background: #f1f5f9; border: 1px solid #e2e8f0;
+            border-radius: 12px; font-size: 0.72rem; font-weight: 600; color: #94a3b8;
+            margin-top: 4px; font-family: -apple-system, sans-serif;
+        }
+        .aff-picker-footer {
+            padding: 14px 24px; border-top: 2px solid #f0f0f5; display: flex;
+            align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        .aff-picker-footer .apf-count { font-size: 0.85rem; color: #64748b; font-weight: 600; }
+        .aff-picker-footer .apf-count strong { color: #6c63ff; }
+        .btn-aff-pick-apply {
+            padding: 10px 28px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white; border: none; border-radius: 12px; font-size: 0.88rem; font-weight: 700;
+            cursor: pointer; font-family: 'Poppins', sans-serif; transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(108,99,255,0.25);
+        }
+        .btn-aff-pick-apply:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,99,255,0.3); }
+        .btn-aff-pick-apply:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .aff-picker-empty { text-align: center; padding: 40px 20px; color: #94a3b8; }
+
+        .aff-name-badge {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            font-size: 0.78rem; font-weight: 600; color: #6c63ff; background: #f0f0ff;
+            padding: 3px 10px; border-radius: 12px; max-width: 130px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; display: none;
+        }
+        .aff-name-badge.show { display: inline-block; }
+
+        .cb-replace-fields { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e0e0e0; }
+        .cb-replace-fields.show { display: block; }
+        .cb-replace-example {
+            background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px;
+            font-size: 0.82rem; color: #92400e; line-height: 1.6; margin-top: 10px;
+        }
+        .cb-replace-example code { background: #fef3c7; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+        .cb-preview { margin-top: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+        .cb-preview-title {
+            padding: 10px 16px; background: #f1f5f9; font-size: 0.78rem; font-weight: 700;
+            color: #475569; text-transform: uppercase; letter-spacing: 0.4px;
+            display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #e2e8f0;
+        }
+        .cb-preview-title i { color: #6c63ff; }
+        .cb-preview-table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; }
+        .cb-preview-table th {
+            padding: 10px 14px; font-size: 0.72rem; font-weight: 700; color: #475569;
+            text-transform: uppercase; text-align: left; background: #f1f5f9;
+            border: 1px solid #e2e8f0; letter-spacing: 0.3px;
+        }
+        .cb-preview-table th:first-child { width: 30px; text-align: center; }
+        .cb-preview-table td {
+            padding: 10px 14px; font-size: 0.8rem; font-family: 'Courier New', monospace;
+            word-break: break-all; border: 1px solid #e2e8f0; vertical-align: middle;
+        }
+        .cb-preview-table td.cb-col-num {
+            text-align: center; font-family: -apple-system, sans-serif;
+            font-weight: 700; color: #64748b; background: #f8fafc; width: 30px;
+        }
+        .cb-preview-table td.cb-col-before { color: #94a3b8; background: #fafafc; }
+        .cb-preview-table td.cb-col-after { color: #16a34a; background: #f8fdf8; font-weight: 600; }
+        .cb-preview-table tr:hover td { background: #f0f4ff; }
+        .cb-preview-table .cb-visits-tag {
+            font-family: -apple-system, sans-serif; font-size: 0.7rem; color: #94a3b8;
+            font-weight: 600; display: block; margin-top: 3px;
+        }
+        .cb-preview-loading { padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem; }
+
+        .btn-create {
+            padding: 12px 32px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; transition: all 0.2s; font-family: 'Poppins', sans-serif;
+            box-shadow: 0 4px 12px rgba(108,99,255,0.25);
+        }
+        .btn-create:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,99,255,0.3); }
+        .btn-create:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ── Sessions Table ── */
+        /* Session Cards */
+        .session-card {
+            background: white; border: none; border-radius: 16px;
+            margin-bottom: 14px; overflow: hidden; transition: box-shadow 0.15s;
+            box-shadow: 0 2px 8px rgba(108,99,255,0.08);
+            border-left: 4px solid #6c63ff;
+        }
+        .session-card:hover { box-shadow: 0 6px 20px rgba(108,99,255,0.12); }
+        .sc-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 18px; border-bottom: 1px solid #e8e8f0; background: #fafaff;
+            flex-wrap: wrap; gap: 8px;
+        }
+        .sc-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .sc-header-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .sc-aff {
+            font-weight: 800; color: #6c63ff; font-family: 'Courier New', monospace;
+            font-size: 1.05rem; letter-spacing: 0.5px;
+        }
+        .sc-name {
+            font-size: 0.88rem; color: #475569; font-weight: 600;
+            background: #f0f0ff; padding: 2px 10px; border-radius: 10px;
+        }
+        .sc-sub { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
+        .sc-ratio {
+            font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 10px;
+            background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fbbf24;
+        }
+        .sc-stats {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+            border-bottom: 1px solid #f5f5fa;
+        }
+        .sc-stat {
+            padding: 14px 16px; text-align: center; border-right: 1px solid #f5f5fa;
+        }
+        .sc-stat:last-child { border-right: none; }
+        .sc-stat-value { font-size: 1.4rem; font-weight: 800; color: #1e293b; }
+        .sc-stat-label { font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+        .sc-stat-label i { margin-right: 2px; }
+        .sc-stat-shaved .sc-stat-value { color: #dc2626; }
+        .sc-stat-safe .sc-stat-value { color: #16a34a; }
+        .sc-stat-orders .sc-stat-value { color: #d97706; }
+        .sc-stat-total .sc-stat-value { color: #64748b; }
+        .sc-stat-processed .sc-stat-value { color: #6c63ff; }
+        .sc-progress { padding: 0 18px 12px; }
+        .sc-progress-bar {
+            display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #f1f5f9;
+        }
+        .sc-progress-shaved { background: #ef4444; height: 6px; }
+        .sc-progress-safe { background: #22c55e; height: 6px; }
+        .sc-progress-labels {
+            display: flex; justify-content: space-between; margin-top: 4px;
+            font-size: 0.7rem; font-weight: 600;
+        }
+        .sc-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 18px; background: #f8f7fc; border-top: 1px solid #e8e8f0;
+            flex-wrap: wrap; gap: 8px;
+        }
+        .sc-footer-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .sc-time { font-size: 0.78rem; color: #94a3b8; font-weight: 500; }
+        .sc-time i { margin-right: 3px; }
+        .sc-replacement { font-size: 0.78rem; color: #475569; }
+        .sc-replacement i { color: #6c63ff; margin-right: 3px; }
+        .sc-notes {
+            font-size: 0.78rem; color: #94a3b8; max-width: 200px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .sc-notes i { margin-right: 3px; }
+
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px;
+        }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-remove { background: #fee2e2; color: #dc2626; }
+        .badge-replace { background: #dbeafe; color: #1d4ed8; }
+        .badge-instant { background: #fef3c7; color: #92400e; }
+        .badge-smart { background: #d1fae5; color: #065f46; }
+        .smart-state {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;
+        }
+        .smart-state-shave { background: #fee2e2; color: #dc2626; }
+        .smart-state-skip { background: #fef3c7; color: #92400e; }
+        .smart-state i { font-size: 0.6rem; }
+        .aff-id-cell {
+            font-weight: 700; color: #6c63ff; font-family: 'Courier New', monospace; font-size: 0.88rem;
+        }
+        .btn-stop {
+            padding: 7px 16px; background: #ef4444; color: white; border: none; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+        }
+        .btn-stop:hover { background: #dc2626; }
+
+        @media (max-width: 768px) {
+            .sc-stats { grid-template-columns: repeat(3, 1fr); }
+            .sc-stat { padding: 10px 12px; }
+            .sc-stat-value { font-size: 1.1rem; }
+        }
+        @media (max-width: 480px) {
+            .sc-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: #95a5a6;
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.4; }
+        .empty-state p { font-size: 1rem; margin-bottom: 5px; }
+        .empty-state small { font-size: 0.82rem; }
+
+        /* ── Collapse Toggle ── */
+        .collapse { display: none; }
+        .collapse.show { display: block; }
+        .btn-toggle {
+            padding: 8px 16px; border: 2px solid #6c63ff; background: white; color: #6c63ff;
+            border-radius: 12px; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+            transition: all 0.2s; font-family: 'Poppins', sans-serif;
+        }
+        .btn-toggle:hover { background: #6c63ff; color: white; }
+
+        /* ── Global input font ── */
+        select, input, textarea, button { font-family: 'Poppins', sans-serif; }
+
+        /* ── Mobile ── */
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 10px; left: 10px; z-index: 1001;
+            width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            color: white; border: none; cursor: pointer; font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(108,99,255,0.3);
+        }
+        .mobile-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle { display: flex; align-items: center; justify-content: center; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding: 15px; padding-top: 60px; }
+            .header { flex-direction: column; gap: 15px; padding: 20px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .shave-mode-selector { grid-template-columns: 1fr; }
+            .form-row, .form-row-3, .action-mode-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item active"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-scissors" style="color:#6c63ff;"></i> Shaver</h1>
+                <p>Create and manage shaving sessions</p>
+            </div>
+            <select class="domain-selector" id="domainSelector"></select>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card stat-red">
+                <div class="stat-value" id="statActive">0</div>
+                <div class="stat-label">Active Sessions</div>
+            </div>
+            <div class="stat-card stat-blue">
+                <div class="stat-value" id="statVisits">0</div>
+                <div class="stat-label">Total Shaved</div>
+            </div>
+            <div class="stat-card stat-orange">
+                <div class="stat-value" id="statSafe">0</div>
+                <div class="stat-label">Smart Safe Visits</div>
+            </div>
+            <div class="stat-card stat-green">
+                <div class="stat-value" id="statAffiliates">0</div>
+                <div class="stat-label">Affiliates Targeted</div>
+            </div>
+        </div>
+
+        <!-- Create New Session -->
+        <div class="card create-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="card-title"><i class="fas fa-plus-circle"></i> New Shaving Session</div>
+                <button class="btn-toggle" onclick="toggleCreateForm()">
+                    <i class="fas fa-chevron-down" id="createToggleIcon"></i>
+                </button>
+            </div>
+
+            <div id="createForm" class="collapse show">
+                <!-- Step 1: Shave Mode -->
+                <label style="font-weight:700;font-size:0.85rem;color:#1a1a2e;margin-bottom:10px;display:block;">
+                    How should the shaver run?
+                </label>
+                <div class="shave-mode-selector">
+                    <div class="shave-mode-btn mode-instant active" onclick="selectShaveMode('instant')" id="modeInstant">
+                        <div class="mode-check"><i class="fas fa-check"></i></div>
+                        <div class="mode-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="mode-title">Start Instantly</div>
+                        <div class="mode-desc">Shave every matching visitor. No exceptions, no gaps.</div>
+                        <div class="mode-badge">AGGRESSIVE</div>
+                    </div>
+                    <div class="shave-mode-btn mode-smart" onclick="selectShaveMode('smart')" id="modeSmart">
+                        <div class="mode-check"><i class="fas fa-check"></i></div>
+                        <div class="mode-icon"><i class="fas fa-brain"></i></div>
+                        <div class="mode-title">Start Smartly</div>
+                        <div class="mode-desc">Shave, then check if visitor converted. If not, let the next one through safely. Alternates until stopped.</div>
+                        <div class="mode-badge">BG ONLY</div>
+                    </div>
+                </div>
+
+                <!-- Smart mode explainer -->
+                <div id="smartExplainer" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-bottom:18px;font-size:0.82rem;color:#166534;line-height:1.6;">
+                    <strong><i class="fas fa-info-circle"></i> How Smart Shaving works:</strong><br>
+                    1. Visitor 1 lands &rarr; <strong style="color:#dc2626">SHAVED</strong><br>
+                    2. If Visitor 1 did NOT reach upsell/order &rarr; Visitor 2 is <strong style="color:#f59e0b">SAFE</strong> (affiliate keeps it)<br>
+                    3. Visitor 3 &rarr; <strong style="color:#dc2626">SHAVED</strong> again &rarr; check conversion &rarr; repeat<br>
+                    4. If a shaved visitor DOES convert &rarr; next is also shaved (winning streak)<br>
+                    <span style="opacity:0.7;">This keeps affiliates seeing traffic flow while you capture the converting ones.</span>
+                </div>
+
+                <!-- Affiliate ID + Action Mode -->
+                <div class="form-row" style="margin-bottom:18px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label id="lblAffId"><i class="fas fa-user-tag"></i> Affiliate ID</label>
+                        <div style="position:relative;">
+                            <input type="text" id="affId" placeholder="Type ID manually..." style="padding-right:140px;">
+                            <span id="affNameBadge" class="aff-name-badge"></span>
+                        </div>
+                        <button type="button" class="btn-browse-aff" onclick="openAffPicker()">
+                            <i class="fas fa-users"></i> Browse Affiliates <span style="opacity:0.6;font-weight:400;">— last 7 days</span>
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label><i class="fas fa-hashtag"></i> Sub ID <span style="font-weight:400;color:#aaa;">(optional)</span></label>
+                        <input type="text" id="subId" placeholder="e.g. campaign1">
+                    </div>
+                </div>
+
+                <!-- Action: Remove or Replace -->
+                <label style="font-weight:700;font-size:0.85rem;color:#1a1a2e;margin-bottom:8px;display:block;">
+                    What happens to shaved traffic?
+                </label>
+                <div class="action-mode-row">
+                    <div class="action-mode-btn active-remove" id="actionRemove" onclick="selectActionMode('remove')">
+                        <i class="fas fa-trash-alt"></i> Remove Affiliate
+                    </div>
+                    <div class="action-mode-btn" id="actionReplace" onclick="selectActionMode('replace')">
+                        <i class="fas fa-exchange-alt"></i> Replace Affiliate
+                    </div>
+                    <div class="action-mode-btn" id="actionCbReplace" onclick="selectActionMode('cb_replace')">
+                        <i class="fas fa-route"></i> CB Replace
+                        <span class="btn-sub">BG Only — Path Swap</span>
+                    </div>
+                </div>
+
+                <div class="replace-fields" id="replaceFields">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label id="lblReplaceAffId">Replace with Affiliate ID</label>
+                            <input type="text" id="replaceAffId" placeholder="Replacement aff_id">
+                        </div>
+                        <div class="form-group">
+                            <label>Replace with Sub ID</label>
+                            <input type="text" id="replaceSubId" placeholder="Replacement sub_id">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cb-replace-fields" id="cbReplaceFields">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-search"></i> Find in path</label>
+                            <input type="text" id="cbPathFind" placeholder="e.g. /v2/" value="/v2/">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-pencil-alt"></i> Replace with</label>
+                            <input type="text" id="cbPathReplace" placeholder="e.g. /v3/" value="/v3/">
+                        </div>
+                    </div>
+                    <div class="cb-replace-example">
+                        <strong>How it works:</strong> Strips all affiliate params (aff_id, subid, etc.) <strong>AND</strong> swaps the path segment.<br>
+                        <code>/v2/short/go/?aff_id=1122</code> → <code>/v3/short/go/</code>
+                    </div>
+                    <div id="cbPreview" class="cb-preview" style="display:none;">
+                        <div class="cb-preview-title"><i class="fas fa-eye"></i> Live URL Preview</div>
+                        <div id="cbPreviewBody"></div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                    <label><i class="fas fa-sticky-note"></i> Notes <span style="font-weight:400;color:#aaa;">(optional)</span></label>
+                    <textarea id="sessionNotes" placeholder="Why are you shaving this affiliate?"></textarea>
+                </div>
+
+                <button class="btn-create" onclick="createSession()" id="btnCreate">
+                    <i class="fas fa-play"></i> Start Shaving
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Sessions -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-list"></i> Active Sessions</div>
+            <div id="sessionsBody">
+                <div class="empty-state">
+                    <i class="fas fa-scissors"></i>
+                    <p>No active shaving sessions</p>
+                    <small>Create one above to start shaving affiliate traffic</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Affiliate Picker Modal -->
+    <div class="aff-picker-overlay" id="affPickerModal" onclick="if(event.target===this)closeAffPicker()">
+        <div class="aff-picker-box">
+            <div class="aff-picker-header">
+                <div class="aff-picker-header-left">
+                    <div class="aph-icon"><i class="fas fa-users"></i></div>
+                    <div>
+                        <h3>Select Affiliates</h3>
+                        <div class="aph-sub">Top affiliates by traffic — last 7 days</div>
+                    </div>
+                </div>
+                <button class="aff-picker-close" onclick="closeAffPicker()">&times;</button>
+            </div>
+            <div class="aff-picker-search">
+                <input type="text" id="affPickerSearch" placeholder="Search by ID or name..." oninput="filterAffPicker()">
+            </div>
+            <div class="aff-picker-body">
+                <table class="aff-picker-table">
+                    <thead><tr><th><input type="checkbox" class="ap-check" id="apCheckAll" onchange="toggleAllAffPicker(this.checked)"></th><th>Affiliate</th><th>Visits (7d)</th></tr></thead>
+                    <tbody id="affPickerBody"></tbody>
+                </table>
+                <div class="aff-picker-empty" id="affPickerEmpty" style="display:none;"><i class="fas fa-search"></i><br>No affiliates found</div>
+            </div>
+            <div class="aff-picker-footer">
+                <div class="apf-count"><strong id="apSelectedCount">0</strong> selected</div>
+                <button class="btn-aff-pick-apply" id="btnApplyAffPicker" onclick="applyAffPicker()" disabled>
+                    <i class="fas fa-scissors"></i> Start Shaving Selected
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        var selectedShaveMode = 'instant';
+        var selectedActionMode = 'remove';
+
+        // ── Shave Mode Selection ──
+        function selectShaveMode(mode) {
+            selectedShaveMode = mode;
+            document.getElementById('modeInstant').classList.toggle('active', mode === 'instant');
+            document.getElementById('modeSmart').classList.toggle('active', mode === 'smart');
+            document.getElementById('smartExplainer').style.display = mode === 'smart' ? 'block' : 'none';
+
+            // Smart mode only for BuyGoods — warn if wrong platform
+            if (mode === 'smart' && currentDomainPlatform !== 'buygoods') {
+                showAlert('Smart shaving is only available for BuyGoods domains. Please select a BuyGoods domain.', 'error');
+            }
+        }
+
+        // ── Action Mode Selection ──
+        function selectActionMode(mode) {
+            selectedActionMode = mode;
+            document.getElementById('actionRemove').className = 'action-mode-btn' + (mode === 'remove' ? ' active-remove' : '');
+            document.getElementById('actionReplace').className = 'action-mode-btn' + (mode === 'replace' ? ' active-replace' : '');
+            document.getElementById('actionCbReplace').className = 'action-mode-btn' + (mode === 'cb_replace' ? ' active-cb_replace' : '');
+            document.getElementById('replaceFields').classList.toggle('show', mode === 'replace');
+            document.getElementById('cbReplaceFields').classList.toggle('show', mode === 'cb_replace');
+
+            // CB Replace is BG only
+            if (mode === 'cb_replace' && currentDomainPlatform !== 'buygoods') {
+                showAlert('CB Replace is only available for BuyGoods domains', 'error');
+            }
+            // Trigger preview when switching to cb_replace
+            if (mode === 'cb_replace') triggerCbPreview();
+            else document.getElementById('cbPreview').style.display = 'none';
+        }
+
+        // ── Affiliate Picker Modal ──
+        var affPickerData = [];
+
+        async function openAffPicker() {
+            var modal = document.getElementById('affPickerModal');
+            var body = document.getElementById('affPickerBody');
+            modal.classList.add('active');
+            body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            document.getElementById('affPickerSearch').value = '';
+            document.getElementById('apCheckAll').checked = false;
+            updateAffPickerCount();
+
+            try {
+                var result = await apiRequest(API_URL, 'get_top_affiliates_7d', { domain_id: currentDomainId });
+                if (!result || !result.success || !result.affiliates || !result.affiliates.length) {
+                    body.innerHTML = '';
+                    document.getElementById('affPickerEmpty').style.display = 'block';
+                    return;
+                }
+                affPickerData = result.affiliates;
+                renderAffPicker(affPickerData);
+            } catch(e) {
+                body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px;color:#dc2626;">Error loading</td></tr>';
+            }
+        }
+
+        function closeAffPicker() {
+            document.getElementById('affPickerModal').classList.remove('active');
+        }
+
+        function renderAffPicker(list) {
+            var body = document.getElementById('affPickerBody');
+            var empty = document.getElementById('affPickerEmpty');
+            if (!list.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+            var maxVisits = parseInt(list[0].visits) || 1;
+            var html = '';
+            list.forEach(function(a, i) {
+                var visits = parseInt(a.visits) || 0;
+                var pct = Math.round((visits / maxVisits) * 100);
+                html += '<tr class="ap-row" data-id="' + escapeHtml(a.aff_id) + '" data-search="' + escapeHtml((a.aff_id + ' ' + (a.name || '')).toLowerCase()) + '">';
+                html += '<td><input type="checkbox" class="ap-check" value="' + escapeHtml(a.aff_id) + '" onchange="updateAffPickerCount()"></td>';
+                var orders2m = parseInt(a.orders_2m) || 0;
+                var orderPill = orders2m > 0
+                    ? '<span class="ap-orders-pill"><i class="fas fa-shopping-bag"></i> ' + orders2m + ' orders (2mo)</span>'
+                    : '<span class="ap-orders-zero"><i class="fas fa-shopping-bag"></i> 0 orders</span>';
+                html += '<td><span class="ap-id">' + escapeHtml(a.aff_id) + '</span>';
+                if (a.name) html += '<br><span class="ap-name">' + escapeHtml(a.name) + '</span>';
+                html += '<br>' + orderPill;
+                html += '</td>';
+                html += '<td><span class="ap-visits">' + formatNumber(visits) + '</span>';
+                html += '<div class="ap-bar"><div class="ap-bar-fill" style="width:' + pct + '%"></div></div></td>';
+                html += '</tr>';
+            });
+            body.innerHTML = html;
+        }
+
+        function filterAffPicker() {
+            var q = document.getElementById('affPickerSearch').value.toLowerCase().trim();
+            var rows = document.querySelectorAll('#affPickerBody .ap-row');
+            var visible = 0;
+            rows.forEach(function(r) {
+                var match = !q || r.dataset.search.indexOf(q) !== -1;
+                r.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            document.getElementById('affPickerEmpty').style.display = visible ? 'none' : 'block';
+        }
+
+        function toggleAllAffPicker(checked) {
+            document.querySelectorAll('#affPickerBody .ap-row:not([style*="display: none"]) .ap-check').forEach(function(cb) {
+                cb.checked = checked;
+            });
+            updateAffPickerCount();
+        }
+
+        function updateAffPickerCount() {
+            var checked = document.querySelectorAll('#affPickerBody .ap-check:checked');
+            var count = checked.length;
+            document.getElementById('apSelectedCount').textContent = count;
+            var btn = document.getElementById('btnApplyAffPicker');
+            btn.disabled = count === 0;
+            btn.innerHTML = count <= 1
+                ? '<i class="fas fa-check"></i> Select Affiliate'
+                : '<i class="fas fa-scissors"></i> Start Shaving ' + count + ' Affiliates';
+        }
+
+        async function applyAffPicker() {
+            var checked = document.querySelectorAll('#affPickerBody .ap-check:checked');
+            var ids = Array.from(checked).map(function(cb) { return cb.value; });
+            if (!ids.length) return;
+
+            if (ids.length === 1) {
+                // Single select — just fill the input
+                document.getElementById('affId').value = ids[0];
+                document.getElementById('affId').dispatchEvent(new Event('input'));
+                closeAffPicker();
+                return;
+            }
+
+            // Multi-select — create sessions for each
+            if (!confirm('Start shaving ' + ids.length + ' affiliates with current settings?')) return;
+
+            var btn = document.getElementById('btnApplyAffPicker');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+
+            var success = 0, fail = 0;
+            for (var i = 0; i < ids.length; i++) {
+                try {
+                    var data = {
+                        domain_id: currentDomainId,
+                        aff_id: ids[i],
+                        sub_id: document.getElementById('subId').value.trim(),
+                        mode: selectedActionMode,
+                        shave_mode: selectedShaveMode,
+                        replace_aff_id: document.getElementById('replaceAffId').value.trim(),
+                        replace_sub_id: document.getElementById('replaceSubId').value.trim(),
+                        cb_path_find: document.getElementById('cbPathFind').value.trim(),
+                        cb_path_replace: document.getElementById('cbPathReplace').value.trim(),
+                        notes: document.getElementById('sessionNotes').value.trim()
+                    };
+                    var result = await apiRequest(API_URL, 'create_session', data);
+                    if (result && result.success) success++;
+                    else fail++;
+                } catch(e) { fail++; }
+            }
+
+            closeAffPicker();
+            showAlert('Started ' + success + ' sessions' + (fail ? ' (' + fail + ' failed)' : ''), success ? 'success' : 'error');
+            loadSessions();
+        }
+
+        function loadAffDropdown() { /* replaced by modal */ }
+
+        // ── Affiliate Name Lookup ──
+        var affNameCache = {};
+        var affNameTimer = null;
+        document.getElementById('affId').addEventListener('input', function() {
+            clearTimeout(affNameTimer);
+            var badge = document.getElementById('affNameBadge');
+            var val = this.value.trim();
+            if (!val) { badge.className = 'aff-name-badge'; badge.textContent = ''; return; }
+            // Check cache
+            var cacheKey = currentDomainId + '_' + val;
+            if (affNameCache[cacheKey]) {
+                badge.textContent = affNameCache[cacheKey];
+                badge.className = 'aff-name-badge show';
+                return;
+            }
+            affNameTimer = setTimeout(async function() {
+                try {
+                    var result = await apiRequest(API_URL, 'get_affiliate_names', { domain_id: currentDomainId });
+                    if (result && result.success && result.names) {
+                        var names = result.names;
+                        Object.keys(names).forEach(function(id) { affNameCache[currentDomainId + '_' + id] = names[id]; });
+                        var key = currentDomainId + '_' + val;
+                        if (affNameCache[key]) {
+                            badge.textContent = affNameCache[key];
+                            badge.className = 'aff-name-badge show';
+                        } else {
+                            badge.className = 'aff-name-badge'; badge.textContent = '';
+                        }
+                    }
+                } catch(e) {}
+            }, 500);
+        });
+
+        // ── CB Replace Preview ──
+        var cbPreviewTimer = null;
+        function triggerCbPreview() {
+            clearTimeout(cbPreviewTimer);
+            if (selectedActionMode !== 'cb_replace') return;
+            cbPreviewTimer = setTimeout(loadCbPreview, 400);
+        }
+        document.getElementById('cbPathFind').addEventListener('input', triggerCbPreview);
+        document.getElementById('cbPathReplace').addEventListener('input', triggerCbPreview);
+        document.getElementById('affId').addEventListener('input', function() { if (selectedActionMode === 'cb_replace') triggerCbPreview(); });
+
+        async function loadCbPreview() {
+            var affId = document.getElementById('affId').value.trim();
+            var pathFind = document.getElementById('cbPathFind').value.trim();
+            var pathReplace = document.getElementById('cbPathReplace').value.trim();
+            var preview = document.getElementById('cbPreview');
+            var body = document.getElementById('cbPreviewBody');
+
+            if (!affId || !pathFind || !currentDomainId) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            preview.style.display = 'block';
+            body.innerHTML = '<div class="cb-preview-loading"><i class="fas fa-spinner fa-spin"></i> Loading real URLs...</div>';
+
+            try {
+                var result = await apiRequest(API_URL, 'get_aff_pages', { domain_id: currentDomainId, aff_id: affId });
+                if (!result || !result.success || !result.pages || !result.pages.length) {
+                    body.innerHTML = '<div class="cb-preview-loading">No pages found for this affiliate on this domain</div>';
+                    return;
+                }
+
+                // Deduplicate: group by after URL, merge visit counts
+                var merged = {};
+                result.pages.forEach(function(p) {
+                    var beforeUrl = p.url;
+                    try {
+                        var u = new URL(beforeUrl);
+                        u.searchParams.delete('aff_id'); u.searchParams.delete('affid');
+                        u.searchParams.delete('subid'); u.searchParams.delete('sub_id');
+                        u.searchParams.delete('subid2'); u.searchParams.delete('subid3');
+                        u.searchParams.delete('sub_id2'); u.searchParams.delete('sub_id3');
+                        if (pathFind && pathReplace) u.pathname = u.pathname.replace(pathFind, pathReplace);
+                        var afterUrl = u.toString();
+                        if (afterUrl.endsWith('?')) afterUrl = afterUrl.slice(0, -1);
+                    } catch(e) {
+                        var afterUrl = beforeUrl;
+                    }
+                    // Use after URL + hash as dedup key
+                    var key = afterUrl;
+                    if (!merged[key]) {
+                        merged[key] = { beforeUrl: beforeUrl, afterUrl: afterUrl, visits: 0, pageType: p.page_type || 'landing' };
+                    }
+                    merged[key].visits += parseInt(p.count) || 0;
+                });
+
+                var entries = Object.values(merged).sort(function(a, b) { return b.visits - a.visits; });
+                var afterUrls = entries.map(function(e) { return e.afterUrl; });
+                var rows = '';
+                entries.forEach(function(e, i) {
+                    rows += '<tr>';
+                    rows += '<td class="cb-col-num">' + (i + 1) + '</td>';
+                    rows += '<td class="cb-col-before">' + escapeHtml(e.beforeUrl) + '<span class="cb-visits-tag">' + e.visits + ' visits</span></td>';
+                    rows += '<td class="cb-col-after">' + escapeHtml(e.afterUrl) + '</td>';
+                    rows += '</tr>';
+                });
+                window._cbPreviewUrls = afterUrls;
+                var html = '<table class="cb-preview-table"><thead><tr><th>#</th><th>Original URL</th><th>Redirects To</th></tr></thead><tbody>' + rows + '</tbody></table>';
+                html += '<div style="padding:12px 16px;text-align:center;">';
+                html += '<button onclick="openAllCbUrls()" style="padding:9px 28px;background:linear-gradient(135deg,#6c63ff,#48c6ef);color:white;border:none;border-radius:12px;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:Poppins,sans-serif;box-shadow:0 4px 12px rgba(108,99,255,0.25);"><i class="fas fa-external-link-alt"></i> Open All ' + afterUrls.length + ' Pages</button>';
+                html += '</div>';
+                body.innerHTML = html;
+            } catch(e) {
+                body.innerHTML = '<div class="cb-preview-loading">Error loading pages</div>';
+            }
+        }
+
+        function openAllCbUrls() {
+            var urls = window._cbPreviewUrls || [];
+            if (!urls.length) return;
+            urls.forEach(function(url) { window.open(url, '_blank'); });
+        }
+
+        // ── Create Session ──
+        async function createSession() {
+            var affId = document.getElementById('affId').value.trim();
+            if (!affId) { showAlert('Affiliate ID is required', 'error'); return; }
+            if (!currentDomainId) { showAlert('Please select a domain first', 'error'); return; }
+
+            // Smart mode guard for non-BG
+            if (selectedShaveMode === 'smart' && currentDomainPlatform !== 'buygoods') {
+                showAlert('Smart shaving is only available for BuyGoods domains', 'error');
+                return;
+            }
+
+            var btn = document.getElementById('btnCreate');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+
+            // CB Replace guard
+            if (selectedActionMode === 'cb_replace' && currentDomainPlatform !== 'buygoods') {
+                showAlert('CB Replace is only available for BuyGoods domains', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Start Shaving';
+                return;
+            }
+
+            var data = {
+                domain_id: currentDomainId,
+                aff_id: affId,
+                sub_id: document.getElementById('subId').value.trim(),
+                mode: selectedActionMode,
+                shave_mode: selectedShaveMode,
+                replace_aff_id: document.getElementById('replaceAffId').value.trim(),
+                replace_sub_id: document.getElementById('replaceSubId').value.trim(),
+                cb_path_find: document.getElementById('cbPathFind').value.trim(),
+                cb_path_replace: document.getElementById('cbPathReplace').value.trim(),
+                notes: document.getElementById('sessionNotes').value.trim()
+            };
+
+            var result = await apiRequest(API_URL, 'create_session', data);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> Start Shaving';
+
+            if (result.success) {
+                showAlert('Session started! Shaving ' + affId + ' in ' + selectedShaveMode.toUpperCase() + ' mode', 'success');
+                // Clear form
+                document.getElementById('affId').value = '';
+                document.getElementById('subId').value = '';
+                document.getElementById('replaceAffId').value = '';
+                document.getElementById('replaceSubId').value = '';
+                document.getElementById('sessionNotes').value = '';
+                loadSessions();
+            } else {
+                showAlert(result.error || 'Failed to create session', 'error');
+            }
+        }
+
+        // ── Stop Session ──
+        async function stopSession(sessionId) {
+            if (!confirm('Stop this shaving session?')) return;
+            var result = await apiRequest(API_URL, 'stop_session', { session_id: sessionId });
+            if (result.success) {
+                showAlert('Session stopped', 'success');
+                loadSessions();
+            } else {
+                showAlert(result.error || 'Failed to stop session', 'error');
+            }
+        }
+
+        // ── Load Sessions ──
+        async function loadSessions() {
+            var result = await apiRequest(API_URL, 'get_sessions', { domain_id: currentDomainId || '' });
+            var body = document.getElementById('sessionsBody');
+
+            if (!result.success || !result.data || result.data.length === 0) {
+                body.innerHTML = '<div class="empty-state"><i class="fas fa-scissors"></i><p>No active shaving sessions</p><small>Create one above to start shaving affiliate traffic</small></div>';
+                updateStats(0, 0, 0, 0);
+                return;
+            }
+
+            var sessions = result.data;
+            var totalVisits = 0;
+            var totalSafe = 0;
+            var uniqueAffs = {};
+
+            // Platform-specific labels
+            var affLabel = 'Affiliate ID';
+            if (currentDomainPlatform === 'clickbank') affLabel = 'Hop ID';
+            else if (currentDomainPlatform === 'digistore24') affLabel = 'Affiliate';
+
+            var html = '';
+
+            sessions.forEach(function(s) {
+                totalVisits += s.trafficShaved || 0;
+                totalSafe += s.trafficSafe || 0;
+                uniqueAffs[s.affId] = true;
+
+                var modeBadge = s.mode === 'replace'
+                    ? '<span class="badge badge-replace"><i class="fas fa-exchange-alt"></i> Replace</span>'
+                    : s.mode === 'cb_replace'
+                    ? '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;"><i class="fas fa-route"></i> CB Replace</span>'
+                    : '<span class="badge badge-remove"><i class="fas fa-trash-alt"></i> Remove</span>';
+
+                var shaveModeBadge = '';
+                if (s.shaveMode === 'smart') {
+                    shaveModeBadge = '<span class="badge badge-smart"><i class="fas fa-brain"></i> Smart</span>';
+                    if (s.smartSkipNext) {
+                        shaveModeBadge += ' <span class="smart-state smart-state-skip"><i class="fas fa-shield-alt"></i> Next: Safe</span>';
+                    } else {
+                        shaveModeBadge += ' <span class="smart-state smart-state-shave"><i class="fas fa-scissors"></i> Next: Shave</span>';
+                    }
+                } else {
+                    shaveModeBadge = '<span class="badge badge-instant"><i class="fas fa-bolt"></i> Instant</span>';
+                }
+
+                var replacement = '';
+                if (s.mode === 'replace' && s.replaceAffId) {
+                    replacement = '<span class="aff-id-cell" style="font-size:0.8rem;">' + escapeHtml(s.replaceAffId) + '</span>';
+                    if (s.replaceSubId) replacement += ' <small style="color:#999;">' + escapeHtml(s.replaceSubId) + '</small>';
+                } else if (s.mode === 'cb_replace') {
+                    replacement = '<span style="font-size:0.78rem;color:#b45309;"><code>' + escapeHtml(s.cbPathFind || '/v2/') + '</code> → <code>' + escapeHtml(s.cbPathReplace || '/v3/') + '</code></span>';
+                }
+
+                var started = formatTimeAgo(new Date(s.startTime).toISOString());
+                var shaved = s.trafficShaved || 0;
+                var safe = s.trafficSafe || 0;
+                var orders = s.trafficOrders || 0;
+                var total = s.trafficTotal || 0;
+                var processed = shaved + safe;
+
+                // Shave ratio
+                var ratioHtml = '';
+                if (total > 0) {
+                    var ratioPct = Math.round((shaved / total) * 100);
+                    ratioHtml = '<span class="sc-ratio">' + ratioPct + '% shaved</span>';
+                }
+
+                html += '<div class="session-card">';
+                // Header row
+                html += '<div class="sc-header">';
+                html += '<div class="sc-header-left">';
+                html += '<span class="badge badge-active"><i class="fas fa-circle" style="font-size:0.45rem;margin-right:4px;"></i> Active</span>';
+                html += '<span class="sc-aff">' + escapeHtml(s.affId) + '</span>';
+                if (s.affName) html += '<span class="sc-name">' + escapeHtml(s.affName) + '</span>';
+                if (s.subId) html += '<span class="sc-sub">sub: ' + escapeHtml(s.subId) + '</span>';
+                html += ratioHtml;
+                html += '</div>';
+                html += '<div class="sc-header-right">';
+                html += modeBadge + ' ' + shaveModeBadge;
+                html += '</div>';
+                html += '</div>';
+
+                // Stats row
+                html += '<div class="sc-stats">';
+                html += '<div class="sc-stat sc-stat-shaved"><div class="sc-stat-value">' + shaved + '</div><div class="sc-stat-label"><i class="fas fa-scissors"></i> Shaved</div></div>';
+                html += '<div class="sc-stat sc-stat-safe"><div class="sc-stat-value">' + safe + '</div><div class="sc-stat-label"><i class="fas fa-shield-alt"></i> Safe Pass</div></div>';
+                html += '<div class="sc-stat sc-stat-orders"><div class="sc-stat-value">' + orders + '</div><div class="sc-stat-label"><i class="fas fa-shopping-bag"></i> Orders</div></div>';
+                html += '<div class="sc-stat sc-stat-total"><div class="sc-stat-value">' + total + '</div><div class="sc-stat-label"><i class="fas fa-eye"></i> Total Traffic</div></div>';
+                html += '<div class="sc-stat sc-stat-processed"><div class="sc-stat-value">' + processed + '</div><div class="sc-stat-label"><i class="fas fa-cogs"></i> Processed</div></div>';
+                html += '</div>';
+
+                // Progress bar
+                if (processed > 0) {
+                    var shavedPct = Math.round((shaved / processed) * 100);
+                    var safePct = 100 - shavedPct;
+                    html += '<div class="sc-progress">';
+                    html += '<div class="sc-progress-bar">';
+                    html += '<div class="sc-progress-shaved" style="width:' + shavedPct + '%" title="Shaved ' + shavedPct + '%"></div>';
+                    html += '<div class="sc-progress-safe" style="width:' + safePct + '%" title="Safe ' + safePct + '%"></div>';
+                    html += '</div>';
+                    html += '<div class="sc-progress-labels"><span style="color:#dc2626;">' + shavedPct + '% shaved</span><span style="color:#16a34a;">' + safePct + '% safe</span></div>';
+                    html += '</div>';
+                }
+
+                // Footer row
+                html += '<div class="sc-footer">';
+                html += '<div class="sc-footer-left">';
+                html += '<span class="sc-time" title="' + new Date(s.startTime).toLocaleString() + '"><i class="fas fa-clock"></i> ' + started + '</span>';
+                if (replacement) html += '<span class="sc-replacement"><i class="fas fa-arrow-right"></i> ' + replacement + '</span>';
+                if (s.notes) html += '<span class="sc-notes" title="' + escapeHtml(s.notes) + '"><i class="fas fa-sticky-note"></i> ' + escapeHtml(s.notes) + '</span>';
+                html += '</div>';
+                html += '<button class="btn-stop" onclick="stopSession(\'' + s.id + '\')"><i class="fas fa-stop"></i> Stop</button>';
+                html += '</div>';
+                html += '</div>';
+            });
+
+            body.innerHTML = html;
+            updateStats(sessions.length, totalVisits, totalSafe, Object.keys(uniqueAffs).length);
+        }
+
+        function updateStats(active, visits, safe, affiliates) {
+            document.getElementById('statActive').textContent = active;
+            document.getElementById('statVisits').textContent = visits;
+            document.getElementById('statSafe').textContent = safe;
+            document.getElementById('statAffiliates').textContent = affiliates;
+        }
+
+        // ── UI Helpers ──
+        function toggleCreateForm() {
+            var form = document.getElementById('createForm');
+            var icon = document.getElementById('createToggleIcon');
+            form.classList.toggle('show');
+            icon.classList.toggle('fa-chevron-down', !form.classList.contains('show'));
+            icon.classList.toggle('fa-chevron-up', form.classList.contains('show'));
+        }
+
+        function showAlert(message, type) {
+            var box = document.getElementById('alertBox');
+            box.className = 'alert alert-' + type;
+            box.textContent = message;
+            box.style.display = 'block';
+            setTimeout(function() { box.style.display = 'none'; }, 4000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function updateLabelsForPlatform() {
+            var p = currentDomainPlatform;
+            var lbl = document.getElementById('lblAffId');
+            var lblR = document.getElementById('lblReplaceAffId');
+            if (p === 'clickbank') {
+                if (lbl) lbl.innerHTML = '<i class="fas fa-user-tag"></i> ClickBank Hop ID';
+                if (lblR) lblR.textContent = 'Replace with Hop ID';
+            } else if (p === 'digistore24') {
+                if (lbl) lbl.innerHTML = '<i class="fas fa-user-tag"></i> Affiliate Username';
+                if (lblR) lblR.textContent = 'Replace with Username';
+            } else {
+                if (lbl) lbl.innerHTML = '<i class="fas fa-user-tag"></i> Affiliate ID';
+                if (lblR) lblR.textContent = 'Replace with Affiliate ID';
+            }
+
+            // If not BG and smart is selected, revert to instant
+            if (p !== 'buygoods' && selectedShaveMode === 'smart') {
+                selectShaveMode('instant');
+            }
+        }
+
+        // ── Sidebar / Mobile ──
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed'));
+        }
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.add('open');
+            document.querySelector('.mobile-overlay').classList.add('active');
+        }
+        function closeMobileMenu() {
+            document.querySelector('.sidebar').classList.remove('open');
+            document.querySelector('.mobile-overlay').classList.remove('active');
+        }
+
+        // ── Domain Change ──
+        function onDomainChange() {
+            updateLabelsForPlatform();
+            loadSessions();
+            loadAffDropdown();
+        }
+
+        // ── Init ──
+        (async function() {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+            await initDomainSelector(onDomainChange);
+        })();
+
+        // Auto-refresh every 30s
+        setInterval(loadSessions, 30000);
+    </script>
+</body>
+</html>
