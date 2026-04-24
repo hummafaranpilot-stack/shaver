@@ -308,13 +308,8 @@
 
     <script>
     var BASE_URL = window.location.origin + window.location.pathname.replace('api.html','') + 'api-v1.php';
-    document.getElementById('statBaseUrl').textContent = BASE_URL;
-    document.getElementById('baseUrlDisplay').textContent = BASE_URL;
-
-    // Update code blocks with real base URL
-    document.querySelectorAll('.code-block').forEach(function(el) {
-        el.innerHTML = el.innerHTML.replace(/BASE_URL/g, BASE_URL);
-    });
+    var baseUrlEl = document.getElementById('statBaseUrl');
+    if (baseUrlEl) baseUrlEl.textContent = BASE_URL;
 
     // Sidebar toggle
     function toggleSidebar() {
