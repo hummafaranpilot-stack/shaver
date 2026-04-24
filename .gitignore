@@ -1,0 +1,16 @@
+# Backup/temp files
+1.zip
+*.zip
+*.bak
+*.tmp
+
+# Sensitive runtime key files (written by UI, not source code)
+.smtp_key
+.cb_key
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/

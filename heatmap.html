@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; overflow: hidden; height: 100vh; }
+
+        .hm-toolbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 10000;
+            background: #fff; padding: 10px 20px; display: flex; align-items: center; gap: 15px;
+            box-shadow: 0 2px 16px rgba(108,99,255,0.10); height: 56px; border-radius: 0 0 16px 16px;
+        }
+        .hm-toolbar h3 { font-size: 0.95rem; color: #6c63ff; white-space: nowrap; font-weight: 700; }
+        .hm-toolbar select, .hm-toolbar button {
+            padding: 6px 12px; border-radius: 10px; font-size: 0.82rem; font-family: 'Poppins', sans-serif;
+            border: none; background: #f0f0ff; color: #1a1a2e; cursor: pointer; transition: all 0.2s;
+        }
+        .hm-toolbar select:focus, .hm-toolbar button:focus { outline: none; box-shadow: 0 0 0 2px rgba(108,99,255,0.3); }
+        .hm-toolbar button:hover { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; }
+        .hm-toolbar .hm-info { font-size: 0.78rem; color: #7a7a9e; margin-left: auto; }
+        .hm-toolbar .hm-legend { display: flex; gap: 8px; align-items: center; font-size: 0.75rem; color: #555; }
+        .hm-stats { display: flex; gap: 12px; align-items: center; padding: 0 8px; border-left: 1px solid #e8e8f0; margin-left: 4px; }
+        .hm-stat { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+        .hm-stat-val { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; }
+        .hm-stat-lbl { font-size: 0.62rem; color: #7a7a9e; text-transform: uppercase; }
+        .hm-legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+        .hm-mode-btn { padding: 6px 14px !important; font-weight: 500; }
+        .hm-mode-btn.active { background: linear-gradient(135deg, #6c63ff, #48c6ef) !important; color: #fff !important; border: none !important; }
+
+        .hm-container {
+            position: fixed; top: 56px; left: 0; right: 0; bottom: 0; overflow: auto;
+        }
+        .hm-wrapper {
+            position: relative; width: 100%; min-height: 100%;
+        }
+        .hm-wrapper iframe {
+            width: 100%; border: none; display: block;
+        }
+
+        /* Scroll heatmap overlay */
+        .hm-scroll-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 100;
+        }
+
+        /* Click heatmap canvas */
+        .hm-click-canvas {
+            position: absolute; top: 0; left: 0;
+            pointer-events: none; z-index: 101;
+        }
+
+        /* Loading */
+        .hm-loading {
+            position: fixed; top: 56px; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: #e8f5e9; z-index: 200;
+        }
+        .hm-loading i { font-size: 2rem; color: #6c63ff; }
+        .hm-loading span { margin-left: 12px; font-size: 1.1rem; color: #1a1a2e; }
+
+        .hm-empty {
+            position: fixed; top: 56px; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            background: #e8f5e9; z-index: 200;
+        }
+        .hm-empty i { font-size: 3rem; color: #c0c0d8; margin-bottom: 15px; }
+        .hm-empty p { color: #7a7a9e; font-size: 1rem; }
+
+        /* Visitor session timeline panel */
+        .vs-panel {
+            position: fixed; top: 56px; right: 0; bottom: 0; width: 320px;
+            background: #fff; border-left: none; overflow-y: auto; z-index: 9999;
+            padding: 16px; font-size: 0.82rem; box-shadow: -4px 0 20px rgba(108,99,255,0.08);
+            border-radius: 16px 0 0 0;
+        }
+        body.vs-mode .hm-container { right: 320px; }
+        .vs-header { margin-bottom: 14px; }
+        .vs-header h4 { color: #6c63ff; font-size: 0.95rem; margin-bottom: 6px; font-weight: 700; }
+        .vs-meta { color: #7a7a9e; font-size: 0.75rem; line-height: 1.6; }
+        .vs-meta strong { color: #1a1a2e; }
+
+        .vs-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+        .vs-stat { background: #f0f0ff; border-radius: 12px; padding: 8px 10px; text-align: center; }
+        .vs-stat-val { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; }
+        .vs-stat-lbl { font-size: 0.65rem; color: #7a7a9e; text-transform: uppercase; margin-top: 2px; }
+
+        .vs-timeline { margin-top: 10px; }
+        .vs-timeline h5 { color: #6c63ff; font-size: 0.8rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .vs-event {
+            display: flex; gap: 10px; margin-bottom: 0; position: relative;
+        }
+        .vs-dot-col { display: flex; flex-direction: column; align-items: center; min-width: 18px; }
+        .vs-dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+        }
+        .vs-line { width: 1px; flex: 1; background: #e8e8f0; min-height: 8px; }
+        .vs-event-body { flex: 1; padding-bottom: 10px; }
+        .vs-event-type { font-weight: 600; font-size: 0.78rem; }
+        .vs-event-time { color: #7a7a9e; font-size: 0.68rem; }
+        .vs-event-detail { color: #7a7a9e; font-size: 0.72rem; margin-top: 2px; word-break: break-all; }
+
+        .vs-dot-start { background: #27ae60; }
+        .vs-dot-scroll { background: #48c6ef; }
+        .vs-dot-click { background: #6c63ff; }
+        .vs-dot-redirect { background: #27ae60; }
+        .vs-dot-buynow { background: #8e44ad; }
+        .vs-dot-footer { background: #48c6ef; }
+        .vs-dot-tab { background: #f39c12; }
+        .vs-dot-end { background: #e74c3c; }
+        .vs-dot-shave { background: #e74c3c; }
+
+        @media (max-width: 900px) {
+            .vs-panel { width: 260px; }
+            body.vs-mode .hm-container { right: 260px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hm-toolbar">
+        <h3><i class="fas fa-fire"></i> Heatmap</h3>
+        <button class="hm-mode-btn active" id="modeScroll" onclick="setMode('scroll')"><i class="fas fa-arrows-alt-v"></i> Scroll</button>
+        <button class="hm-mode-btn" id="modeClick" onclick="setMode('click')"><i class="fas fa-mouse-pointer"></i> Clicks</button>
+        <button class="hm-mode-btn" id="modeBoth" onclick="setMode('both')"><i class="fas fa-layer-group"></i> Both</button>
+        <select id="hmPeriod" onchange="loadHeatmap()">
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="thisweek" selected>This Week</option>
+            <option value="lastweek">Last Week</option>
+            <option value="thismonth">This Month</option>
+            <option value="all">All Time</option>
+        </select>
+        <select id="hmPageSelect" onchange="switchPage()" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;">
+            <option value="">Loading pages...</option>
+        </select>
+        <div class="hm-legend">
+            <span class="hm-legend-dot" style="background:#27ae60;"></span> Redirect
+            <span class="hm-legend-dot" style="background:#6c63ff;"></span> BuyNow
+            <span class="hm-legend-dot" style="background:#48c6ef;"></span> Footer
+        </div>
+        <div class="hm-stats" id="hmStats">
+            <div class="hm-stat"><span class="hm-stat-val" id="hmStatVisitors">0</span><span class="hm-stat-lbl">Visitors</span></div>
+            <div class="hm-stat"><span class="hm-stat-val" id="hmStatTotal" style="color:#1a1a2e;">0</span><span class="hm-stat-lbl">Total Clicks</span></div>
+            <div class="hm-stat"><span class="hm-stat-val" id="hmStatRedirect" style="color:#27ae60;">0</span><span class="hm-stat-lbl">Redirect</span></div>
+            <div class="hm-stat"><span class="hm-stat-val" id="hmStatBuynow" style="color:#6c63ff;">0</span><span class="hm-stat-lbl">BuyNow</span></div>
+            <div class="hm-stat"><span class="hm-stat-val" id="hmStatFooter" style="color:#48c6ef;">0</span><span class="hm-stat-lbl">Footer</span></div>
+        </div>
+        <div class="hm-info" id="hmInfo">Loading...</div>
+    </div>
+
+    <div class="vs-panel" id="vsPanel" style="display:none;"></div>
+
+    <div class="hm-container" id="hmContainer">
+        <div class="hm-loading" id="hmLoading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading heatmap data...</span>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        var API_URL = window.SHAVER_API_URL || 'api.php';
+        var params = new URLSearchParams(window.location.search);
+        var domainId = params.get('domain_id') || '';
+        var pageUrl = params.get('page_url') || '';
+        var trafficId = params.get('traffic_id') || '';
+        var currentMode = 'scroll';
+        var heatmapData = null;
+        var iframeHeight = 0;
+        var visitorSession = null;
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.hm-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+            renderOverlays();
+        }
+
+        async function loadHeatmap() {
+            var loading = document.getElementById('hmLoading');
+            if (loading) loading.style.display = 'flex';
+
+            var period = document.getElementById('hmPeriod').value;
+            var result = await apiRequest(API_URL, 'get_heatmap_data', {
+                domain_id: domainId, period: period, page_url: pageUrl
+            });
+
+            if (!result.success) {
+                document.getElementById('hmContainer').innerHTML = '<div class="hm-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load heatmap data</p></div>';
+                return;
+            }
+
+            heatmapData = result;
+
+            // Count clicks by type
+            var clickCounts = { redirect: 0, buynow: 0, footer: 0, other: 0 };
+            (result.clicks || []).forEach(function(c) {
+                if (c.type === 'redirect') clickCounts.redirect++;
+                else if (c.type === 'buynow') clickCounts.buynow++;
+                else if (c.type === 'footer') clickCounts.footer++;
+                else clickCounts.other++;
+            });
+            document.getElementById('hmStatVisitors').textContent = result.totalVisitors || 0;
+            document.getElementById('hmStatTotal').textContent = result.clicks.length;
+            document.getElementById('hmStatRedirect').textContent = clickCounts.redirect;
+            document.getElementById('hmStatBuynow').textContent = clickCounts.buynow;
+            document.getElementById('hmStatFooter').textContent = clickCounts.footer;
+            document.getElementById('hmInfo').textContent = result.totalClickRecords + ' sessions with clicks';
+
+            if (result.totalVisitors === 0 && result.clicks.length === 0) {
+                document.getElementById('hmContainer').innerHTML = '<div class="hm-empty"><i class="fas fa-chart-area"></i><p>No heatmap data for this period</p></div>';
+                return;
+            }
+
+            // Build the iframe + overlay
+            buildIframe();
+        }
+
+        function buildIframe() {
+            if (!pageUrl) {
+                document.getElementById('hmContainer').innerHTML = '<div class="hm-empty"><i class="fas fa-link"></i><p>No page URL provided. Open heatmap from analytics page.</p></div>';
+                return;
+            }
+
+            var container = document.getElementById('hmContainer');
+            // For mobile visitors, center the iframe and constrain width
+            var wrapperStyle = '';
+            if (visitorMobileWidth > 0) {
+                wrapperStyle = ' style="max-width:' + visitorMobileWidth + 'px;margin:0 auto;border-left:2px solid #e8e8f0;border-right:2px solid #e8e8f0;"';
+            }
+            container.innerHTML = '<div class="hm-wrapper" id="hmWrapper"' + wrapperStyle + '><iframe id="hmIframe" scrolling="no"></iframe><div class="hm-scroll-overlay" id="hmScrollOverlay"></div><canvas class="hm-click-canvas" id="hmClickCanvas"></canvas></div>';
+
+            var iframe = document.getElementById('hmIframe');
+
+            // Load the page — strip query params to avoid triggering shaver
+            var cleanUrl = pageUrl.split('?')[0];
+            iframe.src = cleanUrl;
+
+            iframe.onload = function() {
+                try {
+                    var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    iframeHeight = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight || 8000;
+                    iframe.style.height = iframeHeight + 'px';
+                    renderOverlays();
+                    // Re-check height after images/fonts load (layout may shift)
+                    setTimeout(function() {
+                        try {
+                            var newH = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight;
+                            if (newH > iframeHeight) {
+                                iframeHeight = newH;
+                                iframe.style.height = iframeHeight + 'px';
+                                renderOverlays();
+                            }
+                        } catch(e) {}
+                    }, 3000);
+                } catch(e) {
+                    // Cross-origin — use page height from click data or generous estimate
+                    var maxPageH = 8000;
+                    if (heatmapData && heatmapData.clicks) {
+                        heatmapData.clicks.forEach(function(c) {
+                            if (c.ph && c.ph > maxPageH) maxPageH = c.ph;
+                        });
+                    }
+                    iframeHeight = maxPageH;
+                    iframe.style.height = iframeHeight + 'px';
+                    renderOverlays();
+                }
+            };
+
+            // Fallback if onload doesn't fire
+            setTimeout(function() {
+                if (!iframeHeight) {
+                    var maxPageH = 8000;
+                    if (heatmapData && heatmapData.clicks) {
+                        heatmapData.clicks.forEach(function(c) {
+                            if (c.ph && c.ph > maxPageH) maxPageH = c.ph;
+                        });
+                    }
+                    iframeHeight = maxPageH;
+                    iframe.style.height = iframeHeight + 'px';
+                    renderOverlays();
+                }
+            }, 5000);
+        }
+
+        function renderOverlays() {
+            if (!heatmapData) return;
+            renderScrollOverlay();
+            renderClickOverlay();
+        }
+
+        function renderScrollOverlay() {
+            var overlay = document.getElementById('hmScrollOverlay');
+            if (!overlay) return;
+
+            if (currentMode === 'click') {
+                overlay.style.display = 'none';
+                return;
+            }
+            overlay.style.display = 'block';
+            overlay.style.height = iframeHeight + 'px';
+
+            // Build scroll depth gradient — more visitors at top (hot), fewer at bottom (cold)
+            var dist = heatmapData.scrollDistribution || [];
+            var total = heatmapData.totalVisitors || 1;
+
+            // Create bands: what % of visitors reached each depth zone
+            var bands = [];
+            for (var i = 0; i <= 100; i += 5) {
+                var visitorsAtDepth = 0;
+                dist.forEach(function(d) {
+                    if (parseInt(d.max_scroll_depth) >= i) visitorsAtDepth += parseInt(d.cnt);
+                });
+                bands.push({ depth: i, pct: visitorsAtDepth / total });
+            }
+
+            // Generate gradient CSS
+            var gradientStops = [];
+            bands.forEach(function(b) {
+                var intensity = b.pct;
+                var r, g, blue, a;
+                // Hot (red) → Warm (yellow) → Cool (blue) → Cold (transparent)
+                if (intensity > 0.7) {
+                    r = 233; g = 69; blue = 96; a = 0.45 * intensity;
+                } else if (intensity > 0.4) {
+                    r = 230; g = 126; blue = 34; a = 0.35 * intensity;
+                } else if (intensity > 0.15) {
+                    r = 52; g = 152; blue = 219; a = 0.3 * intensity;
+                } else {
+                    r = 52; g = 73; blue = 94; a = 0.15 * intensity;
+                }
+                gradientStops.push('rgba(' + r + ',' + g + ',' + blue + ',' + a.toFixed(3) + ') ' + b.depth + '%');
+            });
+
+            overlay.style.background = 'linear-gradient(to bottom, ' + gradientStops.join(', ') + ')';
+        }
+
+        function renderClickOverlay() {
+            var canvas = document.getElementById('hmClickCanvas');
+            if (!canvas) return;
+
+            if (currentMode === 'scroll') {
+                canvas.style.display = 'none';
+                return;
+            }
+            canvas.style.display = 'block';
+
+            var wrapper = document.getElementById('hmWrapper');
+            var wrapperWidth = wrapper.offsetWidth;
+            canvas.width = wrapperWidth;
+            canvas.height = iframeHeight;
+            canvas.style.width = wrapperWidth + 'px';
+            canvas.style.height = iframeHeight + 'px';
+
+            var ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            var clicks = heatmapData.clicks || [];
+            if (clicks.length === 0) return;
+
+            // Draw click heatmap dots
+            clicks.forEach(function(c) {
+                if (!c.x || !c.y || !c.pw || !c.ph) return;
+
+                // Scale position to current iframe dimensions
+                var scaledX = (c.x / c.pw) * wrapperWidth;
+                var scaledY = (c.y / c.ph) * iframeHeight;
+
+                var color;
+                if (c.type === 'buynow') color = 'rgba(233, 69, 96, 0.7)';
+                else if (c.type === 'redirect') color = 'rgba(39, 174, 96, 0.7)';
+                else if (c.type === 'footer') color = 'rgba(52, 152, 219, 0.7)';
+                else color = 'rgba(149, 165, 166, 0.5)';
+
+                // Draw glow circle
+                var gradient = ctx.createRadialGradient(scaledX, scaledY, 0, scaledX, scaledY, 20);
+                gradient.addColorStop(0, color);
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.beginPath();
+                ctx.arc(scaledX, scaledY, 20, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Draw center dot
+                ctx.beginPath();
+                ctx.arc(scaledX, scaledY, 4, 0, Math.PI * 2);
+                ctx.fillStyle = color.replace('0.7', '1').replace('0.5', '1');
+                ctx.fill();
+            });
+
+            // Draw click density heatmap (aggregate nearby clicks)
+            var densityMap = {};
+            var gridSize = 30;
+            clicks.forEach(function(c) {
+                if (!c.x || !c.y || !c.pw || !c.ph) return;
+                var gx = Math.floor((c.x / c.pw) * wrapperWidth / gridSize);
+                var gy = Math.floor((c.y / c.ph) * iframeHeight / gridSize);
+                var key = gx + ',' + gy;
+                densityMap[key] = (densityMap[key] || 0) + 1;
+            });
+
+            var maxDensity = 1;
+            for (var key in densityMap) { if (densityMap[key] > maxDensity) maxDensity = densityMap[key]; }
+
+            for (var key in densityMap) {
+                var parts = key.split(',');
+                var gx = parseInt(parts[0]) * gridSize + gridSize / 2;
+                var gy = parseInt(parts[1]) * gridSize + gridSize / 2;
+                var intensity = densityMap[key] / maxDensity;
+                if (intensity < 0.3) continue;
+
+                var radius = 15 + intensity * 25;
+                var gradient = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
+                gradient.addColorStop(0, 'rgba(233, 69, 96, ' + (0.3 * intensity).toFixed(2) + ')');
+                gradient.addColorStop(1, 'rgba(233, 69, 96, 0)');
+                ctx.beginPath();
+                ctx.arc(gx, gy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+        }
+
+        function switchPage() {
+            var sel = document.getElementById('hmPageSelect');
+            pageUrl = sel.value;
+            if (pageUrl) {
+                iframeHeight = 0;
+                loadHeatmap();
+            }
+        }
+
+        async function loadPages() {
+            var select = document.getElementById('hmPageSelect');
+            try {
+                var result = await apiRequest(API_URL, 'get_heatmap_pages', { domain_id: domainId });
+                if (result.success && result.pages && result.pages.length > 0) {
+                    select.innerHTML = '';
+                    result.pages.forEach(function(p) {
+                        var opt = document.createElement('option');
+                        opt.value = p.clean_url;
+                        var displayUrl = p.clean_url.replace(/^https?:\/\//, '');
+                        if (displayUrl.length > 40) displayUrl = '...' + displayUrl.slice(-37);
+                        opt.textContent = displayUrl + ' (' + p.visits + ' visits)';
+                        if (pageUrl && p.clean_url === pageUrl.split('?')[0]) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    // If no pageUrl was provided via URL params, select the first page
+                    if (!pageUrl && result.pages.length > 0) {
+                        pageUrl = result.pages[0].clean_url;
+                        select.value = pageUrl;
+                    }
+                } else {
+                    select.innerHTML = '<option value="">No landing pages found</option>';
+                }
+            } catch(e) {
+                select.innerHTML = '<option value="">Error loading pages</option>';
+            }
+        }
+
+        // ===== Visitor Session Mode =====
+        async function loadVisitorSession() {
+            var result = await apiRequest(API_URL, 'get_visitor_session', { traffic_id: trafficId });
+            if (!result.success) {
+                document.getElementById('hmContainer').innerHTML = '<div class="hm-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load visitor session</p></div>';
+                return;
+            }
+
+            visitorSession = result;
+            var t = result.traffic;
+            var snap = result.shaveSnapshot;
+            domainId = t.domain_id;
+            pageUrl = t.page_url ? t.page_url.split('?')[0] : '';
+
+            // Mobile viewport: constrain iframe to visitor's actual viewport width
+            var isMobile = (t.device || '').toLowerCase().indexOf('mobile') !== -1;
+            var vpWidth = t.viewport_width ? parseInt(t.viewport_width) : 0;
+
+            // Show visitor panel
+            document.body.classList.add('vs-mode');
+            var panel = document.getElementById('vsPanel');
+            panel.style.display = 'block';
+
+            // Build panel content
+            var ph = '<div class="vs-header">';
+            ph += '<h4><i class="fas fa-user"></i> Visitor Session</h4>';
+            ph += '<div class="vs-meta">';
+            ph += '<strong>Affiliate:</strong> ' + esc(t.aff_id || 'Direct') + '<br>';
+            ph += '<strong>IP:</strong> ' + esc(t.ip_address) + '<br>';
+            ph += '<strong>Device:</strong> ' + esc(t.device || '-') + ' / ' + esc(t.browser || '-') + '<br>';
+            ph += '<strong>Country:</strong> ' + esc(t.country || '-') + '<br>';
+            if (vpWidth) ph += '<strong>Viewport:</strong> ' + vpWidth + 'x' + (t.viewport_height || '?') + 'px<br>';
+            ph += '</div>';
+
+            // Shave banner
+            if (t.was_shaved) {
+                ph += '<div style="margin-top:10px;background:#2d1215;border:1px solid #e74c3c;border-radius:8px;padding:10px 12px;">';
+                ph += '<div style="color:#e74c3c;font-weight:700;font-size:0.85rem;margin-bottom:6px;"><i class="fas fa-random"></i> VISIT WAS SHAVED</div>';
+                if (snap) {
+                    ph += '<div style="font-size:0.72rem;color:#f87171;margin-bottom:4px;word-break:break-all;"><strong>From:</strong> ' + esc((snap.before_url || t.page_url || '').replace(/^https?:\/\//, '')) + '</div>';
+                    ph += '<div style="font-size:0.72rem;color:#f87171;word-break:break-all;"><strong>To:</strong> ' + esc((snap.after_url || '').replace(/^https?:\/\//, '')) + '</div>';
+                    if (snap.sub_id && snap.replace_sub_id) {
+                        ph += '<div style="font-size:0.68rem;color:#94a3b8;margin-top:4px;">Sub: ' + esc(snap.sub_id) + ' &rarr; ' + esc(snap.replace_sub_id) + '</div>';
+                    }
+                }
+                if (t.redirect_time_ms) {
+                    ph += '<div style="font-size:0.68rem;color:#94a3b8;margin-top:4px;">Redirect took ' + (t.redirect_time_ms / 1000).toFixed(1) + 's</div>';
+                }
+                ph += '</div>';
+            }
+            ph += '</div>';
+
+            // Stats
+            ph += '<div class="vs-stats">';
+            ph += vsStatBox(t.session_duration ? formatDur(t.session_duration) : '-', 'Duration');
+            ph += vsStatBox((t.max_scroll_depth || 0) + '%', 'Scroll');
+            ph += vsStatBox(t.redirect_clicks || 0, 'Redirect');
+            ph += vsStatBox(t.buynow_clicks || 0, 'BuyNow');
+            ph += vsStatBox(t.footer_clicks || 0, 'Footer');
+            ph += vsStatBox(t.total_clicks || 0, 'Total Clicks');
+            ph += '</div>';
+
+            // Timeline
+            ph += '<div class="vs-timeline"><h5><i class="fas fa-stream"></i> Session Timeline</h5>';
+            var timeline = buildTimeline(result);
+            timeline.forEach(function(ev, idx) {
+                var isLast = idx === timeline.length - 1;
+                ph += '<div class="vs-event">';
+                ph += '<div class="vs-dot-col"><div class="vs-dot vs-dot-' + ev.dotClass + '"></div>' + (isLast ? '' : '<div class="vs-line"></div>') + '</div>';
+                ph += '<div class="vs-event-body">';
+                ph += '<div style="display:flex;justify-content:space-between;align-items:baseline;">';
+                ph += '<span class="vs-event-type" style="color:' + ev.color + ';">' + ev.label + '</span>';
+                ph += '<span class="vs-event-time">' + ev.time + '</span>';
+                ph += '</div>';
+                if (ev.detail) ph += '<div class="vs-event-detail">' + ev.detail + '</div>';
+                ph += '</div></div>';
+            });
+            ph += '</div>';
+
+            panel.innerHTML = ph;
+
+            // Hide period/page selectors, update title
+            document.getElementById('hmPeriod').style.display = 'none';
+            document.getElementById('hmPageSelect').style.display = 'none';
+            var deviceLabel = isMobile ? 'Mobile' : 'Desktop';
+            document.querySelector('.hm-toolbar h3').innerHTML = '<i class="fas fa-fire"></i> Visitor #' + trafficId;
+            document.getElementById('hmInfo').textContent = esc(t.aff_id || 'Direct') + ' · ' + deviceLabel;
+
+            // Set heatmap to click mode and load
+            currentMode = 'click';
+            document.querySelectorAll('.hm-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.getElementById('modeClick').classList.add('active');
+
+            // Build heatmapData from visitor clicks
+            heatmapData = {
+                clicks: result.clicks || [],
+                scrollDistribution: [{ max_scroll_depth: t.max_scroll_depth || 0, cnt: 1 }],
+                totalVisitors: 1,
+                totalClickRecords: result.clicks.length > 0 ? 1 : 0
+            };
+
+            // Update stats
+            var cc = { redirect: 0, buynow: 0, footer: 0, other: 0 };
+            (result.clicks || []).forEach(function(c) {
+                if (c.type === 'redirect') cc.redirect++;
+                else if (c.type === 'buynow') cc.buynow++;
+                else if (c.type === 'footer') cc.footer++;
+                else cc.other++;
+            });
+            document.getElementById('hmStatVisitors').textContent = '1';
+            document.getElementById('hmStatTotal').textContent = result.clicks.length;
+            document.getElementById('hmStatRedirect').textContent = cc.redirect;
+            document.getElementById('hmStatBuynow').textContent = cc.buynow;
+            document.getElementById('hmStatFooter').textContent = cc.footer;
+
+            // For mobile visitors, constrain iframe to actual viewport width
+            if (isMobile && vpWidth && vpWidth < 800) {
+                visitorMobileWidth = vpWidth;
+            }
+
+            buildIframe();
+        }
+
+        // Store mobile width for iframe sizing
+        var visitorMobileWidth = 0;
+
+        function buildTimeline(session) {
+            var events = [];
+            var t = session.traffic;
+            var snap = session.shaveSnapshot;
+            var startTime = new Date(t.timestamp.replace(' ', 'T') + '+05:00');
+
+            // Page load
+            events.push({ time: fmtTime(startTime), label: 'Page Load', detail: esc((t.page_url || '').replace(/^https?:\/\//, '').substring(0, 80)), dotClass: 'start', color: '#27ae60', ts: startTime.getTime() });
+
+            // Shave indicator (if shaved)
+            if (t.was_shaved) {
+                var shaveTs = new Date(startTime.getTime() + 100);
+                var shaveDetail = 'Affiliate params stripped — visit shaved';
+                if (snap) {
+                    shaveDetail = '<div style="margin-top:2px;">';
+                    shaveDetail += '<div style="color:#f87171;">Original: ' + esc((snap.before_url || '').replace(/^https?:\/\//, '').substring(0, 60)) + '</div>';
+                    shaveDetail += '</div>';
+                }
+                events.push({ time: fmtTime(shaveTs), label: 'SHAVED', detail: shaveDetail, dotClass: 'shave', color: '#e74c3c', ts: shaveTs.getTime() });
+            }
+
+            // Behavior events
+            (session.events || []).forEach(function(ev) {
+                var evTime = new Date(ev.timestamp.replace(' ', 'T') + '+05:00');
+                var d = ev.event_data || {};
+                var type = ev.event_type;
+
+                if (type === 'scroll') {
+                    events.push({ time: fmtTime(evTime), label: 'Scroll', detail: (d.depth || d.scrollDepth || '?') + '%', dotClass: 'scroll', color: '#3498db', ts: evTime.getTime() });
+                } else if (type === 'redirect_click') {
+                    events.push({ time: fmtTime(evTime), label: 'Redirect Click', detail: esc(d.text || d.href || ''), dotClass: 'redirect', color: '#27ae60', ts: evTime.getTime() });
+                } else if (type === 'buynow_click') {
+                    events.push({ time: fmtTime(evTime), label: 'BuyNow Click', detail: esc(d.href || ''), dotClass: 'buynow', color: '#8e44ad', ts: evTime.getTime() });
+                } else if (type === 'footer_click') {
+                    events.push({ time: fmtTime(evTime), label: 'Footer Click', detail: esc(d.text || d.href || ''), dotClass: 'footer', color: '#3498db', ts: evTime.getTime() });
+                } else if (type === 'click') {
+                    var clickType = d.type || 'other';
+                    var dotCls = clickType === 'buynow' ? 'buynow' : clickType === 'redirect' ? 'redirect' : clickType === 'footer' ? 'footer' : 'click';
+                    var clr = clickType === 'buynow' ? '#8e44ad' : clickType === 'redirect' ? '#27ae60' : clickType === 'footer' ? '#3498db' : '#e94560';
+                    events.push({ time: fmtTime(evTime), label: clickType.charAt(0).toUpperCase() + clickType.slice(1) + ' Click', detail: esc(d.text || d.tag || ''), dotClass: dotCls, color: clr, ts: evTime.getTime() });
+                } else if (type === 'tab_hidden') {
+                    var dur = d.visibleDuration ? formatDur(d.visibleDuration / 1000) : '';
+                    events.push({ time: fmtTime(evTime), label: 'Tab Hidden', detail: dur ? 'Visible for ' + dur : '', dotClass: 'tab', color: '#f39c12', ts: evTime.getTime() });
+                } else if (type === 'tab_visible') {
+                    events.push({ time: fmtTime(evTime), label: 'Tab Visible', detail: 'Returned to page', dotClass: 'tab', color: '#f39c12', ts: evTime.getTime() });
+                } else if (type === 'checkout_reached') {
+                    events.push({ time: fmtTime(evTime), label: 'Checkout Reached', detail: esc(d.checkoutUrl || '').substring(0, 60), dotClass: 'buynow', color: '#8e44ad', ts: evTime.getTime() });
+                } else {
+                    events.push({ time: fmtTime(evTime), label: type.replace(/_/g, ' '), detail: '', dotClass: 'click', color: '#94a3b8', ts: evTime.getTime() });
+                }
+            });
+
+            // Session end
+            if (t.session_duration) {
+                var endTime = new Date(startTime.getTime() + t.session_duration * 1000);
+                events.push({ time: fmtTime(endTime), label: 'Session End', detail: 'Total: ' + formatDur(t.session_duration), dotClass: 'end', color: '#e74c3c', ts: endTime.getTime() });
+            }
+
+            // Sort by timestamp
+            events.sort(function(a, b) { return a.ts - b.ts; });
+            return events;
+        }
+
+        function vsStatBox(val, label) {
+            return '<div class="vs-stat"><div class="vs-stat-val">' + val + '</div><div class="vs-stat-lbl">' + label + '</div></div>';
+        }
+
+        function formatDur(secs) {
+            secs = Math.round(secs);
+            if (secs < 60) return secs + 's';
+            var m = Math.floor(secs / 60);
+            var s = secs % 60;
+            return m + 'm ' + s + 's';
+        }
+
+        function fmtTime(d) {
+            return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') + ':' + d.getSeconds().toString().padStart(2, '0');
+        }
+
+        function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+        // ===== Initialize =====
+        if (trafficId) {
+            // Visitor session mode
+            loadVisitorSession();
+        } else if (!domainId) {
+            document.getElementById('hmContainer').innerHTML = '<div class="hm-empty"><i class="fas fa-link"></i><p>Missing domain_id. Open heatmap from the analytics page.<br><span style="font-size:0.82rem;color:#475569;">URL format: heatmap.html?domain_id=X</span></p></div>';
+        } else {
+            loadPages().then(function() {
+                if (pageUrl) loadHeatmap();
+            });
+        }
+    </script>
+</body>
+</html>

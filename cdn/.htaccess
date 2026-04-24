@@ -1,0 +1,14 @@
+# Rewrite t.js to the PHP proxy
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^t\.js$ t.js.php [L,QSA]
+</IfModule>
+
+# Prevent caching
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|js|css|php)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
