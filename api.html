@@ -391,12 +391,19 @@
 
     // Load keys table
     async function loadKeys() {
-        var res = await apiRequest(API_URL, 'list_api_keys');
         var tbody = document.getElementById('keysBody');
-        if (!res.success || !res.keys) {
-            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><div>Failed to load keys</div></div></td></tr>';
+        var res;
+        try {
+            res = await apiRequest(API_URL, 'list_api_keys');
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><div>Request failed: ' + escHtml(e.message || String(e)) + '</div></div></td></tr>';
             return;
         }
+        if (!res || !res.success) {
+            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><div>Failed to load keys: ' + escHtml((res && res.error) || 'Unknown error') + '</div><div style="font-size:0.78rem;margin-top:8px;color:#6b7280;">If this is a fresh install, run <code>migrate-api-keys.php</code> first.</div></div></td></tr>';
+            return;
+        }
+        if (!res.keys) res.keys = [];
         var keys = res.keys;
         document.getElementById('statActive').textContent  = keys.filter(function(k){ return k.status === 'active'; }).length;
         document.getElementById('statRevoked').textContent = keys.filter(function(k){ return k.status === 'revoked'; }).length;

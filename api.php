@@ -8011,11 +8011,30 @@ function createApiKey($pdo) {
     $prefix  = 'sk_' . substr($rawHex, 0, 8); // display prefix
     $hash    = hash('sha256', $fullKey);
 
-    $stmt = $pdo->prepare("
-        INSERT INTO api_keys (label, domain_id, key_prefix, key_hash, full_key, status)
-        VALUES (?, ?, ?, ?, ?, 'active')
-    ");
-    $stmt->execute([$label, $domainId, $prefix, $hash, $fullKey]);
+    // Detect full_key column (added by migrate-api-keys-full-key.php). If migration
+    // hasn't run yet, insert without it so creation still works (key just won't be
+    // copyable from the UI later, same as legacy pre-migration keys).
+    $hasFullKey = false;
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM api_keys LIKE 'full_key'")->fetch();
+        $hasFullKey = $col !== false;
+    } catch (Exception $e) {
+        $hasFullKey = false;
+    }
+
+    if ($hasFullKey) {
+        $stmt = $pdo->prepare("
+            INSERT INTO api_keys (label, domain_id, key_prefix, key_hash, full_key, status)
+            VALUES (?, ?, ?, ?, ?, 'active')
+        ");
+        $stmt->execute([$label, $domainId, $prefix, $hash, $fullKey]);
+    } else {
+        $stmt = $pdo->prepare("
+            INSERT INTO api_keys (label, domain_id, key_prefix, key_hash, status)
+            VALUES (?, ?, ?, ?, 'active')
+        ");
+        $stmt->execute([$label, $domainId, $prefix, $hash]);
+    }
     $id = (int)$pdo->lastInsertId();
 
     // Return the full key ONCE — it is never retrievable again
@@ -8033,11 +8052,22 @@ function listApiKeys($pdo) {
     $data     = getPostData();
     $domainId = $data['domain_id'] ?? null;
 
-    // Optionally filter by domain (admin may want to see keys for one domain)
+    // Detect whether the full_key column exists (added by migrate-api-keys-full-key.php).
+    // If not yet migrated, fall back to SELECT without it so the UI still works.
+    $hasFullKey = false;
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM api_keys LIKE 'full_key'")->fetch();
+        $hasFullKey = $col !== false;
+    } catch (Exception $e) {
+        $hasFullKey = false;
+    }
+
+    $cols = "k.id, k.label, k.domain_id, d.label AS domain_label, k.key_prefix, k.status, k.created_at, k.last_used_at"
+          . ($hasFullKey ? ", k.full_key" : "");
+
     if (!empty($domainId)) {
         $stmt = $pdo->prepare("
-            SELECT k.id, k.label, k.domain_id, d.label AS domain_label,
-                k.key_prefix, k.full_key, k.status, k.created_at, k.last_used_at
+            SELECT $cols
             FROM api_keys k
             LEFT JOIN domains d ON d.id = k.domain_id
             WHERE k.domain_id = ?
@@ -8046,15 +8076,14 @@ function listApiKeys($pdo) {
         $stmt->execute([(int)$domainId]);
     } else {
         $stmt = $pdo->query("
-            SELECT k.id, k.label, k.domain_id, d.label AS domain_label,
-                k.key_prefix, k.full_key, k.status, k.created_at, k.last_used_at
+            SELECT $cols
             FROM api_keys k
             LEFT JOIN domains d ON d.id = k.domain_id
             ORDER BY k.created_at DESC
         ");
     }
 
-    echo json_encode(['success' => true, 'keys' => $stmt->fetchAll()]);
+    echo json_encode(['success' => true, 'keys' => $stmt->fetchAll(), 'migrated' => $hasFullKey]);
 }
 
 function revokeApiKey($pdo) {
