@@ -167,6 +167,9 @@ try {
         // Auto-detected card config (called by s.js/t.js bootstrap)
         case 'save_card_config':         saveCardConfig($pdo); break;
 
+        // URL-param order capture (BG upsell pages)
+        case 'capture_url_order': captureUrlOrder($pdo); break;
+
         // API key management
         case 'create_api_key':  createApiKey($pdo); break;
         case 'list_api_keys':   listApiKeys($pdo); break;
@@ -7990,6 +7993,199 @@ function saveCardConfig($pdo) {
     $stmt->execute([json_encode($clean), $domainKey]);
 
     echo json_encode(['success' => true, 'cards' => $clean]);
+}
+
+// ================================================================
+// URL-PARAM ORDER CAPTURE
+// Auto-grabs order details from BG upsell page URLs the moment a buyer
+// lands on upsell1.html / upsell2.html with order_id in the params.
+// Avoids waiting for CSV upload — orders appear in dashboard in real time.
+// ================================================================
+
+/**
+ * Parse a BG upsell URL and return the LATEST order block.
+ *
+ * BG packs all customer + order data into URL params (creditcards_name,
+ * emailaddress, item, order_id, total, etc.). When a buyer accepts an
+ * upsell, the next page's URL contains BOTH the original purchase block
+ * AND the new upsell purchase block, separated. Each subsequent block
+ * is URL-encoded one additional level (so values stay valid as nested
+ * encoded strings).
+ *
+ * Strategy:
+ *   1. Split query string by `&creditcards_name=` — that marker reliably
+ *      starts every order block (BG always emits it as the first field).
+ *   2. The LAST block is the most recent purchase.
+ *   3. urldecode each value enough times that subsequent decodes don't
+ *      change it (handles 1×, 2×, 3× nested encoding without hard-coding
+ *      a level — and stops on stable values to avoid corrupting strings
+ *      that happened to contain literal `+` or `%`).
+ *
+ * Returns associative array of decoded fields, or null if no order data.
+ */
+function bgParseLatestOrderBlock(string $urlString): ?array {
+    $query = parse_url($urlString, PHP_URL_QUERY);
+    if (!$query) return null;
+
+    // Strip leading & or ? if present
+    $query = ltrim($query, '?&');
+
+    // Split into blocks - each block starts with creditcards_name
+    $blocks  = [];
+    $current = [];
+    foreach (explode('&', $query) as $pair) {
+        if ($pair === '') continue;
+        $eq = strpos($pair, '=');
+        $key = $eq === false ? $pair : substr($pair, 0, $eq);
+        $val = $eq === false ? '' : substr($pair, $eq + 1);
+
+        if ($key === 'creditcards_name' && !empty($current)) {
+            $blocks[] = $current;
+            $current = [];
+        }
+        $current[$key] = $val;
+    }
+    if (!empty($current)) $blocks[] = $current;
+    if (empty($blocks)) return null;
+
+    // Latest block is at the end
+    $block = end($blocks);
+
+    // Decode each value until stable (or 5 max iterations to avoid infinite loop)
+    $decoded = [];
+    foreach ($block as $key => $val) {
+        for ($i = 0; $i < 5; $i++) {
+            $next = urldecode($val);
+            if ($next === $val) break;
+            $val = $next;
+        }
+        $decoded[$key] = $val;
+    }
+    return $decoded;
+}
+
+function captureUrlOrder($pdo): void {
+    $data     = getPostData();
+    $domainId = (int)($data['domain_id'] ?? 0);
+    $pageUrl  = trim($data['page_url'] ?? '');
+    $sessid2  = trim($data['sessid2'] ?? '');
+    $affIdJs  = trim($data['aff_id'] ?? '');
+    $subIdJs  = trim($data['sub_id'] ?? '');
+    $referrer = trim($data['referrer'] ?? '');
+
+    if (!$domainId || !$pageUrl) {
+        echo json_encode(['success' => false, 'error' => 'Missing domain_id or page_url']);
+        return;
+    }
+
+    $block = bgParseLatestOrderBlock($pageUrl);
+    if (!$block || empty($block['order_id'])) {
+        echo json_encode(['success' => false, 'error' => 'No order_id found in URL']);
+        return;
+    }
+
+    $orderId       = trim((string)$block['order_id']);
+    $orderIdGlobal = trim((string)($block['order_id_global'] ?? ''));
+
+    // Decide upsell level by inspecting BOTH order_id occurrences in the URL
+    // (count gives us how many purchases this customer has made by this page).
+    // Block index 0 = original sale, 1 = upsell1 sale, 2 = upsell2 sale, etc.
+    $occurrences = substr_count($pageUrl, 'order_id=');
+    $upsellLevel = max(0, $occurrences - 1);
+
+    $name      = trim((string)($block['creditcards_name'] ?? ''));
+    $email     = trim((string)($block['emailaddress'] ?? ''));
+    $item      = trim((string)($block['item'] ?? ''));
+    $country   = trim((string)($block['country'] ?? $block['addresses_country'] ?? ''));
+    $zip       = trim((string)($block['zip'] ?? ''));
+    $city      = trim((string)($block['city'] ?? ''));
+    $address   = trim((string)($block['address'] ?? ''));
+    $phone     = trim((string)($block['phone'] ?? ''));
+    $price     = (float)($block['price'] ?? 0);
+    $total     = (float)($block['total'] ?? 0);
+    $extOrder  = trim((string)($block['external_order_id'] ?? ''));
+
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+
+    // ---- Resolve affiliate ----
+    // Priority: aff_id passed by JS → sessid2 cookie lookup → recent IP-based traffic.
+    $affId = $affIdJs;
+    $subId = $subIdJs;
+
+    if (empty($affId) && !empty($sessid2)) {
+        $stmt = $pdo->prepare("SELECT aff_id, sub_id FROM affiliate_traffic WHERE domain_id = ? AND sessid2 = ? AND aff_id IS NOT NULL AND aff_id != '' ORDER BY timestamp DESC LIMIT 1");
+        $stmt->execute([$domainId, $sessid2]);
+        if ($row = $stmt->fetch()) {
+            $affId = $affId ?: $row['aff_id'];
+            $subId = $subId ?: $row['sub_id'];
+        }
+    }
+    if (empty($affId) && !empty($ip)) {
+        $stmt = $pdo->prepare("SELECT aff_id, sub_id FROM affiliate_traffic WHERE domain_id = ? AND ip_address = ? AND page_type = 'landing' AND aff_id IS NOT NULL AND aff_id != '' AND timestamp > DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY timestamp DESC LIMIT 1");
+        $stmt->execute([$domainId, $ip]);
+        if ($row = $stmt->fetch()) {
+            $affId = $affId ?: $row['aff_id'];
+            $subId = $subId ?: $row['sub_id'];
+        }
+    }
+
+    // Look up affiliate name for convenience
+    $affName = '';
+    if (!empty($affId)) {
+        $stmt = $pdo->prepare("SELECT name FROM affiliate_names WHERE domain_id = ? AND aff_id = ? LIMIT 1");
+        $stmt->execute([$domainId, $affId]);
+        if ($n = $stmt->fetchColumn()) $affName = $n;
+    }
+
+    // ---- Insert / update ----
+    // CSV upload is the source of truth for refunds / fulfillment, so on duplicate
+    // we only update fields the URL definitively provides — never overwrite
+    // status, fulfillment, delay-mail flags etc.
+    $sql = "INSERT INTO orders
+            (domain_id, order_id, order_id_global, date_created, status,
+             customer_name, customer_email, customer_phone, address, city, country, zip,
+             affiliate_id, affiliate_name, sub_id,
+             product_codenames, total_amount, ip_address, external_order_id, referrer_url,
+             flag_upsell, flag_upsell_level, capture_source)
+            VALUES (?, ?, ?, NOW(), 'sale',
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, 'url_capture')
+            ON DUPLICATE KEY UPDATE
+                order_id_global   = COALESCE(NULLIF(VALUES(order_id_global), ''), order_id_global),
+                customer_name     = COALESCE(NULLIF(VALUES(customer_name), ''),  customer_name),
+                customer_email    = COALESCE(NULLIF(VALUES(customer_email), ''), customer_email),
+                customer_phone    = COALESCE(NULLIF(VALUES(customer_phone), ''), customer_phone),
+                address           = COALESCE(NULLIF(VALUES(address), ''),        address),
+                city              = COALESCE(NULLIF(VALUES(city), ''),           city),
+                country           = COALESCE(NULLIF(VALUES(country), ''),        country),
+                zip               = COALESCE(NULLIF(VALUES(zip), ''),            zip),
+                affiliate_id      = COALESCE(NULLIF(VALUES(affiliate_id), ''),   affiliate_id),
+                affiliate_name    = COALESCE(NULLIF(VALUES(affiliate_name), ''), affiliate_name),
+                product_codenames = COALESCE(NULLIF(VALUES(product_codenames), ''), product_codenames),
+                total_amount      = IF(total_amount = 0, VALUES(total_amount), total_amount),
+                ip_address        = COALESCE(NULLIF(VALUES(ip_address), ''),     ip_address),
+                flag_upsell       = GREATEST(flag_upsell, VALUES(flag_upsell)),
+                flag_upsell_level = GREATEST(flag_upsell_level, VALUES(flag_upsell_level))";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        $domainId, $orderId, $orderIdGlobal,
+        $name, $email, $phone, $address, $city, $country, $zip,
+        $affId, $affName, $subId,
+        $item, $total, $ip, $extOrder, $referrer,
+        $upsellLevel > 0 ? 1 : 0, $upsellLevel,
+    ]);
+
+    $action = $stmt->rowCount() === 1 ? 'inserted' : 'updated';
+
+    echo json_encode([
+        'success'      => true,
+        'order_id'     => $orderId,
+        'upsell_level' => $upsellLevel,
+        'action_taken' => $action,
+    ]);
 }
 
 // ================================================================

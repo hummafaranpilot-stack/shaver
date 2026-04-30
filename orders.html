@@ -1484,7 +1484,10 @@
                 }
                 var refundLabel = (o.status === 'Chargeback' || o.status === 'CGBK') ? 'CHARGEBACK' : 'REFUNDED';
                 var refundBadge = isRefunded ? ' <span style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;font-size:0.65rem;font-weight:700;vertical-align:middle;">' + refundLabel + '</span>' : '';
-                html += '<td><strong>' + escapeHtml(o.order_id) + '</strong>' + refundBadge + '</td>';
+                var autoBadge = (o.capture_source === 'url_capture')
+                    ? ' <span style="background:#ede8ff;color:#6d28d9;border:1px solid #c4b5fd;border-radius:4px;padding:1px 6px;font-size:0.62rem;font-weight:700;vertical-align:middle;" title="Auto-captured from upsell URL — pending CSV reconciliation"><i class="fas fa-bolt" style="font-size:0.6rem;"></i> AUTO</span>'
+                    : '';
+                html += '<td><strong>' + escapeHtml(o.order_id) + '</strong>' + refundBadge + autoBadge + '</td>';
                 html += '<td style="white-space:nowrap;"><strong style="font-size:0.82rem;">' + escapeHtml(dtTime) + '</strong><br><span style="color:#95a5a6;font-size:0.76rem;">' + escapeHtml(dtDate) + '</span></td>';
                 html += '<td>' + escapeHtml(o.customer_name || '-') + '<br><span style="color:#95a5a6;font-size:0.8rem;">' + escapeHtml(o.customer_email || '') + '</span></td>';
                 var productDisplay = escapeHtml(o.product_names || '-').replace(/\[BUMP\]/g, '<span style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;border-radius:4px;padding:1px 5px;font-size:0.62rem;font-weight:700;margin-left:4px;">BUMP</span>');

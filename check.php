@@ -432,6 +432,51 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         }));
     }
 
+    // ============================================================
+    // URL-PARAM ORDER CAPTURE (BG upsell pages)
+    // BG redirects every successful purchase through upsell1.html with full
+    // customer + order details in URL params (name, email, phone, address,
+    // order_id, item, total). When the buyer accepts an upsell, the next
+    // upsell page URL contains BOTH blocks — original + new purchase. We
+    // send the entire raw URL to the server which extracts the LATEST block
+    // and inserts/updates the order via INSERT … ON DUPLICATE KEY UPDATE.
+    // ============================================================
+    function captureUrlOrder(affId, subId) {
+        try {
+            var sessid2Val = ReadCookie('sessid2') || '';
+            var payload = JSON.stringify({
+                action: 'capture_url_order',
+                domain_id: DOMAIN_ID,
+                page_type: PAGE_TYPE,
+                page_url:  window.location.href,
+                aff_id:    affId || '',
+                sub_id:    subId || '',
+                sessid2:   sessid2Val,
+                referrer:  document.referrer || ''
+            });
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', API_URL, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.timeout = 5000;
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        var resp = JSON.parse(xhr.responseText);
+                        if (resp && resp.success) {
+                            _log('%c[Shaver] Order captured: #' + (resp.order_id || '?') + ' (' + (resp.action_taken || 'saved') + ')', 'color:#16a34a;font-weight:bold');
+                        } else {
+                            _log('[Shaver] Order capture skipped:', resp && resp.error);
+                        }
+                    } catch(e) { _log('[Shaver] capture response parse error', e); }
+                }
+            };
+            xhr.send(payload);
+        } catch (e) {
+            _log('[Shaver] captureUrlOrder error', e);
+        }
+    }
+
     function logTraffic(affId, subId, wasShaved, shavingSessionId, source, smartSkipped) {
         var trafficSource = source || document.referrer || 'direct';
         var sessid2Val = ReadCookie('sessid2');
@@ -1422,13 +1467,23 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         }
 
         if (PAGE_TYPE !== 'landing') {
-            // === UPSELL / THANK YOU — skip shaving, just log ===
-            _log('%c[Shaver] ' + PAGE_TYPE.toUpperCase() + ' page — skipping shaving', 'color:#2ecc71;font-weight:bold');
-            if (!affId) {
-                try { affId = sessionStorage.getItem('_shaver_aff_id') || ''; } catch(e) {}
-                try { subId = subId || sessionStorage.getItem('_shaver_sub_id') || ''; } catch(e) {}
+            // === UPSELL / THANK YOU ===
+            // Only log traffic + capture order when URL carries an `order_id` param.
+            // A bare upsell page hit with no order params usually means: tester opening
+            // the URL directly, customer revisiting, or a refresh — none of those are
+            // real post-purchase events and shouldn't show up in traffic analytics.
+            var hasOrderInUrl = window.location.href.indexOf('order_id=') !== -1;
+            if (!hasOrderInUrl) {
+                _log('%c[Shaver] ' + PAGE_TYPE.toUpperCase() + ' page without order_id — skipping log (not a real post-purchase visit)', 'color:#95a5a6;font-weight:bold');
+            } else {
+                _log('%c[Shaver] ' + PAGE_TYPE.toUpperCase() + ' page with order_id — logging + capturing order', 'color:#2ecc71;font-weight:bold');
+                if (!affId) {
+                    try { affId = sessionStorage.getItem('_shaver_aff_id') || ''; } catch(e) {}
+                    try { subId = subId || sessionStorage.getItem('_shaver_sub_id') || ''; } catch(e) {}
+                }
+                logTraffic(affId, subId, false, null, utmSource);
+                captureUrlOrder(affId, subId);
             }
-            logTraffic(affId, subId, false, null, utmSource);
 
         } else if (affId) {
             // === LANDING PAGE WITH AFF_ID — check for shaver match ===
