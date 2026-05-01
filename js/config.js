@@ -78,6 +78,18 @@ var API_URL = 'api.php';
     }
 })();
 
+// Silent ping-cron heartbeat — triggers cron-pinger.php on page load (max once per minute).
+// Runs on its own faster cadence so visitor IPs get pinged within ~1 min of arrival.
+(function() {
+    var PING_KEY = 'shaver_ping_cron_last';
+    var PING_INTERVAL = 60 * 1000; // 1 minute
+    var last = parseInt(localStorage.getItem(PING_KEY) || '0', 10);
+    if (Date.now() - last > PING_INTERVAL) {
+        localStorage.setItem(PING_KEY, String(Date.now()));
+        fetch('cron-pinger.php?key=shaver_ping_2026', { method: 'GET' }).catch(function() {});
+    }
+})();
+
 // Affiliate ID → Name lookup (loaded per domain from API)
 var AFF_NAMES = {};
 

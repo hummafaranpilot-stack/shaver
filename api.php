@@ -3538,6 +3538,7 @@ function getTrafficLog($pdo) {
             'browser' => $item['browser'],
             'device' => $item['device'],
             'ip' => $item['ip_address'],
+            'pingMs' => isset($item['ping_ms']) ? (int)$item['ping_ms'] : null,
             'country' => $item['country'],
             'countryCode' => $item['country_code'],
             'wasShaved' => (bool)$item['was_shaved'],
