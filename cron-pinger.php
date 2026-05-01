@@ -1,57 +1,66 @@
 <?php
 /**
- * Cron-Pinger
+ * Cron-Pinger — measures server-to-IP round-trip latency.
  *
- * Picks up to N un-pinged rows from affiliate_traffic (recent visits),
- * runs ICMP ping against each visitor IP, stores ping_ms and ping_checked_at.
+ * Hostinger shared hosting disables exec()/shell_exec(), so we cannot run
+ * the `ping` binary. Instead we use a TCP-connect timing fallback:
+ *
+ *   - stream_socket_client() to tcp://IP:80 (or 443 if 80 fails)
+ *   - Measure microseconds from connect() to either handshake-completion
+ *     (open port) or RST-received (closed port — TCP kernel reply still
+ *     gives us the same one-round-trip information)
+ *   - If both ports time out (firewalled IP), record -1 ("no response")
+ *
+ * This is functionally equivalent to ICMP ping for proxy/VPN detection:
+ * round-trip is determined by physical path length, regardless of whether
+ * the response is SYN-ACK or RST.
  *
  * Trigger:
- *   - Server-side cron (every minute) — preferred. crontab entry:
- *       * * * * * curl -s 'https://shaver.trustednutraproduct.com/cron-pinger.php?key=shaver_ping_2026' > /dev/null 2>&1
- *   - Or piggybacked on the JS heartbeat that pages already fire
- *     (orders/analytics/etc.) — config.js calls this URL on page load if it
- *     hasn't run in the last 60 seconds.
+ *   - JS heartbeat in js/config.js fires every minute on admin page loads
+ *   - Or set up real cron:
+ *     * * * * * curl -s 'https://shaver.trustednutraproduct.com/cron-pinger.php?key=shaver_ping_2026' > /dev/null 2>&1
  *
- * Auth: ?key=<KEY> (see CRON_KEY below). Don't expose this URL publicly.
+ * Auth: ?key=<KEY>
  *
- * Output: plain-text summary so cron logs / browser visits show what happened.
- *
- * Tuning knobs:
- *   BATCH_SIZE     — rows processed per invocation (keeps each run short)
- *   PING_TIMEOUT_S — per-IP timeout in seconds
- *   ROW_AGE_HOURS  — how far back to look for un-pinged rows (avoids
- *                    pinging old, possibly-recycled IPs)
+ * Tuning:
+ *   BATCH_SIZE     — rows per invocation
+ *   TIMEOUT_MS     — per-IP timeout in ms (1500 = 1.5s)
+ *   ROW_AGE_HOURS  — how far back to look for un-pinged rows
  */
 
 require_once __DIR__ . '/config.php';
 header('Content-Type: text/plain; charset=utf-8');
 
 // ---- Config ---------------------------------------------------------------
-const CRON_KEY       = 'shaver_ping_2026';
-const BATCH_SIZE     = 50;
-const PING_TIMEOUT_S = 1;     // 1 second per ping
-const ROW_AGE_HOURS  = 6;     // only ping visits from last 6 hours
-const NO_RESPONSE    = -1;    // sentinel for "ping timed out / no reply"
+const CRON_KEY      = 'shaver_ping_2026';
+const BATCH_SIZE    = 50;
+const TIMEOUT_MS    = 1500;
+const ROW_AGE_HOURS = 6;
+const NO_RESPONSE   = -1;
+const TCP_PORTS     = [80, 443]; // try in order
 
 // ---- Auth -----------------------------------------------------------------
-$key = $_GET['key'] ?? '';
-if ($key !== CRON_KEY) {
+if (($_GET['key'] ?? '') !== CRON_KEY) {
     http_response_code(403);
     echo "Forbidden\n";
     exit;
 }
 
-// ---- Capability check (graceful skip if exec disabled) --------------------
-$disabled = array_map('trim', explode(',', ini_get('disable_functions')));
-$canExec  = function_exists('shell_exec') && !in_array('shell_exec', $disabled);
-if (!$canExec) {
-    echo "Cron-Pinger: exec() disabled — cannot ping. (No fallback yet.)\n";
+$pdo = getDB();
+
+// ---- Capability detection -------------------------------------------------
+$disabled    = array_map('trim', explode(',', ini_get('disable_functions')));
+$canExec     = function_exists('shell_exec') && !in_array('shell_exec', $disabled);
+$canFsockopen = function_exists('stream_socket_client') && !in_array('stream_socket_client', $disabled);
+
+if (!$canExec && !$canFsockopen) {
+    echo "Cron-Pinger: both exec and stream_socket_client are disabled — no way to measure latency.\n";
     exit;
 }
 
-$pdo = getDB();
+$mode = $canExec ? 'icmp' : 'tcp';
 
-// ---- Pick rows to process -------------------------------------------------
+// ---- Pick rows ------------------------------------------------------------
 $stmt = $pdo->prepare("
     SELECT id, ip_address
     FROM affiliate_traffic
@@ -67,34 +76,29 @@ $stmt->execute();
 $rows = $stmt->fetchAll();
 
 if (!$rows) {
-    echo "Cron-Pinger: nothing to do (no pending rows in last " . ROW_AGE_HOURS . "h)\n";
+    echo "Cron-Pinger ($mode): nothing to do (no pending rows in last " . ROW_AGE_HOURS . "h)\n";
     exit;
 }
 
-// ---- De-dupe IPs within this batch (one ping per unique IP) ---------------
+// ---- De-dupe by IP --------------------------------------------------------
 $ipToRowIds = [];
+$invalidIds = [];
 foreach ($rows as $r) {
     $ip = $r['ip_address'];
     if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-        // Mark invalid IP rows as checked so we don't re-pick them
-        $ipToRowIds['__invalid__'][] = (int)$r['id'];
+        $invalidIds[] = (int)$r['id'];
         continue;
     }
-    if (!isset($ipToRowIds[$ip])) $ipToRowIds[$ip] = [];
     $ipToRowIds[$ip][] = (int)$r['id'];
 }
 
-$invalidIds = $ipToRowIds['__invalid__'] ?? [];
-unset($ipToRowIds['__invalid__']);
-
-// ---- Ping each unique IP --------------------------------------------------
+// ---- Probe each unique IP -------------------------------------------------
 $updateStmt = $pdo->prepare("UPDATE affiliate_traffic SET ping_ms = ?, ping_checked_at = NOW() WHERE id = ?");
-
-$startedAt = microtime(true);
-$summary   = ['ok' => 0, 'no_response' => 0, 'total_ips' => count($ipToRowIds)];
+$startedAt  = microtime(true);
+$summary    = ['ok' => 0, 'no_response' => 0, 'total_ips' => count($ipToRowIds)];
 
 foreach ($ipToRowIds as $ip => $ids) {
-    $latency = pingHost($ip);
+    $latency = $canExec ? pingHostIcmp($ip) : pingHostTcp($ip);
     foreach ($ids as $id) {
         $updateStmt->execute([$latency, $id]);
     }
@@ -102,7 +106,6 @@ foreach ($ipToRowIds as $ip => $ids) {
     else                          $summary['ok']++;
 }
 
-// Mark invalid-IP rows as checked too (with NO_RESPONSE so they're filtered)
 foreach ($invalidIds as $id) {
     $updateStmt->execute([NO_RESPONSE, $id]);
 }
@@ -111,28 +114,23 @@ $elapsed = round(microtime(true) - $startedAt, 2);
 
 echo "Cron-Pinger\n";
 echo "============\n";
+echo "Mode ................... $mode " . ($mode === 'tcp' ? '(exec disabled — using TCP-connect timing)' : '(ICMP via ping binary)') . "\n";
 echo "Rows picked ............ " . count($rows) . "\n";
-echo "Unique IPs pinged ...... " . $summary['total_ips'] . "\n";
-echo "Responded .............. " . $summary['ok'] . "\n";
+echo "Unique IPs probed ...... " . $summary['total_ips'] . "\n";
+echo "Got latency ............ " . $summary['ok'] . "\n";
 echo "No response ............ " . $summary['no_response'] . "\n";
 echo "Invalid IPs ............ " . count($invalidIds) . "\n";
 echo "Wall time .............. {$elapsed}s\n";
 
-// ---- Helper ---------------------------------------------------------------
+// ---- Probe implementations ------------------------------------------------
+
 /**
- * Ping a single host. Returns latency in ms (int), or NO_RESPONSE (-1) on timeout.
- *
- * Linux: ping -c 1 -W 1
- * Output line we parse: "rtt min/avg/max/mdev = 0.xxx/<avg>/0.xxx/0.xxx ms"
- * Fallback: "time=<ms> ms"
+ * ICMP ping via the system `ping` binary. Used when exec() is allowed.
  */
-function pingHost(string $ip): int {
-    $timeout = PING_TIMEOUT_S;
-    $cmd = 'ping -c 1 -W ' . (int)$timeout . ' -q ' . escapeshellarg($ip) . ' 2>&1';
+function pingHostIcmp(string $ip): int {
+    $cmd = 'ping -c 1 -W 1 -q ' . escapeshellarg($ip) . ' 2>&1';
     $output = (string)@shell_exec($cmd);
-
     if ($output === '') return NO_RESPONSE;
-
     if (preg_match('#min/avg/max[^=]*=\s*[\d.]+/([\d.]+)/#', $output, $m)) {
         return (int)round((float)$m[1]);
     }
@@ -140,4 +138,45 @@ function pingHost(string $ip): int {
         return (int)round((float)$m[1]);
     }
     return NO_RESPONSE;
+}
+
+/**
+ * TCP-connect timing fallback. Returns ms to either successful TCP handshake
+ * (open port) or to ECONNREFUSED (closed port — kernel still replies in one
+ * round-trip, which is what we want to measure).
+ *
+ * If both ports time out, the IP is firewalled (drops SYNs silently) and we
+ * have no usable measurement → return NO_RESPONSE.
+ */
+function pingHostTcp(string $ip): int {
+    $best = NO_RESPONSE;
+    foreach (TCP_PORTS as $port) {
+        $start  = microtime(true);
+        $errno  = 0;
+        $errstr = '';
+        $sock   = @stream_socket_client(
+            "tcp://{$ip}:{$port}",
+            $errno,
+            $errstr,
+            TIMEOUT_MS / 1000.0,
+            STREAM_CLIENT_CONNECT
+        );
+        $elapsedMs = (int)round((microtime(true) - $start) * 1000);
+
+        if ($sock) {
+            // Port is open — handshake completed, this IS our round-trip.
+            @fclose($sock);
+            return $elapsedMs;
+        }
+
+        // Port closed but kernel returned RST: errno is set, elapsed is small.
+        // If we hit the timeout boundary, it's a silent drop (firewalled), skip.
+        if ($errno !== 0 && $elapsedMs < (int)(TIMEOUT_MS * 0.85)) {
+            if ($best === NO_RESPONSE || $elapsedMs < $best) {
+                $best = $elapsedMs;
+            }
+        }
+        // If timeout: try next port
+    }
+    return $best;
 }

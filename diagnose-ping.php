@@ -31,8 +31,30 @@ echo "   shell_exec() ..... " . ($shellEnabled ? 'ENABLED' : 'DISABLED') . "\n";
 echo "\n";
 
 if (!$execEnabled && !$shellEnabled) {
-    echo "[STOP] Both exec() and shell_exec() are disabled. Ping feature cannot work.\n";
-    echo "Fallback options: third-party ping API, or fsockopen TCP probe (less accurate).\n";
+    echo "[INFO] exec()/shell_exec() are disabled — falling back to TCP-connect timing.\n";
+    echo "       This works equivalently for proxy detection (round-trip is determined\n";
+    echo "       by physical path; SYN-ACK and RST take the same time to come back).\n\n";
+
+    // Quick TCP test against 8.8.8.8:53
+    if (!function_exists('stream_socket_client')) {
+        echo "[STOP] stream_socket_client() also disabled. Cannot proceed.\n";
+        exit;
+    }
+
+    echo "Testing TCP connect to 8.8.8.8:53...\n";
+    $start = microtime(true);
+    $errno = 0; $errstr = '';
+    $sock  = @stream_socket_client('tcp://8.8.8.8:53', $errno, $errstr, 1.5, STREAM_CLIENT_CONNECT);
+    $elapsedMs = (int)round((microtime(true) - $start) * 1000);
+
+    if ($sock) {
+        @fclose($sock);
+        echo "   [OK] Connected in {$elapsedMs}ms\n\n";
+        echo "Verdict: GO (tcp mode) — cron-pinger.php will auto-detect and use TCP timing.\n";
+    } else {
+        echo "   [FAIL] errno=$errno errstr=$errstr (elapsed {$elapsedMs}ms)\n\n";
+        echo "Verdict: NO-GO. Outbound TCP also blocked. Need third-party API.\n";
+    }
     exit;
 }
 
