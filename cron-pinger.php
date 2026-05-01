@@ -33,11 +33,15 @@ header('Content-Type: text/plain; charset=utf-8');
 
 // ---- Config ---------------------------------------------------------------
 const CRON_KEY      = 'shaver_ping_2026';
-const BATCH_SIZE    = 50;
-const TIMEOUT_MS    = 1500;
+const BATCH_SIZE    = 15;        // lowered so browser visits don't time out
+const TIMEOUT_MS    = 800;       // 800ms is plenty for valid round-trips; firewalled IPs return after this
 const ROW_AGE_HOURS = 6;
 const NO_RESPONSE   = -1;
 const TCP_PORTS     = [80, 443]; // try in order
+
+// Don't let PHP kill us mid-batch
+@set_time_limit(60);
+@ignore_user_abort(true);
 
 // ---- Auth -----------------------------------------------------------------
 if (($_GET['key'] ?? '') !== CRON_KEY) {
