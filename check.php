@@ -1506,21 +1506,21 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         }
 
         if (PAGE_TYPE !== 'landing') {
-            // === UPSELL / THANK YOU ===
-            // Only log traffic + capture order when URL carries an `order_id` param.
-            // A bare upsell page hit with no order params usually means: tester opening
-            // the URL directly, customer revisiting, or a refresh — none of those are
-            // real post-purchase events and shouldn't show up in traffic analytics.
+            // === UPSELL / THANK YOU — always log traffic (preserves analytics linkage
+            // between landing and upsell rows via session_uuid + sessid2). Order
+            // capture is conditional: fires only when URL carries real BG params
+            // so test/refresh hits with no order_id don't create empty order rows.
+            _log('%c[Shaver] ' + PAGE_TYPE.toUpperCase() + ' page — logging traffic', 'color:#2ecc71;font-weight:bold');
+            if (!affId) {
+                try { affId = sessionStorage.getItem('_shaver_aff_id') || ''; } catch(e) {}
+                try { subId = subId || sessionStorage.getItem('_shaver_sub_id') || ''; } catch(e) {}
+            }
+            logTraffic(affId, subId, false, null, utmSource);
+
+            // Order capture only when BG passed an order_id in the URL
             var hasOrderInUrl = window.location.href.indexOf('order_id=') !== -1;
-            if (!hasOrderInUrl) {
-                _log('%c[Shaver] ' + PAGE_TYPE.toUpperCase() + ' page without order_id — skipping log (not a real post-purchase visit)', 'color:#95a5a6;font-weight:bold');
-            } else {
-                _log('%c[Shaver] ' + PAGE_TYPE.toUpperCase() + ' page with order_id — logging + capturing order', 'color:#2ecc71;font-weight:bold');
-                if (!affId) {
-                    try { affId = sessionStorage.getItem('_shaver_aff_id') || ''; } catch(e) {}
-                    try { subId = subId || sessionStorage.getItem('_shaver_sub_id') || ''; } catch(e) {}
-                }
-                logTraffic(affId, subId, false, null, utmSource);
+            if (hasOrderInUrl) {
+                _log('[Shaver] order_id present — running URL capture');
                 captureUrlOrder(affId, subId);
             }
 
