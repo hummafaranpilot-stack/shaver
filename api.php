@@ -992,6 +992,15 @@ function logTraffic($pdo) {
         $geoStmt->execute([$geoInfo['country'], $geoInfo['countryCode'], $trafficId]);
     }
 
+    // Inline TCP-connect ping (visitor doesn't wait — response already flushed).
+    // Cron-pinger.php still exists as a backup for any rows we couldn't ping
+    // here (e.g. if PHP times out before reaching this).
+    if (filter_var($ip, FILTER_VALIDATE_IP)) {
+        $pingMs = pingHostTcpInline($ip);
+        $pingStmt = $pdo->prepare("UPDATE affiliate_traffic SET ping_ms = ?, ping_checked_at = NOW() WHERE id = ?");
+        $pingStmt->execute([$pingMs, $trafficId]);
+    }
+
     // Auto-check fraud when visitor reaches upsell
     if ($pageType === 'upsell') {
         $landingRec = null;
@@ -8299,5 +8308,36 @@ function deleteApiKey($pdo) {
 
     $pdo->prepare("DELETE FROM api_keys WHERE id = ?")->execute([$id]);
     echo json_encode(['success' => true]);
+}
+
+/**
+ * TCP-connect timing — measures server-to-IP round-trip latency.
+ * Returns ms (>=0) on success, or -1 if both ports time out (firewalled IP).
+ *
+ * Used inline by logTraffic() so each new visitor row gets ping_ms filled
+ * within ~1s of their visit, with no impact on visitor page-load (response
+ * is already flushed before this runs).
+ */
+function pingHostTcpInline(string $ip): int {
+    $timeoutSec = 0.8;
+    $best = -1;
+    foreach ([80, 443] as $port) {
+        $start  = microtime(true);
+        $errno  = 0;
+        $errstr = '';
+        $sock   = @stream_socket_client("tcp://{$ip}:{$port}", $errno, $errstr, $timeoutSec, STREAM_CLIENT_CONNECT);
+        $elapsedMs = (int)round((microtime(true) - $start) * 1000);
+
+        if ($sock) {
+            @fclose($sock);
+            return $elapsedMs;
+        }
+        // Closed port (kernel sent RST quickly) is also a valid measurement.
+        // Silent drop (firewalled) hits the timeout — skip.
+        if ($errno !== 0 && $elapsedMs < (int)($timeoutSec * 1000 * 0.85)) {
+            if ($best === -1 || $elapsedMs < $best) $best = $elapsedMs;
+        }
+    }
+    return $best;
 }
 ?>
