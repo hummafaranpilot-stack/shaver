@@ -3538,7 +3538,7 @@ function getTrafficLog($pdo) {
         unset($item);
     }
 
-    $formatted = array_map(function($item) use ($funnelMap, $uuidMap, $sessionMap) {
+    $formatted = array_map(function($item) use ($funnelMap, $uuidMap, $sessionMap, $resolveFunnel) {
         $sid = $item['sessid2'] ?? null;
         $uid = $item['session_uuid'] ?? null;
         $aff = $item['aff_id'] ?? '';
