@@ -3374,63 +3374,50 @@ function getTrafficLog($pdo) {
             $sessid2List[$item['sessid2']] = true;
         }
     }
-    $funnelMap = []; // sessid2 => ['upsells' => [...], 'thankyou' => [...]]
+    // funnelMap stores RAW upsell/thankyou rows keyed by sessid2 (+ aff_id);
+    // we filter by landing timestamp later so a stale BG cookie from an old
+    // purchase doesn't mis-attribute "reached upsell" to a fresh landing visit.
+    $funnelMap = []; // key => array of {page_type, name, timestamp, order_id, matched_order_id}
     if (!empty($sessid2List)) {
         try {
         $placeholders = implode(',', array_fill(0, count($sessid2List), '?'));
-        // Bug fix: scope to same domain_id to prevent cross-domain upsell matching
         $domainFilter = $currentDomainId ? " AND domain_id = " . intval($currentDomainId) : "";
         $funnelStmt = $pdo->prepare("
-            SELECT sessid2, aff_id, page_type, page_url, matched_order_id
+            SELECT sessid2, aff_id, page_type, page_url, matched_order_id, timestamp
             FROM affiliate_traffic
             WHERE sessid2 IN ($placeholders) AND page_type IN ('upsell', 'thankyou') $domainFilter
         ");
         $funnelStmt->execute(array_keys($sessid2List));
-        $funnelRows = $funnelStmt->fetchAll();
-        foreach ($funnelRows as $fr) {
+        foreach ($funnelStmt->fetchAll() as $fr) {
             $sid = $fr['sessid2'];
             $fAff = $fr['aff_id'] ?? '';
-            $key = $sid . '|' . $fAff;
-            $keyGlobal = $sid . '|*'; // Global key to share matched order across affiliates for same session
-            if (!isset($funnelMap[$key])) $funnelMap[$key] = ['upsells' => [], 'thankyou' => null, 'matchedOrderId' => null];
-            if (!isset($funnelMap[$keyGlobal])) $funnelMap[$keyGlobal] = ['upsells' => [], 'thankyou' => null, 'matchedOrderId' => null];
-            if ($fr['page_type'] === 'upsell') {
-                // Extract upsell name from URL
-                $upsellName = 'Upsell';
-                $url = $fr['page_url'] ?? '';
-                if (preg_match('/upsell\s*(\d+)/i', $url, $m)) {
-                    $upsellName = 'Upsell ' . $m[1];
-                } elseif (preg_match('/upsell/i', $url)) {
-                    $upsellName = 'Upsell';
-                }
-                if (!in_array($upsellName, $funnelMap[$key]['upsells'])) {
-                    $funnelMap[$key]['upsells'][] = $upsellName;
-                }
-                if (!in_array($upsellName, $funnelMap[$keyGlobal]['upsells'])) {
-                    $funnelMap[$keyGlobal]['upsells'][] = $upsellName;
-                }
-                // Extract order_id_global from upsell URL (BuyGoods passes it)
-                if (preg_match('/order_id_global=([^&]+)/', $url, $orderMatch)) {
-                    $orderId = urldecode($orderMatch[1]);
-                    if (empty($funnelMap[$key]['matchedOrderId'])) $funnelMap[$key]['matchedOrderId'] = $orderId;
-                    if (empty($funnelMap[$keyGlobal]['matchedOrderId'])) $funnelMap[$keyGlobal]['matchedOrderId'] = $orderId;
-                }
-            } elseif ($fr['page_type'] === 'thankyou') {
-                $funnelMap[$key]['thankyou'] = true;
-                $funnelMap[$keyGlobal]['thankyou'] = true;
-                if (!empty($fr['matched_order_id'])) {
-                    $funnelMap[$key]['matchedOrderId'] = $fr['matched_order_id'];
-                    $funnelMap[$keyGlobal]['matchedOrderId'] = $fr['matched_order_id'];
-                }
+            $name = 'Upsell';
+            $url = $fr['page_url'] ?? '';
+            if (preg_match('/upsell\s*(\d+)/i', $url, $m))      $name = 'Upsell ' . $m[1];
+            elseif (preg_match('/upsell/i', $url))              $name = 'Upsell';
+            elseif ($fr['page_type'] === 'thankyou')            $name = 'ThankYou';
+
+            $orderIdFromUrl = null;
+            if (preg_match('/order_id_global=([^&]+)/', $url, $orderMatch)) {
+                $orderIdFromUrl = urldecode($orderMatch[1]);
             }
+
+            $entry = [
+                'page_type'        => $fr['page_type'],
+                'name'             => $name,
+                'timestamp'        => $fr['timestamp'],
+                'matched_order_id' => $fr['matched_order_id'] ?? null,
+                'order_id_from_url' => $orderIdFromUrl,
+            ];
+
+            $funnelMap[$sid . '|' . $fAff][] = $entry;
+            $funnelMap[$sid . '|*'][]        = $entry; // global key for cross-affiliate match
         }
-        } catch (Exception $e) {
-            // matched_order_id column may not exist yet
-        }
+        } catch (Exception $e) { /* matched_order_id column may not exist yet */ }
     }
 
     // Fallback: for landing records without sessid2, use session_uuid to find funnel siblings
-    $uuidMap = []; // session_uuid => ['upsells' => [...], 'thankyou' => null, 'matchedOrderId' => null]
+    $uuidMap = [];
     $uuidList = [];
     foreach ($traffic as $item) {
         if (empty($item['sessid2']) && !empty($item['session_uuid'])) {
@@ -3442,39 +3429,67 @@ function getTrafficLog($pdo) {
             $placeholders = implode(',', array_fill(0, count($uuidList), '?'));
             $domainFilter2 = $currentDomainId ? " AND domain_id = " . intval($currentDomainId) : "";
             $uuidStmt = $pdo->prepare("
-                SELECT session_uuid, aff_id, page_type, page_url, matched_order_id
+                SELECT session_uuid, aff_id, page_type, page_url, matched_order_id, timestamp
                 FROM affiliate_traffic
                 WHERE session_uuid IN ($placeholders) AND page_type IN ('upsell', 'thankyou') $domainFilter2
             ");
             $uuidStmt->execute(array_keys($uuidList));
-            $uuidRows = $uuidStmt->fetchAll();
-            foreach ($uuidRows as $fr) {
+            foreach ($uuidStmt->fetchAll() as $fr) {
                 $uid = $fr['session_uuid'];
                 $fAff = $fr['aff_id'] ?? '';
-                $key = $uid . '|' . $fAff; // Key by session_uuid + aff_id to prevent cross-affiliate attribution
-                if (!isset($uuidMap[$key])) $uuidMap[$key] = ['upsells' => [], 'thankyou' => null, 'matchedOrderId' => null];
-                if ($fr['page_type'] === 'upsell') {
-                    $upsellName = 'Upsell';
-                    $url = $fr['page_url'] ?? '';
-                    if (preg_match('/upsell\s*(\d+)/i', $url, $m)) {
-                        $upsellName = 'Upsell ' . $m[1];
-                    }
-                    if (!in_array($upsellName, $uuidMap[$key]['upsells'])) {
-                        $uuidMap[$key]['upsells'][] = $upsellName;
-                    }
-                    // Extract order_id_global from upsell URL
-                    if (empty($uuidMap[$key]['matchedOrderId']) && preg_match('/order_id_global=([^&]+)/', $url, $orderMatch)) {
-                        $uuidMap[$key]['matchedOrderId'] = urldecode($orderMatch[1]);
-                    }
-                } elseif ($fr['page_type'] === 'thankyou') {
-                    $uuidMap[$key]['thankyou'] = true;
-                    if (!empty($fr['matched_order_id'])) {
-                        $uuidMap[$key]['matchedOrderId'] = $fr['matched_order_id'];
-                    }
+                $name = 'Upsell';
+                $url = $fr['page_url'] ?? '';
+                if (preg_match('/upsell\s*(\d+)/i', $url, $m))      $name = 'Upsell ' . $m[1];
+                elseif (preg_match('/upsell/i', $url))              $name = 'Upsell';
+                elseif ($fr['page_type'] === 'thankyou')            $name = 'ThankYou';
+
+                $orderIdFromUrl = null;
+                if (preg_match('/order_id_global=([^&]+)/', $url, $orderMatch)) {
+                    $orderIdFromUrl = urldecode($orderMatch[1]);
                 }
+
+                $uuidMap[$uid . '|' . $fAff][] = [
+                    'page_type'         => $fr['page_type'],
+                    'name'              => $name,
+                    'timestamp'         => $fr['timestamp'],
+                    'matched_order_id'  => $fr['matched_order_id'] ?? null,
+                    'order_id_from_url' => $orderIdFromUrl,
+                ];
             }
         } catch (Exception $e) {}
     }
+
+    /**
+     * Resolve a single landing row's funnel data — only counts upsell/thankyou
+     * entries that happened AFTER the landing visit and within a 4-hour window
+     * (BG's tracking cookie persists across visits, so without this filter a
+     * stale sessid2 from last week's purchase would mis-attribute every new
+     * landing visit as "reached upsell").
+     */
+    $resolveFunnel = function(?array $entries, ?string $landingTs): array {
+        $out = ['upsells' => [], 'thankyou' => false, 'matchedOrderId' => null];
+        if (!$entries || !$landingTs) return $out;
+        $landingEpoch = strtotime($landingTs);
+        if ($landingEpoch === false) return $out;
+        $windowEnd = $landingEpoch + 4 * 3600; // 4 hours
+        foreach ($entries as $e) {
+            $ts = strtotime($e['timestamp'] ?? '');
+            if ($ts === false) continue;
+            if ($ts < $landingEpoch || $ts > $windowEnd) continue; // outside funnel window
+            if ($e['page_type'] === 'upsell') {
+                if (!in_array($e['name'], $out['upsells'])) $out['upsells'][] = $e['name'];
+                if (empty($out['matchedOrderId']) && !empty($e['order_id_from_url'])) {
+                    $out['matchedOrderId'] = $e['order_id_from_url'];
+                }
+            } elseif ($e['page_type'] === 'thankyou') {
+                $out['thankyou'] = true;
+                if (empty($out['matchedOrderId']) && !empty($e['matched_order_id'])) {
+                    $out['matchedOrderId'] = $e['matched_order_id'];
+                }
+            }
+        }
+        return $out;
+    };
 
     // Batch lookup shaving session details for shaved/skipped traffic
     $sessionIds = [];
@@ -3527,15 +3542,15 @@ function getTrafficLog($pdo) {
         $sid = $item['sessid2'] ?? null;
         $uid = $item['session_uuid'] ?? null;
         $aff = $item['aff_id'] ?? '';
-        // Look up funnel: try affiliate-specific key first, then global key (cross-affiliate match for shaved sessions)
-        $funnelKey1 = $sid ? ($sid . '|' . $aff) : null;
-        $funnelKey2 = $uid ? ($uid . '|' . $aff) : null;
-        $globalKey1 = $sid ? ($sid . '|*') : null;
-        $globalKey2 = $uid ? ($uid . '|*') : null;
-        $funnel = ($funnelKey1 && isset($funnelMap[$funnelKey1])) ? $funnelMap[$funnelKey1]
-                : (($funnelKey2 && isset($uuidMap[$funnelKey2])) ? $uuidMap[$funnelKey2]
-                : (($globalKey1 && isset($funnelMap[$globalKey1])) ? $funnelMap[$globalKey1]
-                : (($globalKey2 && isset($uuidMap[$globalKey2])) ? $uuidMap[$globalKey2] : null)));
+        $landingTs = $item['timestamp'] ?? null;
+        // Look up funnel entries — try sessid2 affiliate-specific, then session_uuid,
+        // then global sessid2 (cross-affiliate, for shaved sessions).
+        $entries = null;
+        if ($sid && isset($funnelMap[$sid . '|' . $aff]))         $entries = $funnelMap[$sid . '|' . $aff];
+        elseif ($uid && isset($uuidMap[$uid . '|' . $aff]))       $entries = $uuidMap[$uid . '|' . $aff];
+        elseif ($sid && isset($funnelMap[$sid . '|*']))           $entries = $funnelMap[$sid . '|*'];
+        // Resolve to per-landing funnel data with timestamp-window filter
+        $funnel = $resolveFunnel($entries, $landingTs);
         return [
             'id' => $item['id'],
             'domainId' => (int)$item['domain_id'],
