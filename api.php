@@ -170,6 +170,9 @@ try {
         // URL-param order capture (BG upsell pages)
         case 'capture_url_order': captureUrlOrder($pdo); break;
 
+        // Browser-measured round-trip latency (called right after log_traffic)
+        case 'update_traffic_rtt': updateTrafficRtt($pdo); break;
+
         // API key management
         case 'create_api_key':  createApiKey($pdo); break;
         case 'list_api_keys':   listApiKeys($pdo); break;
@@ -992,14 +995,10 @@ function logTraffic($pdo) {
         $geoStmt->execute([$geoInfo['country'], $geoInfo['countryCode'], $trafficId]);
     }
 
-    // Inline TCP-connect ping (visitor doesn't wait — response already flushed).
-    // Cron-pinger.php still exists as a backup for any rows we couldn't ping
-    // here (e.g. if PHP times out before reaching this).
-    if (filter_var($ip, FILTER_VALIDATE_IP)) {
-        $pingMs = pingHostTcpInline($ip);
-        $pingStmt = $pdo->prepare("UPDATE affiliate_traffic SET ping_ms = ?, ping_checked_at = NOW() WHERE id = ?");
-        $pingStmt->execute([$pingMs, $trafficId]);
-    }
+    // RTT is now measured BROWSER-SIDE (visitor's browser times the log_traffic
+    // fetch and sends the value back via update_traffic_rtt). Server-side ICMP
+    // and TCP probes don't work reliably on Hostinger because residential ISPs
+    // and mobile NAT silently drop our SYNs / ICMP echoes.
 
     // Auto-check fraud when visitor reaches upsell
     if ($pageType === 'upsell') {
@@ -8311,13 +8310,35 @@ function deleteApiKey($pdo) {
 }
 
 /**
- * TCP-connect timing — measures server-to-IP round-trip latency.
- * Returns ms (>=0) on success, or -1 if both ports time out (firewalled IP).
+ * Browser-measured RTT update. Called by the tracker JS right after
+ * log_traffic completes — JS measures `performance.now()` delta around
+ * the fetch and posts the value here, keyed by the traffic_id we returned.
  *
- * Used inline by logTraffic() so each new visitor row gets ping_ms filled
- * within ~1s of their visit, with no impact on visitor page-load (response
- * is already flushed before this runs).
+ * This captures user-perceived latency including any VPN/proxy hop, which
+ * is the actual signal we care about (server-side ICMP/TCP doesn't work
+ * on Hostinger because residential NAT drops outbound SYN packets).
  */
+function updateTrafficRtt($pdo): void {
+    $data      = getPostData();
+    $trafficId = (int)($data['traffic_id'] ?? 0);
+    $rttMs     = (int)($data['rtt_ms']     ?? -1);
+
+    if ($trafficId <= 0 || $rttMs <= 0) {
+        echo json_encode(['success' => false, 'error' => 'Missing traffic_id or rtt_ms']);
+        return;
+    }
+
+    // Cap insane values — anything over 10s is browser tab being throttled
+    // (background tab, sleep) and tells us nothing about real network latency.
+    if ($rttMs > 10000) $rttMs = 10000;
+
+    $stmt = $pdo->prepare("UPDATE affiliate_traffic SET ping_ms = ?, ping_checked_at = NOW() WHERE id = ?");
+    $stmt->execute([$rttMs, $trafficId]);
+    echo json_encode(['success' => true]);
+}
+
+// pingHostTcpInline kept for cron-pinger.php compatibility (legacy fallback,
+// rarely useful given how often residential IPs drop our SYNs).
 function pingHostTcpInline(string $ip): int {
     $timeoutSec = 0.8;
     $best = -1;

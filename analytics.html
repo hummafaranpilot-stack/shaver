@@ -2298,7 +2298,7 @@
             html += '<th>Landing Page</th>';
             html += '<th>Country</th>';
             html += '<th>IP Address</th>';
-            html += '<th>Ping</th>';
+            html += '<th>RTT</th>';
             html += '<th>Device</th>';
             html += '<th>Scroll %</th>';
             html += '<th>Package</th>';
@@ -2357,17 +2357,20 @@
                 var ipVal = escapeHtml(t.ip || '-');
                 if (ipVal.length > 18) ipVal = ipVal.substring(0, Math.ceil(ipVal.length/2)) + '<br>' + ipVal.substring(Math.ceil(ipVal.length/2));
                 html += '<td><code style="font-size:0.8rem;background:#f5f7fa;padding:2px 6px;border-radius:3px;display:inline-block;line-height:1.4;">' + ipVal + '</code></td>';
-                // Ping cell — color-coded: green <200ms, yellow 200-500ms, red >500ms, gray pending/no-response
-                var pingHtml = '<span style="color:#cbd5e1;font-size:0.78rem;" title="Pending — pinger runs in background every minute">…</span>';
+                // RTT cell — browser-measured round-trip time (visitor's browser → our server).
+                // Captures user-perceived latency including any VPN/proxy detour.
+                // Thresholds: green <300ms (likely direct), yellow 300-700ms (intercontinental
+                // OR light proxy), red >700ms (likely heavy proxy / mobile congestion).
+                var pingHtml = '<span style="color:#cbd5e1;font-size:0.78rem;" title="Pending — measured by the visitor browser, may take a moment to arrive">…</span>';
                 if (t.pingMs !== null && t.pingMs !== undefined) {
-                    if (t.pingMs === -1) {
-                        pingHtml = '<span style="color:#94a3b8;font-size:0.75rem;font-weight:600;" title="No ICMP response (firewalled or unreachable)">—</span>';
+                    if (t.pingMs === -1 || t.pingMs === 0) {
+                        pingHtml = '<span style="color:#94a3b8;font-size:0.75rem;font-weight:600;" title="No RTT received (visitor closed page before reporting back)">—</span>';
                     } else {
                         var pColor, pBg;
-                        if (t.pingMs < 200)      { pColor = '#166534'; pBg = '#dcfce7'; }
-                        else if (t.pingMs < 500) { pColor = '#92400e'; pBg = '#fef3c7'; }
+                        if (t.pingMs < 300)      { pColor = '#166534'; pBg = '#dcfce7'; }
+                        else if (t.pingMs < 700) { pColor = '#92400e'; pBg = '#fef3c7'; }
                         else                     { pColor = '#991b1b'; pBg = '#fee2e2'; }
-                        pingHtml = '<span style="display:inline-block;padding:2px 8px;background:' + pBg + ';color:' + pColor + ';border-radius:10px;font-size:0.74rem;font-weight:700;font-family:monospace;" title="Server-to-IP round-trip latency. Real residential users typically <200ms; proxies often >500ms.">' + t.pingMs + 'ms</span>';
+                        pingHtml = '<span style="display:inline-block;padding:2px 8px;background:' + pBg + ';color:' + pColor + ';border-radius:10px;font-size:0.74rem;font-weight:700;font-family:monospace;" title="Browser-to-server round-trip latency. Real direct users typically <300ms; VPN/proxy users often >700ms.">' + t.pingMs + 'ms</span>';
                     }
                 }
                 html += '<td style="text-align:center;">' + pingHtml + '</td>';

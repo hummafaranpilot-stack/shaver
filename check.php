@@ -433,6 +433,33 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     }
 
     // ============================================================
+    // BROWSER-MEASURED ROUND-TRIP TIME
+    // Fires immediately after log_traffic returns, posting the measured
+    // fetch RTT back to the server so it can be displayed in analytics.
+    // Fire-and-forget — visitor never waits for this.
+    // ============================================================
+    function sendTrafficRtt(trafficId, rttMs) {
+        try {
+            var payload = JSON.stringify({
+                action: 'update_traffic_rtt',
+                traffic_id: trafficId,
+                rtt_ms: rttMs
+            });
+            // sendBeacon is ideal — it survives page unload and doesn't
+            // block anything. Fall back to a normal XHR if not supported.
+            if (navigator.sendBeacon) {
+                var blob = new Blob([payload], { type: 'application/json' });
+                navigator.sendBeacon(API_URL, blob);
+            } else {
+                var x = new XMLHttpRequest();
+                x.open('POST', API_URL, true);
+                x.setRequestHeader('Content-Type', 'application/json');
+                x.send(payload);
+            }
+        } catch (e) { _log('[Shaver] sendTrafficRtt error', e); }
+    }
+
+    // ============================================================
     // URL-PARAM ORDER CAPTURE (BG upsell pages)
     // BG redirects every successful purchase through upsell1.html with full
     // customer + order details in URL params (name, email, phone, address,
@@ -512,18 +539,30 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         xhr.open('POST', API_URL, true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.timeout = 5000;
+        // Capture send-start timestamp for RTT measurement
+        var rttStartMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4 && xhr.status === 200) {
+                // Browser-measured RTT — fires AFTER we have traffic_id
+                var rttEndMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                var rttMs = Math.round(rttEndMs - rttStartMs);
                 try {
                     var result = JSON.parse(xhr.responseText);
-                    if (result.success && result.traffic_id && window.__behaviorTracking) {
-                        window.__behaviorTracking.trafficId = result.traffic_id;
-                        window.__behaviorTracking.trafficLogged = true;
-                        if (window.__behaviorTracking.eventQueue.length > 0) {
-                            window.__behaviorTracking.eventQueue.forEach(function(event) {
-                                logBehaviorEvent(event.eventType, event.eventData);
-                            });
-                            window.__behaviorTracking.eventQueue = [];
+                    if (result.success && result.traffic_id) {
+                        if (window.__behaviorTracking) {
+                            window.__behaviorTracking.trafficId = result.traffic_id;
+                            window.__behaviorTracking.trafficLogged = true;
+                            if (window.__behaviorTracking.eventQueue.length > 0) {
+                                window.__behaviorTracking.eventQueue.forEach(function(event) {
+                                    logBehaviorEvent(event.eventType, event.eventData);
+                                });
+                                window.__behaviorTracking.eventQueue = [];
+                            }
+                        }
+                        // Send the measured RTT back so the analytics page shows
+                        // user-perceived latency. Fire-and-forget — visitor doesn't wait.
+                        if (rttMs > 0 && rttMs < 30000) {
+                            sendTrafficRtt(result.traffic_id, rttMs);
                         }
                     }
                 } catch (e) {}
