@@ -8334,22 +8334,14 @@ function deleteApiKey($pdo) {
  * on Hostinger because residential NAT drops outbound SYN packets).
  */
 function updateTrafficRtt($pdo): void {
-    $data      = getPostData();
-    $trafficId = (int)($data['traffic_id'] ?? 0);
-    $rttMs     = (int)($data['rtt_ms']     ?? -1);
-
-    if ($trafficId <= 0 || $rttMs <= 0) {
-        echo json_encode(['success' => false, 'error' => 'Missing traffic_id or rtt_ms']);
-        return;
-    }
-
-    // Cap insane values — anything over 10s is browser tab being throttled
-    // (background tab, sleep) and tells us nothing about real network latency.
-    if ($rttMs > 10000) $rttMs = 10000;
-
-    $stmt = $pdo->prepare("UPDATE affiliate_traffic SET ping_ms = ?, ping_checked_at = NOW() WHERE id = ?");
-    $stmt->execute([$rttMs, $trafficId]);
-    echo json_encode(['success' => true]);
+    // No-op: ping_ms now comes from cron-pinger.php which calls check-host.net
+    // for ICMP ping from a USA-located node — that's the metric the admin
+    // wanted (real users <100ms, non-USA proxies >250ms). Browser-measured
+    // RTT was noisy for intercontinental real users (Pakistani users on a
+    // German server naturally show 1000ms+ which looked like proxy traffic
+    // even though it wasn't). We keep this endpoint reachable so older JS
+    // out in the wild doesn't error, but we no longer write to ping_ms.
+    echo json_encode(['success' => true, 'noop' => true]);
 }
 
 // pingHostTcpInline kept for cron-pinger.php compatibility (legacy fallback,
