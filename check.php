@@ -1790,18 +1790,28 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         cbXhr.open('POST', API_URL, true);
         cbXhr.setRequestHeader('Content-Type', 'application/json');
         cbXhr.timeout = 5000;
+        // Capture send-start timestamp for RTT measurement
+        var cbRttStartMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         cbXhr.onreadystatechange = function() {
             if (cbXhr.readyState === 4 && cbXhr.status === 200) {
+                var cbRttEndMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                var cbRttMs = Math.round(cbRttEndMs - cbRttStartMs);
                 try {
                     var result = JSON.parse(cbXhr.responseText);
-                    if (result.success && result.traffic_id && window.__behaviorTracking) {
-                        window.__behaviorTracking.trafficId = result.traffic_id;
-                        window.__behaviorTracking.trafficLogged = true;
-                        if (window.__behaviorTracking.eventQueue.length > 0) {
-                            window.__behaviorTracking.eventQueue.forEach(function(event) {
-                                logBehaviorEvent(event.eventType, event.eventData);
-                            });
-                            window.__behaviorTracking.eventQueue = [];
+                    if (result.success && result.traffic_id) {
+                        if (window.__behaviorTracking) {
+                            window.__behaviorTracking.trafficId = result.traffic_id;
+                            window.__behaviorTracking.trafficLogged = true;
+                            if (window.__behaviorTracking.eventQueue.length > 0) {
+                                window.__behaviorTracking.eventQueue.forEach(function(event) {
+                                    logBehaviorEvent(event.eventType, event.eventData);
+                                });
+                                window.__behaviorTracking.eventQueue = [];
+                            }
+                        }
+                        // Browser-measured RTT — fire-and-forget back to server
+                        if (cbRttMs > 0 && cbRttMs < 30000) {
+                            sendTrafficRtt(result.traffic_id, cbRttMs);
                         }
                     }
                 } catch (e) {}
