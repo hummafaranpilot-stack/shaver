@@ -445,11 +445,16 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 traffic_id: trafficId,
                 rtt_ms: rttMs
             });
-            // sendBeacon is ideal — it survives page unload and doesn't
-            // block anything. Fall back to a normal XHR if not supported.
-            if (navigator.sendBeacon) {
-                var blob = new Blob([payload], { type: 'application/json' });
-                navigator.sendBeacon(API_URL, blob);
+            // fetch with keepalive survives page unload (replacement for sendBeacon)
+            // AND supports CORS preflight, so it works cross-origin with
+            // application/json. Plain XHR fallback for older browsers.
+            if (window.fetch) {
+                fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload,
+                    keepalive: true
+                }).catch(function(){});
             } else {
                 var x = new XMLHttpRequest();
                 x.open('POST', API_URL, true);
