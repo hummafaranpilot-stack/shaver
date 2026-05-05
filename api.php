@@ -3468,14 +3468,19 @@ function getTrafficLog($pdo) {
      */
     $resolveFunnel = function(?array $entries, ?string $landingTs): array {
         $out = ['upsells' => [], 'thankyou' => false, 'matchedOrderId' => null];
-        if (!$entries || !$landingTs) return $out;
-        $landingEpoch = strtotime($landingTs);
-        if ($landingEpoch === false) return $out;
-        $windowEnd = $landingEpoch + 4 * 3600; // 4 hours
+        if (!$entries) return $out;
+        // Allow ±5 min slack on landing timestamp to absorb logging delay /
+        // clock precision. Without a landingTs we can't filter — accept all.
+        $landingEpoch = $landingTs ? strtotime($landingTs) : null;
+        $minTs = $landingEpoch !== null ? $landingEpoch - 300 : null;
         foreach ($entries as $e) {
             $ts = strtotime($e['timestamp'] ?? '');
             if ($ts === false) continue;
-            if ($ts < $landingEpoch || $ts > $windowEnd) continue; // outside funnel window
+            // Keep upsell/thankyou ONLY if it happened at-or-after the landing
+            // visit. Drop the upper bound entirely — real funnels can take
+            // hours; what we actually need to filter is upsell rows that
+            // precede this landing (stale sessid2 from a prior session).
+            if ($minTs !== null && $ts < $minTs) continue;
             if ($e['page_type'] === 'upsell') {
                 if (!in_array($e['name'], $out['upsells'])) $out['upsells'][] = $e['name'];
                 if (empty($out['matchedOrderId']) && !empty($e['order_id_from_url'])) {
