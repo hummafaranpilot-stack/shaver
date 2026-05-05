@@ -63,17 +63,19 @@ function getDomainEmailBranding($domainId) {
                 'reason_short' => 'high demand and daily bulk orders',
                 'reason_long'  => 'high demand and daily bulk orders',
                 'theme' => [
-                    // Match the cb/desktop.html landing page palette: clean white with mint green accent.
-                    // Header/footer no longer have dark boxes around the logo (per request).
-                    'header_bg'         => '#ffffff',
+                    // Header & footer use the landing page's dark palette so the
+                    // logo's WEBP transparency (which some email clients fall back
+                    // to as a dark fill) is hidden against an equally dark band.
+                    // Body content stays light for readability.
+                    'header_bg'         => '#14141c',
                     'header_text'       => '#94a3b8',
                     'hero_bg'           => '#f8fafc',
                     'accent'            => '#53CB9B',
                     'accent_soft_bg'    => '#e6faf2',
-                    'footer_bg'         => '#ffffff',
-                    'footer_text'       => '#64748b',
+                    'footer_bg'         => '#14141c',
+                    'footer_text'       => '#cbd5e1',
                     'footer_meta_text'  => '#94a3b8',
-                    'footer_divider'    => '#e2e8f0',
+                    'footer_divider'    => '#334155',
                     'product_img_width' => 130,
                     'product_img_pad'   => 22,
                 ],
