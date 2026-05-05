@@ -10,6 +10,52 @@
 require_once __DIR__ . '/config.php';
 
 /**
+ * Per-domain email branding lookup.
+ *
+ * Returns the brand pack (name, logo, bottle image, subject template, delay
+ * reason text) used in delay/dispatch/comp emails for the given domain. Adding
+ * a new branded domain = adding a case below — no template edits needed.
+ *
+ * Default fallback is MetaTrim BHB (the original brand the templates were
+ * built for) so any unconfigured domain keeps the existing look.
+ */
+function getDomainEmailBranding($domainId) {
+    $default = [
+        'name'         => 'MetaTrim BHB',
+        'logo_url'     => 'https://metatrim.trustednutraproduct.com/v2/lib/img/logo.png',
+        'bottle_url'   => 'https://metatrim.trustednutraproduct.com/v2/lib/img/prod1.png',
+        'subject'      => 'Your MetaTrim BHB Order Has Been Confirmed',
+        'reason_short' => 'an upcoming warehouse audit',  // used in "Due to ..."
+        'reason_long'  => 'an upcoming audit at our warehouse', // used in "due to ... at our warehouse"
+    ];
+
+    if (empty($domainId)) return $default;
+
+    try {
+        $pdo = getDB();
+        $stmt = $pdo->prepare("SELECT LOWER(TRIM(label)) AS label FROM domains WHERE id = ? LIMIT 1");
+        $stmt->execute([(int)$domainId]);
+        $label = (string)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return $default;
+    }
+
+    switch ($label) {
+        case 'metaflow sugar':
+            return [
+                'name'         => 'MetaFlow Sugar',
+                'logo_url'     => 'https://metaflow.trustednutraproduct.com/cb/logo.webp?v=20260427d',
+                'bottle_url'   => 'https://metaflow.trustednutraproduct.com/cb/product_images/5plus1_bottles.webp?v=20260429',
+                'subject'      => 'Your MetaFlow Sugar Order Has Been Confirmed',
+                'reason_short' => 'high demand and daily bulk orders',
+                'reason_long'  => 'high demand and daily bulk orders',
+            ];
+    }
+
+    return $default;
+}
+
+/**
  * Apply deliverability headers to a PHPMailer instance
  * Adds List-Unsubscribe, plain-text fallback, and proper encoding
  */
@@ -39,6 +85,7 @@ function applyMailHeaders($mail, $html) {
  */
 function buildDelayMailFromOrders(array $orders, $deliveryStart = '', $deliveryEnd = '') {
     $primary = $orders[0];
+    $brand   = getDomainEmailBranding($primary['domain_id'] ?? null);
 
     // Build order date from earliest order
     $orderDate = '';
@@ -52,29 +99,31 @@ function buildDelayMailFromOrders(array $orders, $deliveryStart = '', $deliveryE
         }
     }
 
-    // Build delivery date text
+    // Build delivery date text using brand-specific delay reason
+    $reasonShort = $brand['reason_short']; // "Due to ..."
+    $reasonLong  = $brand['reason_long'];  // "due to ... at our warehouse"
     if (!empty($deliveryStart) && !empty($deliveryEnd)) {
         $ds = strtotime($deliveryStart);
         $de = strtotime($deliveryEnd);
         $startFmt = date('F jS', $ds);
         $endFmt   = date('F jS, Y', $de);
         $rangeFmt = $startFmt . ' &ndash; ' . $endFmt;
-        $deliveryEstimate = 'Estimated delivery: <strong style="color: #555555;">2-3 working days</strong>. Due to an upcoming warehouse audit, delivery may be delayed to <strong style="color: #555555;">' . $rangeFmt . '</strong>.';
-        $deliveryNotice   = 'Your order is expected within <strong style="color: #555555;">2-3 working days</strong>. However, due to an upcoming audit at our warehouse, delivery may be delayed to <strong style="color: #555555;">' . $rangeFmt . '</strong>.';
+        $deliveryEstimate = 'Estimated delivery: <strong style="color: #555555;">2-3 working days</strong>. Due to ' . $reasonShort . ', delivery may be delayed to <strong style="color: #555555;">' . $rangeFmt . '</strong>.';
+        $deliveryNotice   = 'Your order is expected within <strong style="color: #555555;">2-3 working days</strong>. However, due to ' . $reasonLong . ', delivery may be delayed to <strong style="color: #555555;">' . $rangeFmt . '</strong>.';
     } elseif (!empty($deliveryStart)) {
         $ds = strtotime($deliveryStart);
         $startFmt = date('F jS, Y', $ds);
-        $deliveryEstimate = 'Estimated delivery: <strong style="color: #555555;">2-3 working days</strong>. Due to an upcoming warehouse audit, delivery may be delayed to <strong style="color: #555555;">' . $startFmt . '</strong>.';
-        $deliveryNotice   = 'Your order is expected within <strong style="color: #555555;">2-3 working days</strong>. However, due to an upcoming audit at our warehouse, delivery may be delayed to <strong style="color: #555555;">' . $startFmt . '</strong>.';
+        $deliveryEstimate = 'Estimated delivery: <strong style="color: #555555;">2-3 working days</strong>. Due to ' . $reasonShort . ', delivery may be delayed to <strong style="color: #555555;">' . $startFmt . '</strong>.';
+        $deliveryNotice   = 'Your order is expected within <strong style="color: #555555;">2-3 working days</strong>. However, due to ' . $reasonLong . ', delivery may be delayed to <strong style="color: #555555;">' . $startFmt . '</strong>.';
     } else {
-        $deliveryEstimate = 'Estimated delivery: <strong style="color: #555555;">2-3 working days</strong>. Due to an upcoming warehouse audit, delivery may be delayed by <strong style="color: #555555;">1-2 weeks</strong>.';
-        $deliveryNotice   = 'Your order is expected within <strong style="color: #555555;">2-3 working days</strong>. However, due to an upcoming audit at our warehouse, delivery may be delayed by <strong style="color: #555555;">1-2 weeks</strong>.';
+        $deliveryEstimate = 'Estimated delivery: <strong style="color: #555555;">2-3 working days</strong>. Due to ' . $reasonShort . ', delivery may be delayed by <strong style="color: #555555;">1-2 weeks</strong>.';
+        $deliveryNotice   = 'Your order is expected within <strong style="color: #555555;">2-3 working days</strong>. However, due to ' . $reasonLong . ', delivery may be delayed by <strong style="color: #555555;">1-2 weeks</strong>.';
     }
 
     // Build product rows HTML
     $productsHtml = '';
     foreach ($orders as $i => $o) {
-        $productName = htmlspecialchars($o['product_names'] ?? 'MetaTrim BHB');
+        $productName = htmlspecialchars($o['product_names'] ?? $brand['name']);
         $orderId     = htmlspecialchars($o['order_id'] ?? '');
         $isUpsell    = ($o['flag_upsell'] == 1);
 
@@ -85,11 +134,9 @@ function buildDelayMailFromOrders(array $orders, $deliveryStart = '', $deliveryE
             $qty = intval($m[1]);
         }
 
-        $imgUrl = ($qty > 1)
-            ? 'https://metatrim.trustednutraproduct.com/v2/lib/img/prod1.png'
-            : 'https://metatrim.trustednutraproduct.com/v2/lib/img/prod1.png';
+        $imgUrl = $brand['bottle_url'];
 
-        $displayName = 'MetaTrim BHB Bottle' . ($qty > 1 ? 's' : '');
+        $displayName = $brand['name'] . ' Bottle' . ($qty > 1 ? 's' : '');
         $padding = ($i === 0) ? '25px 40px 0 40px' : '12px 40px 0 40px';
 
         $upsellBadge = '';
@@ -137,7 +184,7 @@ function buildDelayMailFromOrders(array $orders, $deliveryStart = '', $deliveryE
     if ($city || $state) $addressLines .= '<br>' . $city . ($city && $state ? ', ' : '') . $state;
     if ($country || $zip) $addressLines .= '<br>' . $country . ($zip ? ', ' . $zip : '');
 
-    return buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $name, $phone, $deliveryEstimate, $deliveryNotice);
+    return buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $name, $phone, $deliveryEstimate, $deliveryNotice, $brand);
 }
 
 /**
@@ -155,6 +202,7 @@ function sendDelayMail(array $orders, array $recipients = [], $deliveryStart = '
     }
 
     $primary = $orders[0];
+    $brand   = getDomainEmailBranding($primary['domain_id'] ?? null);
 
     // If no recipients specified, use customer email
     if (empty($recipients)) {
@@ -192,7 +240,7 @@ function sendDelayMail(array $orders, array $recipients = [], $deliveryStart = '
         }
 
         $mail->isHTML(true);
-        $mail->Subject = 'Your MetaTrim BHB Order Has Been Confirmed';
+        $mail->Subject = $brand['subject'];
         $mail->Body    = $html;
         applyMailHeaders($mail, $html);
 
@@ -206,7 +254,10 @@ function sendDelayMail(array $orders, array $recipients = [], $deliveryStart = '
 /**
  * Build the full delay email HTML from template
  */
-function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactName, $phone, $deliveryEstimate, $deliveryNotice) {
+function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactName, $phone, $deliveryEstimate, $deliveryNotice, $brand = null) {
+    if (!$brand) $brand = getDomainEmailBranding(null);
+    $brandName = htmlspecialchars($brand['name']);
+    $brandLogo = htmlspecialchars($brand['logo_url']);
     return '<!DOCTYPE html>
 <html>
 <head>
@@ -245,7 +296,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="vertical-align: middle;">
-                    <img src="https://metatrim.trustednutraproduct.com/v2/lib/img/logo.png" alt="MetaTrim BHB" width="120" style="display: block; height: auto; max-width: 120px;">
+                    <img src="' . $brandLogo . '" alt="' . $brandName . '" width="120" style="display: block; height: auto; max-width: 120px;">
                   </td>
                   <td align="right" style="vertical-align: middle;">
                     <span style="color: #999999; font-size: 12px;">Order Confirmation</span>
@@ -260,7 +311,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
             <td class="email-padding" style="padding: 50px 40px 35px 40px; text-align: center; background-color: #fdf8f3;">
               <h1 class="hero-title" style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 32px; font-weight: 900; line-height: 1.2;">Your order has been<br>confirmed!</h1>
               <p style="margin: 0; color: #777777; font-size: 14px; line-height: 1.6;">
-                We\'re excited to get your MetaTrim BHB products on their way to you.
+                We\'re excited to get your ' . $brandName . ' products on their way to you.
               </p>
             </td>
           </tr>
@@ -437,7 +488,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
           <tr>
             <td class="email-padding" style="padding: 25px 40px 35px 40px; background-color: #ffffff;">
               <p style="margin: 0; color: #777777; font-size: 14px; line-height: 1.6;">
-                We hope you enjoy your MetaTrim BHB products! We sincerely apologize for any inconvenience caused by the potential delay.
+                We hope you enjoy your ' . $brandName . ' products! We sincerely apologize for any inconvenience caused by the potential delay.
               </p>
             </td>
           </tr>
@@ -455,13 +506,13 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
           <!-- Footer -->
           <tr>
             <td class="dark-bg" style="padding: 30px 40px; text-align: center; background-color: #2d2d2d;">
-              <img src="https://metatrim.trustednutraproduct.com/v2/lib/img/logo.png" alt="MetaTrim BHB" width="140" style="display: block; margin: 0 auto 4px auto; height: auto; max-width: 140px;">
+              <img src="' . $brandLogo . '" alt="' . $brandName . '" width="140" style="display: block; margin: 0 auto 4px auto; height: auto; max-width: 140px;">
               <p style="margin: 0 0 15px 0; color: #888888; font-size: 12px;">Product Support Team</p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr><td style="border-top: 1px solid #444444; font-size: 0; line-height: 0;">&nbsp;</td></tr>
               </table>
               <p style="margin: 12px 0 0 0; color: #666666; font-size: 11px; line-height: 1.5;">
-                &copy; ' . date('Y') . ' MetaTrim BHB. All Rights Reserved.
+                &copy; ' . date('Y') . ' ' . $brandName . '. All Rights Reserved.
               </p>
             </td>
           </tr>
