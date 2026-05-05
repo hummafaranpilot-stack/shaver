@@ -1594,7 +1594,11 @@
                 html += '<td style="text-align:center;vertical-align:middle;">';
                 var emailOptions = [];
                 var allSent = true;
-                if (fs === 'delayed') {
+                // MetaFlow Sugar: agents need the Order Delay email available on every
+                // order without first opening the fulfillment modal to mark it delayed.
+                // Match by current selector label (case-insensitive).
+                var isMetaFlowSugar = (currentDomainLabel || '').trim().toLowerCase() === 'metaflow sugar';
+                if (fs === 'delayed' || isMetaFlowSugar) {
                     emailOptions.push({ type: 'delay', sent: hasMailSent });
                     if (!hasMailSent) allSent = false;
                 }
