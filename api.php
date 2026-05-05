@@ -5477,8 +5477,17 @@ function getDelayedOrdersForCustomer($pdo, $domainId, $orderId) {
 
     if (!$row || empty($row['customer_email'])) return null;
 
+    // MetaFlow Sugar agents send the Order Delay email on any order — they don't
+    // need to first open the fulfillment modal and mark it 'delayed'. Drop the
+    // status filter when the domain matches; for every other domain keep the
+    // existing behavior (only orders explicitly marked delayed).
+    $domStmt = $pdo->prepare("SELECT LOWER(TRIM(label)) AS label FROM domains WHERE id = ? LIMIT 1");
+    $domStmt->execute([$domainId]);
+    $domainLabel = (string)$domStmt->fetchColumn();
+    $statusFilter = ($domainLabel === 'metaflow sugar') ? '' : "AND fulfillment_status = 'delayed'";
+
     $stmt = $pdo->prepare("SELECT * FROM orders
-        WHERE domain_id = ? AND customer_email = ? AND fulfillment_status = 'delayed'
+        WHERE domain_id = ? AND customer_email = ? $statusFilter
         ORDER BY flag_upsell ASC, date_created ASC");
     $stmt->execute([$domainId, $row['customer_email']]);
     return $stmt->fetchAll();
@@ -5547,9 +5556,16 @@ function sendDelayMailAction($pdo) {
     $result = sendDelayMail($orders, $recipients, $deliveryStart, $deliveryEnd);
 
     if ($result['success']) {
-        // Mark all delayed orders for this customer as mail sent
+        // Same domain-aware filter as getDelayedOrdersForCustomer — for MetaFlow
+        // Sugar mark all the customer's orders as mail-sent (any status). For
+        // other domains stay scoped to fulfillment_status='delayed'.
+        $domStmt = $pdo->prepare("SELECT LOWER(TRIM(label)) AS label FROM domains WHERE id = ? LIMIT 1");
+        $domStmt->execute([$domainId]);
+        $domainLabel = (string)$domStmt->fetchColumn();
+        $statusFilter = ($domainLabel === 'metaflow sugar') ? '' : "AND fulfillment_status = 'delayed'";
+
         $stmt = $pdo->prepare("UPDATE orders SET delay_mail_sent = 1
-            WHERE domain_id = ? AND customer_email = ? AND fulfillment_status = 'delayed'");
+            WHERE domain_id = ? AND customer_email = ? $statusFilter");
         $stmt->execute([$domainId, $email]);
 
         echo json_encode([
