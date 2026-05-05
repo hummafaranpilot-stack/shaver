@@ -67,12 +67,12 @@ function getDomainEmailBranding($domainId) {
                     // logo's WEBP transparency (which some email clients fall back
                     // to as a dark fill) is hidden against an equally dark band.
                     // Body content stays light for readability.
-                    'header_bg'         => '#14141c',
+                    'header_bg'         => '#000000',
                     'header_text'       => '#94a3b8',
                     'hero_bg'           => '#f8fafc',
                     'accent'            => '#53CB9B',
                     'accent_soft_bg'    => '#e6faf2',
-                    'footer_bg'         => '#14141c',
+                    'footer_bg'         => '#000000',
                     'footer_text'       => '#cbd5e1',
                     'footer_meta_text'  => '#94a3b8',
                     'footer_divider'    => '#334155',
