@@ -57,7 +57,7 @@ function getDomainEmailBranding($domainId) {
         case 'metaflow sugar':
             return [
                 'name'         => 'MetaFlow Sugar',
-                'logo_url'     => 'https://metaflow.trustednutraproduct.com/cb/logo.png?v=20260427d',
+                'logo_url'     => 'https://metaflow.trustednutraproduct.com/cb/logo.webp?v=20260427d',
                 'bottle_url'   => 'https://metaflow.trustednutraproduct.com/cb/product_images/5plus1_bottles.webp?v=20260429',
                 'subject'      => 'Your MetaFlow Sugar Order Has Been Confirmed',
                 'reason_short' => 'high demand and daily bulk orders',
