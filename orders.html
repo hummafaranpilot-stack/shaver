@@ -321,8 +321,9 @@
         }
         .email-chooser-item:hover { background: #f8fafc; }
         .email-chooser-item i { font-size: 0.9rem; width: 20px; text-align: center; }
-        .email-chooser-item.sent { opacity: 0.5; cursor: default; }
-        .email-chooser-item .sent-check { color: #16a34a; margin-left: auto; font-size: 0.75rem; }
+        .email-chooser-item.sent { opacity: 0.7; }
+        .email-chooser-item.sent:hover { opacity: 1; background: #f5f3ff; }
+        .email-chooser-item .sent-check { color: #6c63ff; margin-left: auto; font-size: 0.75rem; font-weight: 700; }
         .actions-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
         .actions-row { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; justify-content: flex-end; }
         .actions-icons { display: flex; align-items: center; gap: 3px; justify-content: flex-end; }
@@ -1613,33 +1614,30 @@
                 }
                 if (emailOptions.length > 0) {
                     var eid = escapeHtml(o.order_id);
-                    if (allSent && emailOptions.length > 0) {
-                        html += '<div class="email-col-wrap">';
-                        html += '<span class="btn-email-trigger all-sent" title="All emails sent"><i class="fas fa-check"></i></span>';
-                        html += '</div>';
-                    } else {
-                        html += '<div class="email-col-wrap">';
-                        var triggerClass = hasMailSent ? 'btn-email-trigger delay-sent' : 'btn-email-trigger';
-                        html += '<button class="' + triggerClass + '" onclick="toggleEmailChooser(\'' + eid + '\', event)" title="Send email"><i class="fas fa-envelope"></i></button>';
-                        html += '<div class="email-chooser" id="emailChooser_' + eid + '">';
-                        html += '<div class="email-chooser-title">Send Email</div>';
-                        for (var ei = 0; ei < emailOptions.length; ei++) {
-                            var eo = emailOptions[ei];
-                            if (eo.type === 'delay') {
-                                if (eo.sent) {
-                                    html += '<div class="email-chooser-item sent"><i class="fas fa-clock" style="color:#f59e0b;"></i> Order Delay<span class="sent-check"><i class="fas fa-check-circle"></i> Sent</span></div>';
-                                } else {
-                                    html += '<div class="email-chooser-item" onclick="closeEmailChooser();sendDelayEmail(\'' + eid + '\')"><i class="fas fa-clock" style="color:#f59e0b;"></i> Order Delay</div>';
-                                }
-                            } else if (eo.type === 'dispatch') {
-                                html += '<div class="email-chooser-item" onclick="closeEmailChooser();openDispatchModal(\'' + eid + '\')"><i class="fas fa-shipping-fast" style="color:#059669;"></i> Order Dispatched</div>';
-                            } else if (eo.type === 'comp') {
-                                html += '<div class="email-chooser-item" onclick="closeEmailChooser();openCompensationModal(\'' + eid + '\')"><i class="fas fa-gift" style="color:#db2777;"></i> Compensation</div>';
+                    html += '<div class="email-col-wrap">';
+                    var triggerClass = allSent ? 'btn-email-trigger all-sent' : (hasMailSent ? 'btn-email-trigger delay-sent' : 'btn-email-trigger');
+                    var triggerIcon  = allSent ? 'fa-check' : 'fa-envelope';
+                    var triggerTitle = allSent ? 'All emails sent — click to resend' : 'Send email';
+                    html += '<button class="' + triggerClass + '" onclick="toggleEmailChooser(\'' + eid + '\', event)" title="' + triggerTitle + '"><i class="fas ' + triggerIcon + '"></i></button>';
+                    html += '<div class="email-chooser" id="emailChooser_' + eid + '">';
+                    html += '<div class="email-chooser-title">Send Email</div>';
+                    for (var ei = 0; ei < emailOptions.length; ei++) {
+                        var eo = emailOptions[ei];
+                        if (eo.type === 'delay') {
+                            if (eo.sent) {
+                                // Sent items now clickable too — agent can resend (e.g. customer didn't receive)
+                                html += '<div class="email-chooser-item sent" onclick="closeEmailChooser();sendDelayEmail(\'' + eid + '\')" title="Click to resend"><i class="fas fa-clock" style="color:#f59e0b;"></i> Order Delay<span class="sent-check"><i class="fas fa-redo"></i> Resend</span></div>';
+                            } else {
+                                html += '<div class="email-chooser-item" onclick="closeEmailChooser();sendDelayEmail(\'' + eid + '\')"><i class="fas fa-clock" style="color:#f59e0b;"></i> Order Delay</div>';
                             }
+                        } else if (eo.type === 'dispatch') {
+                            html += '<div class="email-chooser-item" onclick="closeEmailChooser();openDispatchModal(\'' + eid + '\')"><i class="fas fa-shipping-fast" style="color:#059669;"></i> Order Dispatched</div>';
+                        } else if (eo.type === 'comp') {
+                            html += '<div class="email-chooser-item" onclick="closeEmailChooser();openCompensationModal(\'' + eid + '\')"><i class="fas fa-gift" style="color:#db2777;"></i> Compensation</div>';
                         }
-                        html += '</div>';
-                        html += '</div>';
                     }
+                    html += '</div>';
+                    html += '</div>';
                 }
                 html += '</td>';
 

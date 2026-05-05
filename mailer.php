@@ -25,8 +25,21 @@ function getDomainEmailBranding($domainId) {
         'logo_url'     => 'https://metatrim.trustednutraproduct.com/v2/lib/img/logo.png',
         'bottle_url'   => 'https://metatrim.trustednutraproduct.com/v2/lib/img/prod1.png',
         'subject'      => 'Your MetaTrim BHB Order Has Been Confirmed',
-        'reason_short' => 'an upcoming warehouse audit',  // used in "Due to ..."
-        'reason_long'  => 'an upcoming audit at our warehouse', // used in "due to ... at our warehouse"
+        'reason_short' => 'an upcoming warehouse audit',
+        'reason_long'  => 'an upcoming audit at our warehouse',
+        'theme' => [
+            'header_bg'         => '#2d2d2d',
+            'header_text'       => '#999999',
+            'hero_bg'           => '#fdf8f3',
+            'accent'            => '#2E7D32',
+            'accent_soft_bg'    => '#e8f5e9',
+            'footer_bg'         => '#2d2d2d',
+            'footer_text'       => '#888888',
+            'footer_meta_text'  => '#666666',
+            'footer_divider'    => '#444444',
+            'product_img_width' => 75,
+            'product_img_pad'   => 18,
+        ],
     ];
 
     if (empty($domainId)) return $default;
@@ -49,6 +62,21 @@ function getDomainEmailBranding($domainId) {
                 'subject'      => 'Your MetaFlow Sugar Order Has Been Confirmed',
                 'reason_short' => 'high demand and daily bulk orders',
                 'reason_long'  => 'high demand and daily bulk orders',
+                'theme' => [
+                    // Match the cb/desktop.html landing page palette: clean white with mint green accent.
+                    // Header/footer no longer have dark boxes around the logo (per request).
+                    'header_bg'         => '#ffffff',
+                    'header_text'       => '#94a3b8',
+                    'hero_bg'           => '#f8fafc',
+                    'accent'            => '#53CB9B',
+                    'accent_soft_bg'    => '#e6faf2',
+                    'footer_bg'         => '#ffffff',
+                    'footer_text'       => '#64748b',
+                    'footer_meta_text'  => '#94a3b8',
+                    'footer_divider'    => '#e2e8f0',
+                    'product_img_width' => 130,
+                    'product_img_pad'   => 22,
+                ],
             ];
     }
 
@@ -134,7 +162,11 @@ function buildDelayMailFromOrders(array $orders, $deliveryStart = '', $deliveryE
             $qty = intval($m[1]);
         }
 
-        $imgUrl = $brand['bottle_url'];
+        $imgUrl   = $brand['bottle_url'];
+        $imgWidth = (int)($brand['theme']['product_img_width'] ?? 75);
+        $imgPad   = (int)($brand['theme']['product_img_pad']   ?? 18);
+        $cellW    = $imgWidth + 30;
+        $accentInline = $brand['theme']['accent'] ?? '#2E7D32';
 
         $displayName = $brand['name'] . ' Bottle' . ($qty > 1 ? 's' : '');
         $padding = ($i === 0) ? '25px 40px 0 40px' : '12px 40px 0 40px';
@@ -156,13 +188,13 @@ function buildDelayMailFromOrders(array $orders, $deliveryStart = '', $deliveryE
             <td class="email-padding" style="padding: ' . $padding . '; background-color: #ffffff;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #eeeeee; border-radius: 8px;">
                 <tr>
-                  <td style="padding: 18px; width: 90px; background-color: #fafafa; text-align: center; vertical-align: middle;">
-                    <img src="' . $imgUrl . '" alt="' . $displayName . '" width="75" style="display: block; margin: 0 auto; height: auto; max-width: 75px;">
+                  <td style="padding: ' . $imgPad . 'px; width: ' . $cellW . 'px; background-color: #fafafa; text-align: center; vertical-align: middle;">
+                    <img src="' . $imgUrl . '" alt="' . $displayName . '" width="' . $imgWidth . '" style="display: block; margin: 0 auto; height: auto; max-width: ' . $imgWidth . 'px;">
                   </td>
                   <td style="padding: 18px 20px;">
                     ' . $nameCell . '
                     <p style="margin: 0 0 4px 0; color: #888888; font-size: 13px;">Quantity: ' . $qty . '</p>
-                    <p style="margin: 0; color: #aaaaaa; font-size: 12px;">Order ID: <span style="color: #2E7D32; font-weight: 700;">' . $orderId . '</span></p>
+                    <p style="margin: 0; color: #aaaaaa; font-size: 12px;">Order ID: <span style="color: ' . $accentInline . '; font-weight: 700;">' . $orderId . '</span></p>
                   </td>
                 </tr>
               </table>
@@ -258,6 +290,16 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
     if (!$brand) $brand = getDomainEmailBranding(null);
     $brandName = htmlspecialchars($brand['name']);
     $brandLogo = htmlspecialchars($brand['logo_url']);
+    $theme = $brand['theme'];
+    $headerBg     = $theme['header_bg'];
+    $headerText   = $theme['header_text'];
+    $heroBg       = $theme['hero_bg'];
+    $accent       = $theme['accent'];
+    $accentSoftBg = $theme['accent_soft_bg'];
+    $footerBg     = $theme['footer_bg'];
+    $footerText   = $theme['footer_text'];
+    $footerMeta   = $theme['footer_meta_text'];
+    $footerDiv    = $theme['footer_divider'];
     return '<!DOCTYPE html>
 <html>
 <head>
@@ -282,8 +324,8 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f5f0eb; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f5f0eb;">
+<body style="margin: 0; padding: 0; background-color: ' . $heroBg . '; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: ' . $heroBg . ';">
     <tr>
       <td align="center" style="padding: 0;">
 
@@ -292,14 +334,14 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Top Nav Bar -->
           <tr>
-            <td class="email-padding dark-bg" style="padding: 16px 40px; background-color: #2d2d2d;">
+            <td class="email-padding dark-bg" style="padding: 16px 40px; background-color: ' . $headerBg . ';">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="vertical-align: middle;">
                     <img src="' . $brandLogo . '" alt="' . $brandName . '" width="120" style="display: block; height: auto; max-width: 120px;">
                   </td>
                   <td align="right" style="vertical-align: middle;">
-                    <span style="color: #999999; font-size: 12px;">Order Confirmation</span>
+                    <span style="color: ' . $headerText . '; font-size: 12px;">Order Confirmation</span>
                   </td>
                 </tr>
               </table>
@@ -308,7 +350,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Hero Section -->
           <tr>
-            <td class="email-padding" style="padding: 50px 40px 35px 40px; text-align: center; background-color: #fdf8f3;">
+            <td class="email-padding" style="padding: 50px 40px 35px 40px; text-align: center; background-color: ' . $heroBg . ';">
               <h1 class="hero-title" style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 32px; font-weight: 900; line-height: 1.2;">Your order has been<br>confirmed!</h1>
               <p style="margin: 0; color: #777777; font-size: 14px; line-height: 1.6;">
                 We\'re excited to get your ' . $brandName . ' products on their way to you.
@@ -318,13 +360,13 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Order Progress Tracker -->
           <tr>
-            <td class="tracker-padding" style="padding: 15px 50px 25px 50px; background-color: #fdf8f3;">
+            <td class="tracker-padding" style="padding: 15px 50px 25px 50px; background-color: ' . $heroBg . ';">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td align="center" style="vertical-align: middle; width: 40px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
                       <tr>
-                        <td style="width: 40px; height: 40px; background-color: #2E7D32; border-radius: 50%; text-align: center; vertical-align: middle;">
+                        <td style="width: 40px; height: 40px; background-color: ' . $accent . '; border-radius: 50%; text-align: center; vertical-align: middle;">
                           <span style="color: #ffffff; font-size: 18px; font-family: Arial, sans-serif;">&#10003;</span>
                         </td>
                       </tr>
@@ -361,7 +403,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
                 </tr>
                 <tr>
                   <td align="center" style="padding-top: 8px;">
-                    <p style="margin: 0; color: #2E7D32; font-size: 11px; font-weight: 700; line-height: 1.3;">Order<br>Confirmed</p>
+                    <p style="margin: 0; color: ' . $accent . '; font-size: 11px; font-weight: 700; line-height: 1.3;">Order<br>Confirmed</p>
                   </td>
                   <td>&nbsp;</td>
                   <td align="center" style="padding-top: 8px;">
@@ -378,8 +420,8 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Delivery Estimate -->
           <tr>
-            <td class="email-padding" style="padding: 0 40px 15px 40px; text-align: center; background-color: #fdf8f3;">
-              <p style="margin: 0; color: #888888; font-size: 13px; line-height: 1.5;">
+            <td class="email-padding" style="padding: 0 40px 15px 40px; text-align: center; background-color: ' . $heroBg . ';">
+              <p style="margin: 0; color: ' . $footerText . '; font-size: 13px; line-height: 1.5;">
                 ' . $deliveryEstimate . '
               </p>
             </td>
@@ -387,8 +429,8 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- FREE Gift Box Notice -->
           <tr>
-            <td class="email-padding" style="padding: 10px 40px 40px 40px; background-color: #fdf8f3;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #E8F5E9; border-radius: 8px; border: 2px solid #4CAF50;">
+            <td class="email-padding" style="padding: 10px 40px 40px 40px; background-color: ' . $heroBg . ';">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #E8F5E9; border-radius: 8px; border: 2px solid ' . $accent . ';">
                 <tr>
                   <td style="padding: 25px; text-align: center;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
@@ -398,7 +440,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
                         </td>
                       </tr>
                     </table>
-                    <h4 style="margin: 15px 0 10px 0; color: #2E7D32; font-size: 18px; font-weight: 800;">FREE Gift Box Added!</h4>
+                    <h4 style="margin: 15px 0 10px 0; color: ' . $accent . '; font-size: 18px; font-weight: 800;">FREE Gift Box Added!</h4>
                     <p style="margin: 0; color: #555555; font-size: 14px; line-height: 1.6;">
                       As compensation for any delay, we\'ve added a <strong>complimentary gift box</strong> to your package at no extra cost!
                     </p>
@@ -421,7 +463,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
           <tr>
             <td class="email-padding" style="padding: 35px 40px 5px 40px; text-align: center; background-color: #ffffff;">
               <h2 style="margin: 0 0 8px 0; color: #1a1a1a; font-size: 24px; font-weight: 900;">Order details</h2>
-              <p style="margin: 0; color: #2E7D32; font-size: 14px; font-weight: 700;">' . htmlspecialchars($orderDate) . '</p>
+              <p style="margin: 0; color: ' . $accent . '; font-size: 14px; font-weight: 700;">' . htmlspecialchars($orderDate) . '</p>
             </td>
           </tr>
 
@@ -444,13 +486,13 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
                 <tr>
                   <td width="50%" style="vertical-align: top; padding-right: 15px;">
                     <p style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 14px; font-weight: 800;">Shipping address</p>
-                    <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.7;">
+                    <p style="margin: 0; color: ' . $footerMeta . '; font-size: 13px; line-height: 1.7;">
                       ' . $addressLines . '
                     </p>
                   </td>
                   <td width="50%" style="vertical-align: top; padding-left: 15px;">
                     <p style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 14px; font-weight: 800;">Contact</p>
-                    <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.7;">
+                    <p style="margin: 0; color: ' . $footerMeta . '; font-size: 13px; line-height: 1.7;">
                       ' . htmlspecialchars($contactName) . ($phone ? '<br>' . htmlspecialchars($phone) : '') . '
                     </p>
                   </td>
@@ -495,9 +537,9 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Any Questions Section -->
           <tr>
-            <td class="email-padding" style="padding: 35px 40px; text-align: center; background-color: #fdf8f3;">
+            <td class="email-padding" style="padding: 35px 40px; text-align: center; background-color: ' . $heroBg . ';">
               <p style="margin: 0 0 6px 0; color: #1a1a1a; font-size: 16px; font-weight: 800;">Any questions?</p>
-              <p style="margin: 0; color: #888888; font-size: 13px; line-height: 1.6;">
+              <p style="margin: 0; color: ' . $footerText . '; font-size: 13px; line-height: 1.6;">
                 If you need any help whatsoever, simply reply to this email<br>and our support team will get back to you.
               </p>
             </td>
@@ -507,11 +549,11 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
           <tr>
             <td class="dark-bg" style="padding: 30px 40px; text-align: center; background-color: #2d2d2d;">
               <img src="' . $brandLogo . '" alt="' . $brandName . '" width="140" style="display: block; margin: 0 auto 4px auto; height: auto; max-width: 140px;">
-              <p style="margin: 0 0 15px 0; color: #888888; font-size: 12px;">Product Support Team</p>
+              <p style="margin: 0 0 15px 0; color: ' . $footerText . '; font-size: 12px;">Product Support Team</p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr><td style="border-top: 1px solid #444444; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                <tr><td style="border-top: 1px solid ' . $footerDiv . '; font-size: 0; line-height: 0;">&nbsp;</td></tr>
               </table>
-              <p style="margin: 12px 0 0 0; color: #666666; font-size: 11px; line-height: 1.5;">
+              <p style="margin: 12px 0 0 0; color: ' . $footerMeta . '; font-size: 11px; line-height: 1.5;">
                 &copy; ' . date('Y') . ' ' . $brandName . '. All Rights Reserved.
               </p>
             </td>
