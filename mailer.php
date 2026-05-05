@@ -334,7 +334,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Top Nav Bar -->
           <tr>
-            <td class="email-padding dark-bg" style="padding: 16px 40px; background-color: ' . $headerBg . ';">
+            <td class="email-padding" style="padding: 16px 40px; background-color: ' . $headerBg . ';">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="vertical-align: middle;">
@@ -547,7 +547,7 @@ function buildDelayEmailHtml($orderDate, $productsHtml, $addressLines, $contactN
 
           <!-- Footer -->
           <tr>
-            <td class="dark-bg" style="padding: 30px 40px; text-align: center; background-color: #2d2d2d;">
+            <td style="padding: 30px 40px; text-align: center; background-color: ' . $footerBg . ';">
               <img src="' . $brandLogo . '" alt="' . $brandName . '" width="140" style="display: block; margin: 0 auto 4px auto; height: auto; max-width: 140px;">
               <p style="margin: 0 0 15px 0; color: ' . $footerText . '; font-size: 12px;">Product Support Team</p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
