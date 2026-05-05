@@ -3469,18 +3469,19 @@ function getTrafficLog($pdo) {
     $resolveFunnel = function(?array $entries, ?string $landingTs): array {
         $out = ['upsells' => [], 'thankyou' => false, 'matchedOrderId' => null];
         if (!$entries) return $out;
-        // Allow ±5 min slack on landing timestamp to absorb logging delay /
-        // clock precision. Without a landingTs we can't filter — accept all.
+        // Window: upsell/thankyou must be at-or-after the landing (with 5-min
+        // slack for logging delay / clock skew) AND within 7 days. Lower bound
+        // kills stale-sessid2 false positives; upper bound caps how far a
+        // single session can stretch — funnels older than a week sharing the
+        // same BG cookie are almost certainly a different session.
         $landingEpoch = $landingTs ? strtotime($landingTs) : null;
         $minTs = $landingEpoch !== null ? $landingEpoch - 300 : null;
+        $maxTs = $landingEpoch !== null ? $landingEpoch + (7 * 86400) : null;
         foreach ($entries as $e) {
             $ts = strtotime($e['timestamp'] ?? '');
             if ($ts === false) continue;
-            // Keep upsell/thankyou ONLY if it happened at-or-after the landing
-            // visit. Drop the upper bound entirely — real funnels can take
-            // hours; what we actually need to filter is upsell rows that
-            // precede this landing (stale sessid2 from a prior session).
             if ($minTs !== null && $ts < $minTs) continue;
+            if ($maxTs !== null && $ts > $maxTs) continue;
             if ($e['page_type'] === 'upsell') {
                 if (!in_array($e['name'], $out['upsells'])) $out['upsells'][] = $e['name'];
                 if (empty($out['matchedOrderId']) && !empty($e['order_id_from_url'])) {
