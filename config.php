@@ -52,7 +52,7 @@ define('SMTP_FROM_NAME', 'Trusted Nutra Products');
 // ================================================================
 define('FB_PIXEL_ID',         '2461255981056616');
 define('FB_ACCESS_TOKEN',     file_exists(__DIR__ . '/.fb_token') ? trim(file_get_contents(__DIR__ . '/.fb_token')) : '');
-define('FB_TEST_EVENT_CODE',  'TEST12345'); // set to '' (empty string) in production
+define('FB_TEST_EVENT_CODE',  'TEST47155'); // set to '' (empty string) in production
 
 // Whitelist by domain LABEL (case-insensitive). CAPI only fires for these.
 // Match by label so adding a new branded domain doesn't require knowing its
