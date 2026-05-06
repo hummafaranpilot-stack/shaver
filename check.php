@@ -846,11 +846,28 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // hits as one event.
     // ============================================================
     function fireViewContent() {
-        if (!IS_WEIGHTLOSS_DOMAIN) return;
+        // Verbose debug — uses console.log directly (not _log) so it's
+        // visible without ?_t_debug=1 while we're chasing the bug. Switch
+        // back to _log once the path is proven on production traffic.
+        console.log('[VC] fireViewContent() called', {
+            IS_WEIGHTLOSS_DOMAIN: IS_WEIGHTLOSS_DOMAIN,
+            vc_fired: (function(){ try { return sessionStorage.getItem('vc_fired'); } catch(e){ return 'sessionStorage error'; } })(),
+            fbq_typeof: typeof fbq
+        });
+        if (!IS_WEIGHTLOSS_DOMAIN) {
+            console.log('[VC] SKIP — domain not whitelisted (IS_WEIGHTLOSS_DOMAIN=false). Check FB_WEIGHTLOSS_DOMAINS labels in config.php vs the actual domain label in the DB.');
+            return;
+        }
         try {
-            if (sessionStorage.getItem('vc_fired') === '1') return;
+            if (sessionStorage.getItem('vc_fired') === '1') {
+                console.log('[VC] SKIP — vc_fired already set (already sent in this tab session). Open in new incognito or sessionStorage.removeItem("vc_fired") to retest.');
+                return;
+            }
         } catch (e) {}
-        if (typeof fbq === 'undefined') return;
+        if (typeof fbq === 'undefined') {
+            console.log('[VC] SKIP — fbq is undefined. FB Pixel base code not loaded yet. Check that the Weight Loss Snippet (h.js) is on this page and loads before the tracker.');
+            return;
+        }
 
         var sessionUUID = window.__behaviorTracking ? window.__behaviorTracking.sessionUUID : '';
         var scrollDepth = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
@@ -865,8 +882,8 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 currency: 'USD',
                 value: 0
             }, { eventID: eventId });
-            _log('%c[Shaver] FB ViewContent fired', 'color:#1877f2;font-weight:bold', '| scroll:', scrollDepth, '| time:', timeSpent + 's');
-        } catch (e) { _log('[Shaver] fbq ViewContent error', e); }
+            console.log('%c[VC] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| scroll:', scrollDepth + '%', '| time:', timeSpent + 's', '| eventId:', eventId);
+        } catch (e) { console.error('[VC] fbq ViewContent error', e); }
 
         try {
             sessionStorage.setItem('vc_fired', '1');
@@ -877,14 +894,23 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // Time-based trigger — runs every 1s until 15s threshold is reached or
     // ViewContent has fired (whichever first), then self-terminates.
     function setupViewContentTimer() {
-        if (!IS_WEIGHTLOSS_DOMAIN) return;
+        if (!IS_WEIGHTLOSS_DOMAIN) {
+            console.log('[VC] timer NOT started — domain not whitelisted (IS_WEIGHTLOSS_DOMAIN=false)');
+            return;
+        }
+        console.log('[VC] timer started — will fire at 15s OR scroll>=30%, whichever first');
         var poll = setInterval(function() {
             try {
                 if (sessionStorage.getItem('vc_fired') === '1') { clearInterval(poll); return; }
             } catch (e) {}
             if (!window.__behaviorTracking) return;
             var elapsed = Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000);
+            // Heartbeat every 5s so user can see timer is alive
+            if (elapsed > 0 && elapsed % 5 === 0) {
+                console.log('[VC] timer heartbeat — elapsed:', elapsed + 's', '| fbq:', typeof fbq, '| scroll:', (window.__behaviorTracking.maxScrollDepth || 0) + '%');
+            }
             if (elapsed >= 15) {
+                console.log('[VC] 15s threshold hit, firing…');
                 fireViewContent();
                 clearInterval(poll);
             }
@@ -911,7 +937,10 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     lastDepth = scrollDepth;
 
                     // FB ViewContent trigger — first time scroll crosses 30%
-                    if (scrollDepth >= 30) fireViewContent();
+                    if (scrollDepth >= 30) {
+                        console.log('[VC] scroll trigger — depth:', scrollDepth + '%, calling fireViewContent()');
+                        fireViewContent();
+                    }
                 }
             }, 300);
         });
