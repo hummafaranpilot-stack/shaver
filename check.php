@@ -163,6 +163,9 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // FB_WEIGHTLOSS_DOMAINS (config.php). Browser-side FB events short-circuit
     // when this is false, so unrelated domains never call fbq().
     var IS_WEIGHTLOSS_DOMAIN = <?php echo $isWeightLossDomain ? 'true' : 'false'; ?>;
+    // Pixel ID — used by fireBrowserPurchase() to re-init pixel with Advanced
+    // Matching (email/name/etc) when firing the Purchase event on upsell/thankyou.
+    var FB_PIXEL_ID = '<?php echo defined('FB_PIXEL_ID') ? addslashes(FB_PIXEL_ID) : ''; ?>';
 
     // Silent mode — suppress all console output (enable via URL ?_shaver_debug=1)
     var _DEBUG = (window.location.search.indexOf('_shaver_debug=1') !== -1);
@@ -938,6 +941,158 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         } catch (e) {}
     }
 
+    // ============================================================
+    // FB PIXEL — Pricing-card price capture (landing-page side)
+    // When a buyer clicks a BuyNow image, we walk up to the closest
+    // ancestor that contains the price text and grab the LARGEST
+    // dollar amount from it (that's the displayed "Total" — the small
+    // numbers are usually per-bottle / shipping / discount). The
+    // captured price gets persisted to localStorage so the Purchase
+    // event later (on upsell1 / thankyou — different page) can use it
+    // as the Pixel `value`. Auto-detection > hardcoded class names so
+    // it survives lander HTML variations.
+    // ============================================================
+    function captureLastPurchaseValue(clickedEl) {
+        if (!IS_WEIGHTLOSS_DOMAIN) return;
+        try {
+            // Walk up up to 6 ancestors looking for one whose text contains
+            // at least one $-amount and is "card-sized" (>40 chars). That
+            // filters out the button itself / tiny inline price spans.
+            var node = clickedEl, depth = 0, card = null;
+            while (node && depth < 6) {
+                var txt = node.textContent || '';
+                if (txt.length > 40 && /\$\d/.test(txt)) { card = node; break; }
+                node = node.parentElement;
+                depth++;
+            }
+            if (!card) return;
+
+            var matches = (card.textContent || '').match(/\$(\d+(?:\.\d+)?)/g);
+            if (!matches || !matches.length) return;
+            var amounts = [];
+            for (var i = 0; i < matches.length; i++) {
+                amounts.push(parseFloat(matches[i].replace('$', '')));
+            }
+            var largest = Math.max.apply(null, amounts);
+            if (!largest || largest <= 0) return;
+
+            try {
+                localStorage.setItem('last_purchase_value', String(largest));
+                localStorage.setItem('last_purchase_currency', 'USD');
+                localStorage.setItem('last_purchase_timestamp', String(Date.now()));
+            } catch (e) {}
+            console.log('[Purchase capture] saved $' + largest + ' for later Purchase event');
+        } catch (e) { console.error('[Purchase capture] error', e); }
+    }
+
+    // ============================================================
+    // FB PIXEL — Purchase event (fires on upsell1 / thankyou pages)
+    // BG: order params come on /upsell1.html (we never see BG's own
+    //     thankyou — different domain).
+    // CB: order params come on /upsell1.html AND /Thankyou.html. Same
+    //     event_id used both times so FB dedupes (or merges enrichment).
+    //
+    // Advanced Matching: Pass UNHASHED PII to fbq('init', PIXEL_ID, {...}).
+    // FB Pixel JS hashes them client-side per their spec. Pre-hashing
+    // would break matching (double-hash mismatch with FB's pipeline).
+    // ============================================================
+    function fireBrowserPurchase() {
+        if (!IS_WEIGHTLOSS_DOMAIN) return;
+        if (typeof fbq === 'undefined') {
+            console.log('[PURCHASE] SKIP — fbq is undefined (Weight Loss Snippet not on this page)');
+            return;
+        }
+        if (PAGE_TYPE !== 'upsell' && PAGE_TYPE !== 'thankyou') return;
+
+        var sp;
+        try { sp = new URLSearchParams(window.location.search); } catch (e) { return; }
+
+        // Detect platform by params present in the URL
+        var isBG = sp.has('order_id_global') || sp.has('creditcards_name');
+        var isCB = sp.has('cbreceipt');
+        if (!isBG && !isCB) {
+            console.log('[PURCHASE] SKIP — no order params in URL (not a real post-purchase visit)');
+            return;
+        }
+
+        var orderId = '', value = 0;
+        var email = '', firstName = '', lastName = '';
+        var city = '', state = '', zip = '', country = '', phone = '';
+
+        if (isBG) {
+            orderId = sp.get('order_id') || sp.get('order_id_global') || '';
+            var totalStr = sp.get('total') || sp.get('price') || '0';
+            value   = parseFloat(totalStr) || 0;
+            email   = (sp.get('emailaddress') || '').trim();
+            var fullNameBG = (sp.get('creditcards_name') || '').trim();
+            var partsBG    = fullNameBG.split(/\s+/);
+            firstName = partsBG[0] || '';
+            lastName  = partsBG.length > 1 ? partsBG.slice(1).join(' ') : '';
+            city    = (sp.get('city') || '').trim();
+            zip     = (sp.get('zip') || '').trim();
+            country = (sp.get('country') || '').trim();
+            phone   = (sp.get('phone') || '').trim();
+        } else {
+            orderId = sp.get('cbreceipt') || '';
+            // CB doesn't pass price in URL — pull from landing-page capture
+            var stored = '0';
+            try { stored = localStorage.getItem('last_purchase_value') || '0'; } catch (e) {}
+            value   = parseFloat(stored) || 0;
+            email   = (sp.get('cemail') || '').trim();
+            var fullNameCB = (sp.get('cname') || '').trim();
+            var partsCB    = fullNameCB.split(/\s+/);
+            firstName = partsCB[0] || '';
+            lastName  = partsCB.length > 1 ? partsCB.slice(1).join(' ') : '';
+            city    = (sp.get('st_city') || '').trim();
+            state   = (sp.get('st_province') || '').trim();
+            zip     = (sp.get('czip') || sp.get('st_zip') || '').trim();
+            country = (sp.get('ccountry') || sp.get('st_country') || '').trim();
+        }
+
+        if (!orderId) {
+            console.log('[PURCHASE] SKIP — no order_id resolved from URL');
+            return;
+        }
+
+        // Same eventId across CB upsell1 AND thankyou for this order so FB
+        // dedupes — and re-firing on thankyou enriches with address fields.
+        var eventId = 'Purchase_' + orderId;
+        var alreadyFiredKey = 'purchase_fired_' + orderId;
+        var alreadyFired = false;
+        try { alreadyFired = sessionStorage.getItem(alreadyFiredKey) === '1'; } catch (e) {}
+
+        // Re-init pixel with Advanced Matching (FB hashes client-side).
+        // Empty fields are simply ignored by FB — safe to pass them all.
+        if (FB_PIXEL_ID) {
+            try {
+                fbq('init', FB_PIXEL_ID, {
+                    em: email,
+                    fn: firstName,
+                    ln: lastName,
+                    ct: city,
+                    st: state,
+                    zp: zip,
+                    country: country,
+                    ph: phone
+                });
+            } catch (e) { console.error('[PURCHASE] fbq init error', e); }
+        }
+
+        try {
+            fbq('track', 'Purchase', {
+                currency: 'USD',
+                value: value,
+                content_ids: [orderId],
+                content_type: 'product'
+            }, { eventID: eventId });
+            console.log('%c[PURCHASE] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;',
+                '| order:', orderId, '| value: $' + value, '| source:', (isBG ? 'BG' : 'CB'),
+                '| eventId:', eventId, alreadyFired ? '(re-fired for enrichment)' : '');
+        } catch (e) { console.error('[PURCHASE] track error', e); }
+
+        try { sessionStorage.setItem(alreadyFiredKey, '1'); } catch (e) {}
+    }
+
     // Time-based trigger — runs every 1s until 15s threshold is reached or
     // ViewContent has fired (whichever first), then self-terminates.
     function setupViewContentTimer() {
@@ -964,6 +1119,11 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         }, 1000);
     }
     setupViewContentTimer();
+
+    // Browser-side Purchase event — self-gates: only fires if PAGE_TYPE is
+    // 'upsell' or 'thankyou' AND we're on a whitelisted weight-loss domain
+    // AND fbq is defined AND URL carries order params.
+    fireBrowserPurchase();
 
     // Scroll tracking
     function setupScrollTracking() {
@@ -1039,6 +1199,10 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     if (clickType === 'redirect') window.__behaviorTracking.redirectClicks++;
                     else if (clickType === 'buynow') {
                         window.__behaviorTracking.buynowClicks++;
+                        // Capture pricing-card price NOW (this page) so the
+                        // Purchase event later (different page, post-checkout)
+                        // can use it as the Pixel `value`.
+                        captureLastPurchaseValue(target);
                         // Browser-side FB Pixel InitiateCheckout (saves ic_event_id)
                         fireInitiateCheckout();
                         // Server-side trigger: dedicated event_type so api.php's
