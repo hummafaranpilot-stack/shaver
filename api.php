@@ -173,6 +173,13 @@ try {
         // Browser-measured round-trip latency (called right after log_traffic)
         case 'update_traffic_rtt': updateTrafficRtt($pdo); break;
 
+        // Header snippets (Tag-Manager-lite)
+        case 'list_header_snippets':   listHeaderSnippets($pdo); break;
+        case 'create_header_snippet':  createHeaderSnippet($pdo); break;
+        case 'update_header_snippet':  updateHeaderSnippet($pdo); break;
+        case 'delete_header_snippet':  deleteHeaderSnippet($pdo); break;
+        case 'toggle_header_snippet':  toggleHeaderSnippet($pdo); break;
+
         // API key management
         case 'create_api_key':  createApiKey($pdo); break;
         case 'list_api_keys':   listApiKeys($pdo); break;
@@ -8343,6 +8350,79 @@ function deleteApiKey($pdo) {
     if (!$id) { echo json_encode(['success' => false, 'error' => 'Missing id']); return; }
 
     $pdo->prepare("DELETE FROM api_keys WHERE id = ?")->execute([$id]);
+    echo json_encode(['success' => true]);
+}
+
+// ================================================================
+// HEADER SNIPPETS (Tag-Manager-lite)
+// ================================================================
+
+function listHeaderSnippets($pdo): void {
+    $rows = $pdo->query("
+        SELECT id, snippet_key, label, code, enabled, created_at, updated_at
+        FROM header_snippets ORDER BY created_at DESC
+    ")->fetchAll();
+    echo json_encode(['success' => true, 'snippets' => $rows]);
+}
+
+function createHeaderSnippet($pdo): void {
+    $data = getPostData();
+    $label = trim($data['label'] ?? '');
+    $code  = (string)($data['code'] ?? '');
+    if ($label === '') {
+        echo json_encode(['success' => false, 'error' => 'Label required']); return;
+    }
+
+    // Random 12-char hex key — non-guessable URL component
+    do {
+        $key = bin2hex(random_bytes(6));
+        $check = $pdo->prepare("SELECT 1 FROM header_snippets WHERE snippet_key = ? LIMIT 1");
+        $check->execute([$key]);
+    } while ($check->fetchColumn());
+
+    $stmt = $pdo->prepare("INSERT INTO header_snippets (snippet_key, label, code, enabled) VALUES (?, ?, ?, 1)");
+    $stmt->execute([$key, $label, $code]);
+    echo json_encode([
+        'success' => true,
+        'id'          => (int)$pdo->lastInsertId(),
+        'snippet_key' => $key,
+        'label'       => $label,
+    ]);
+}
+
+function updateHeaderSnippet($pdo): void {
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) { echo json_encode(['success' => false, 'error' => 'Missing id']); return; }
+
+    $sets = []; $params = [];
+    if (isset($data['label']))   { $sets[] = 'label = ?';   $params[] = trim((string)$data['label']); }
+    if (isset($data['code']))    { $sets[] = 'code = ?';    $params[] = (string)$data['code']; }
+    if (isset($data['enabled'])) { $sets[] = 'enabled = ?'; $params[] = $data['enabled'] ? 1 : 0; }
+
+    if (empty($sets)) { echo json_encode(['success' => false, 'error' => 'Nothing to update']); return; }
+
+    $params[] = $id;
+    $stmt = $pdo->prepare("UPDATE header_snippets SET " . implode(', ', $sets) . " WHERE id = ?");
+    $stmt->execute($params);
+    echo json_encode(['success' => true]);
+}
+
+function deleteHeaderSnippet($pdo): void {
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) { echo json_encode(['success' => false, 'error' => 'Missing id']); return; }
+
+    $pdo->prepare("DELETE FROM header_snippets WHERE id = ?")->execute([$id]);
+    echo json_encode(['success' => true]);
+}
+
+function toggleHeaderSnippet($pdo): void {
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) { echo json_encode(['success' => false, 'error' => 'Missing id']); return; }
+
+    $pdo->prepare("UPDATE header_snippets SET enabled = NOT enabled WHERE id = ?")->execute([$id]);
     echo json_encode(['success' => true]);
 }
 

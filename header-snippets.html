@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header Snippets - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; }
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #fff; color: #1a1a2e; overflow-y: auto; z-index: 1000; transition: width 0.3s ease; border-radius: 0 24px 24px 0; box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0; }
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 { font-size: 1.3rem; margin-bottom: 5px; color: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+        .sidebar-header h2 .logo-icon { width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+        .sidebar-header p { font-size: 0.85rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle { position: absolute; top: 18px; right: 12px; width: 28px; height: 28px; background: #f0f0ff; border: none; border-radius: 6px; color: #6c63ff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: background 0.2s, transform 0.3s; z-index: 10; }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; }
+        .nav-section-title { padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; color: #b0b0c0; transition: opacity 0.2s; }
+        .nav-item { display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px; color: #7b7b8e; text-decoration: none; transition: all 0.3s; font-size: 0.84rem; border-radius: 12px; }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; box-shadow: 0 4px 15px rgba(108,99,255,0.3); }
+        .nav-item i { width: 22px; margin-right: 12px; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+        .main-content { margin-left: 240px; padding: 20px; transition: margin-left 0.3s ease; }
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; }
+        body.sidebar-collapsed .sidebar-header h2, body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 20px 10px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 1px 6px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        .header { background: white; padding: 25px 30px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header-left h1 { font-size: 1.8rem; color: #1a1a2e; margin-bottom: 5px; }
+        .header-left p { color: #7f8c8d; font-size: 0.95rem; }
+
+        .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.2s; }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-icon { padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 600; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-icon-edit { background: #ede8ff; color: #6d28d9; }
+        .btn-icon-edit:hover { background: #ddd6fe; }
+        .btn-icon-delete { background: #fee2e2; color: #dc2626; }
+        .btn-icon-delete:hover { background: #fecaca; }
+        .btn-icon-copy { background: #dbeafe; color: #1e40af; }
+        .btn-icon-copy:hover { background: #bfdbfe; }
+        .btn-icon-copy.copied { background: #dcfce7; color: #166534; }
+
+        .snippet-grid { display: grid; gap: 14px; }
+        .snippet-card { background: #fff; border-radius: 14px; padding: 18px 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1.5px solid transparent; transition: border-color 0.2s, box-shadow 0.2s; }
+        .snippet-card:hover { border-color: #c4b5fd; box-shadow: 0 4px 12px rgba(108,99,255,0.08); }
+        .snippet-card.disabled { opacity: 0.65; }
+        .snippet-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+        .snippet-title { display: flex; align-items: center; gap: 10px; }
+        .snippet-title h3 { font-size: 1.05rem; color: #1a1a2e; margin: 0; }
+        .toggle-switch { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 22px; transition: 0.2s; }
+        .toggle-slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+        .toggle-switch input:checked + .toggle-slider { background: #16a34a; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+        .snippet-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .snippet-meta { color: #94a3b8; font-size: 0.75rem; margin-top: 2px; }
+
+        .snippet-tag-bar { background: #1e1b4b; color: #a5f3fc; font-family: 'Courier New', monospace; font-size: 0.78rem; padding: 10px 14px; border-radius: 8px; margin-top: 14px; display: flex; align-items: center; gap: 10px; word-break: break-all; }
+        .snippet-tag-bar code { flex: 1; color: #a5f3fc; }
+
+        .code-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-top: 12px; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #475569; max-height: 80px; overflow: hidden; position: relative; }
+        .code-preview.empty { color: #cbd5e1; font-style: italic; }
+        .code-preview.empty:before { content: "(no code yet — click Edit to add)"; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 18px; padding: 28px 32px; width: 720px; max-width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+        .modal-box h3 { font-size: 1.15rem; margin-bottom: 22px; color: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.84rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.9rem; font-family: inherit; outline: none; transition: border-color 0.2s; background: #fff; }
+        .form-group input:focus, .form-group textarea:focus { border-color: #6c63ff; }
+        .form-group textarea { font-family: 'Courier New', monospace; min-height: 220px; resize: vertical; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+        .modal-cancel { padding: 10px 18px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .modal-cancel:hover { background: #e2e8f0; }
+
+        .empty-state { background: #fff; border-radius: 14px; text-align: center; padding: 60px 30px; color: #94a3b8; }
+        .empty-state i { font-size: 3rem; margin-bottom: 16px; display: block; color: #c4b5fd; }
+        .empty-state h3 { color: #475569; font-size: 1.05rem; margin-bottom: 6px; }
+        .empty-state p { font-size: 0.88rem; }
+
+        @media (max-width: 768px) { .main-content { margin-left: 0; } .sidebar { transform: translateX(-100%); } .sidebar.mobile-open { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+    <script src="js/config.js"></script>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+            <a href="shipping-setup.html" class="nav-item"><i class="fas fa-truck-loading"></i><span>Shipping Setup</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+            <a href="header-snippets.html" class="nav-item active"><i class="fas fa-tags"></i><span>Header Snippets</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-tags"></i> Header Snippets</h1>
+                <p>One-click reusable code blocks. Paste the snippet on any page; edit the code here and it deploys everywhere instantly.</p>
+            </div>
+            <button class="btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> Create Snippet</button>
+        </div>
+
+        <div id="snippetList">
+            <div style="text-align:center;color:#94a3b8;padding:40px;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+    </div>
+
+    <!-- Create / Edit Modal -->
+    <div class="modal-overlay" id="snippetModal">
+        <div class="modal-box">
+            <h3 id="modalTitle"><i class="fas fa-tags" style="color:#6c63ff;"></i> Create Snippet</h3>
+            <input type="hidden" id="modalSnippetId">
+            <div class="form-group">
+                <label>Name <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="snippetLabel" placeholder="e.g. Facebook Pixel · Google Analytics · Custom Header" maxlength="150" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Code <span style="color:#94a3b8;font-weight:400;">— HTML / JS / pixel snippet</span></label>
+                <textarea id="snippetCode" placeholder="Paste your code here. Anything that goes in the page &lt;head&gt; works — script tags, noscript, meta tags, inline JS, etc."></textarea>
+            </div>
+            <p style="font-size:0.78rem;color:#6b7280;background:#f8f6ff;padding:10px 14px;border-radius:8px;border-left:3px solid #6c63ff;margin-bottom:0;">
+                <i class="fas fa-info-circle" style="color:#6c63ff;"></i>
+                The snippet's URL stays the same forever — you can edit the code anytime and changes deploy to every page using it within ~1 minute.
+            </p>
+            <div class="modal-footer">
+                <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" id="modalSaveBtn" onclick="saveSnippet()"><i class="fas fa-check"></i> Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    var BASE_CDN = 'https://cdn.trustednutraproduct.com/h.js';
+    var allSnippets = [];
+
+    function toggleSidebar() {
+        document.body.classList.toggle('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+    }
+    if (localStorage.getItem('sidebarCollapsed') === '1') document.body.classList.add('sidebar-collapsed');
+
+    function escHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmtDate(d) {
+        if (!d) return '-';
+        var dt = new Date(d.replace(' ', 'T') + '+05:00');
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function snippetTag(key) {
+        return '<script src="' + BASE_CDN + '?v=' + key + '"><\/script>';
+    }
+
+    async function loadSnippets() {
+        var res = await apiRequest(API_URL, 'list_header_snippets');
+        var container = document.getElementById('snippetList');
+        if (!res.success) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Failed to load</h3><p>' + escHtml(res.error || 'Unknown error') + '</p><p style="margin-top:8px;color:#9ca3af;font-size:0.78rem;">If this is a fresh install, run <code>migrate-header-snippets.php</code> first.</p></div>';
+            return;
+        }
+        allSnippets = res.snippets || [];
+        if (allSnippets.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-tags"></i><h3>No snippets yet</h3><p>Click "Create Snippet" above to add your first one.</p></div>';
+            return;
+        }
+        container.innerHTML = '<div class="snippet-grid">' + allSnippets.map(renderSnippet).join('') + '</div>';
+    }
+
+    function renderSnippet(s) {
+        var tag = snippetTag(s.snippet_key);
+        var preview = (s.code || '').trim();
+        var previewHtml = preview === ''
+            ? '<div class="code-preview empty"></div>'
+            : '<div class="code-preview">' + escHtml(preview.length > 280 ? preview.substring(0, 280) + '…' : preview) + '</div>';
+
+        return '<div class="snippet-card' + (s.enabled == 1 ? '' : ' disabled') + '" id="snippet_' + s.id + '">' +
+            '<div class="snippet-card-top">' +
+                '<div class="snippet-title">' +
+                    '<label class="toggle-switch"><input type="checkbox"' + (s.enabled == 1 ? ' checked' : '') + ' onchange="toggleSnippet(' + s.id + ')"><span class="toggle-slider"></span></label>' +
+                    '<div>' +
+                        '<h3>' + escHtml(s.label) + '</h3>' +
+                        '<div class="snippet-meta">Created ' + fmtDate(s.created_at) + ' · Last updated ' + fmtDate(s.updated_at) + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="snippet-actions">' +
+                    '<button class="btn-icon btn-icon-edit" onclick="openEditModal(' + s.id + ')"><i class="fas fa-pen"></i> Edit Code</button>' +
+                    '<button class="btn-icon btn-icon-delete" onclick="deleteSnippet(' + s.id + ')"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="snippet-tag-bar">' +
+                '<i class="fas fa-link" style="color:#a5f3fc;flex-shrink:0;"></i>' +
+                '<code id="tag_' + s.id + '">' + escHtml(tag) + '</code>' +
+                '<button class="btn-icon btn-icon-copy" onclick="copySnippet(' + s.id + ', this)"><i class="fas fa-copy"></i> Copy</button>' +
+            '</div>' +
+            previewHtml +
+        '</div>';
+    }
+
+    function copySnippet(id, btn) {
+        var s = allSnippets.find(function(x){ return x.id === id; });
+        if (!s) return;
+        navigator.clipboard.writeText(snippetTag(s.snippet_key)).then(function() {
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            btn.classList.add('copied');
+            setTimeout(function() {
+                btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                btn.classList.remove('copied');
+            }, 1500);
+        });
+    }
+
+    function openCreateModal() {
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-tags" style="color:#6c63ff;"></i> Create Snippet';
+        document.getElementById('modalSnippetId').value = '';
+        document.getElementById('snippetLabel').value = '';
+        document.getElementById('snippetCode').value = '';
+        document.getElementById('snippetModal').classList.add('open');
+        setTimeout(function(){ document.getElementById('snippetLabel').focus(); }, 50);
+    }
+
+    function openEditModal(id) {
+        var s = allSnippets.find(function(x){ return x.id === id; });
+        if (!s) return;
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen" style="color:#6c63ff;"></i> Edit Snippet';
+        document.getElementById('modalSnippetId').value = id;
+        document.getElementById('snippetLabel').value = s.label;
+        document.getElementById('snippetCode').value = s.code || '';
+        document.getElementById('snippetModal').classList.add('open');
+        setTimeout(function(){ document.getElementById('snippetCode').focus(); }, 50);
+    }
+
+    function closeModal() {
+        document.getElementById('snippetModal').classList.remove('open');
+    }
+
+    async function saveSnippet() {
+        var id = document.getElementById('modalSnippetId').value;
+        var label = document.getElementById('snippetLabel').value.trim();
+        var code = document.getElementById('snippetCode').value;
+        if (!label) { alert('Please enter a name.'); return; }
+
+        var btn = document.getElementById('modalSaveBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+        var action = id ? 'update_header_snippet' : 'create_header_snippet';
+        var payload = id ? { id: parseInt(id, 10), label: label, code: code } : { label: label, code: code };
+
+        var res = await apiRequest(API_URL, action, payload);
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Save';
+
+        if (!res.success) { alert('Error: ' + (res.error || 'Unknown error')); return; }
+
+        closeModal();
+        loadSnippets();
+    }
+
+    async function toggleSnippet(id) {
+        await apiRequest(API_URL, 'toggle_header_snippet', { id: id });
+        loadSnippets();
+    }
+
+    async function deleteSnippet(id) {
+        var s = allSnippets.find(function(x){ return x.id === id; });
+        if (!s) return;
+        if (!confirm('Delete snippet "' + s.label + '"? Pages still using its <script> tag will silently get a 404 (no error, just no code injected).')) return;
+        var res = await apiRequest(API_URL, 'delete_header_snippet', { id: id });
+        if (res.success) loadSnippets(); else alert('Error: ' + res.error);
+    }
+
+    document.getElementById('snippetModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    loadSnippets();
+    </script>
+</body>
+</html>
