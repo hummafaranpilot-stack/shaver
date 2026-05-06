@@ -182,11 +182,6 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // Visible "tracker is alive on this page" beacon — unconditional so users
     // can confirm t.js is actually loaded on upsell/thankyou pages without
     // having to flip ?_t_debug=1.
-    console.log('%c[Shaver] tracker active', 'color:#7c3aed;font-weight:bold;background:#f3e8ff;padding:2px 6px;border-radius:3px;',
-        '| path:', window.location.pathname,
-        '| domain_key:', DOMAIN_KEY,
-        '| weightloss:', IS_WEIGHTLOSS_DOMAIN,
-        '| pixel_id:', FB_PIXEL_ID || '(none)');
 
     // Silent mode — suppress all console output (enable via URL ?_shaver_debug=1)
     var _DEBUG = (window.location.search.indexOf('_shaver_debug=1') !== -1);
@@ -293,7 +288,6 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     var PAGE_TYPE = detectPageType();
     try { if (window.__shaver) window.__shaver.PAGE_TYPE = PAGE_TYPE; } catch (e) {}
     if (PAGE_TYPE !== 'landing') {
-        console.log('%c[Shaver] PAGE_TYPE = ' + PAGE_TYPE.toUpperCase(), 'color:#2ecc71;font-weight:bold;');
     }
 
     // ============================================================
@@ -879,26 +873,15 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // hits as one event.
     // ============================================================
     function fireViewContent() {
-        // Verbose debug — uses console.log directly (not _log) so it's
-        // visible without ?_t_debug=1 while we're chasing the bug. Switch
-        // back to _log once the path is proven on production traffic.
-        console.log('[VC] fireViewContent() called', {
-            IS_WEIGHTLOSS_DOMAIN: IS_WEIGHTLOSS_DOMAIN,
-            vc_fired: (function(){ try { return sessionStorage.getItem('vc_fired'); } catch(e){ return 'sessionStorage error'; } })(),
-            fbq_typeof: typeof fbq
-        });
         if (!IS_WEIGHTLOSS_DOMAIN) {
-            console.log('[VC] SKIP — domain not whitelisted (IS_WEIGHTLOSS_DOMAIN=false). Check FB_WEIGHTLOSS_DOMAINS labels in config.php vs the actual domain label in the DB.');
             return;
         }
         try {
             if (sessionStorage.getItem('vc_fired') === '1') {
-                console.log('[VC] SKIP — vc_fired already set (already sent in this tab session). Open in new incognito or sessionStorage.removeItem("vc_fired") to retest.');
                 return;
             }
         } catch (e) {}
         if (typeof fbq === 'undefined') {
-            console.log('[VC] SKIP — fbq is undefined. FB Pixel base code not loaded yet. Check that the Weight Loss Snippet (h.js) is on this page and loads before the tracker.');
             return;
         }
 
@@ -915,10 +898,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 currency: 'USD',
                 value: 0
             }, { eventID: eventId });
-            console.log('%c[VC] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| scroll:', scrollDepth + '%', '| time:', timeSpent + 's', '| eventId:', eventId);
-        } catch (e) { console.error('[VC] fbq ViewContent error', e); }
-
-        try {
+        } catch (e) {} try {
             sessionStorage.setItem('vc_fired', '1');
             sessionStorage.setItem('vc_event_id', eventId);
         } catch (e) {}
@@ -936,16 +916,13 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     function fireInitiateCheckout() {
         try {
             if (sessionStorage.getItem('ic_fired') === '1') {
-                console.log('[IC] SKIP — already fired in this session');
                 return;
             }
         } catch (e) {}
         if (!IS_WEIGHTLOSS_DOMAIN) {
-            console.log('[IC] SKIP — domain not whitelisted');
             return;
         }
         if (typeof fbq === 'undefined') {
-            console.log('[IC] SKIP — fbq is undefined (FB Pixel not loaded)');
             return;
         }
 
@@ -962,10 +939,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 time_spent: timeSpent,
                 page_url: window.location.href
             }, { eventID: eventId });
-            console.log('%c[IC] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| scroll:', scrollDepth + '%', '| time:', timeSpent + 's', '| eventId:', eventId);
-        } catch (e) { console.error('[IC] fbq InitiateCheckout error', e); }
-
-        try {
+        } catch (e) {} try {
             sessionStorage.setItem('ic_fired', '1');
             sessionStorage.setItem('ic_event_id', eventId);
         } catch (e) {}
@@ -1083,9 +1057,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 localStorage.setItem('last_purchase_currency', 'USD');
                 localStorage.setItem('last_purchase_timestamp', String(Date.now()));
             } catch (e) {}
-            console.log('[Purchase capture] saved $' + chosen + ' via ' + strategy);
-        } catch (e) { console.error('[Purchase capture] error', e); }
-    }
+        } catch (e) {} }
 
     // ============================================================
     // FB PIXEL — Purchase event (fires on upsell1 / thankyou pages)
@@ -1099,22 +1071,13 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // would break matching (double-hash mismatch with FB's pipeline).
     // ============================================================
     function fireBrowserPurchase() {
-        console.log('[PURCHASE] called', {
-            IS_WEIGHTLOSS_DOMAIN: IS_WEIGHTLOSS_DOMAIN,
-            PAGE_TYPE: PAGE_TYPE,
-            fbq_typeof: typeof fbq,
-            url_search: window.location.search.substring(0, 200)
-        });
         if (!IS_WEIGHTLOSS_DOMAIN) {
-            console.log('[PURCHASE] SKIP — IS_WEIGHTLOSS_DOMAIN=false. Domain label in DB does not match FB_WEIGHTLOSS_DOMAINS in config.php.');
             return;
         }
         if (PAGE_TYPE !== 'upsell' && PAGE_TYPE !== 'thankyou') {
-            console.log('[PURCHASE] SKIP — not upsell/thankyou page (PAGE_TYPE=' + PAGE_TYPE + ')');
             return;
         }
         if (typeof fbq === 'undefined') {
-            console.log('[PURCHASE] SKIP — fbq is undefined. Paste the Weight Loss Snippet on this page (h.js?v=e6246c71447b in <head>).');
             return;
         }
 
@@ -1125,7 +1088,6 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         var isBG = sp.has('order_id_global') || sp.has('creditcards_name');
         var isCB = sp.has('cbreceipt');
         if (!isBG && !isCB) {
-            console.log('[PURCHASE] SKIP — no order params in URL (not a real post-purchase visit)');
             return;
         }
 
@@ -1164,7 +1126,6 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         }
 
         if (!orderId) {
-            console.log('[PURCHASE] SKIP — no order_id resolved from URL');
             return;
         }
 
@@ -1189,8 +1150,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     country: country,
                     ph: phone
                 });
-            } catch (e) { console.error('[PURCHASE] fbq init error', e); }
-        }
+            } catch (e) {} }
 
         try {
             fbq('track', 'Purchase', {
@@ -1199,12 +1159,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 content_ids: [orderId],
                 content_type: 'product'
             }, { eventID: eventId });
-            console.log('%c[PURCHASE] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;',
-                '| order:', orderId, '| value: $' + value, '| source:', (isBG ? 'BG' : 'CB'),
-                '| eventId:', eventId, alreadyFired ? '(re-fired for enrichment)' : '');
-        } catch (e) { console.error('[PURCHASE] track error', e); }
-
-        try { sessionStorage.setItem(alreadyFiredKey, '1'); } catch (e) {}
+        } catch (e) {} try { sessionStorage.setItem(alreadyFiredKey, '1'); } catch (e) {}
     }
 
     // ============================================================
@@ -1222,10 +1177,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
             if (sessionStorage.getItem(flagKey) === '1') return false;
         } catch (e) {}
         if (!IS_WEIGHTLOSS_DOMAIN) return false;
-        if (typeof fbq === 'undefined') {
-            console.log('[' + name + '] SKIP — fbq is undefined (Weight Loss Snippet not loaded on this page)');
-            return false;
-        }
+        if (typeof fbq === 'undefined') return false;
         var sessionUUID = window.__behaviorTracking ? window.__behaviorTracking.sessionUUID : '';
         var eventId = name + '_' + sessionUUID + '_' + Date.now();
         try {
@@ -1234,7 +1186,7 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 time_spent: timeSpent,
                 page_url: window.location.href
             }, { eventID: eventId });
-        } catch (e) { console.error('[' + name + '] fbq error', e); return false; }
+        } catch (e) { return false; }
         try {
             sessionStorage.setItem(flagKey, '1');
             sessionStorage.setItem(idKey, eventId);
@@ -1246,21 +1198,18 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         var scroll = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
         var t      = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
         var id = fireCustomFBEvent('EngagedVisitor', 'engaged_fired', 'engaged_event_id', scroll, t);
-        if (id) console.log('%c[EV] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| time:', t + 's', '| scroll:', scroll + '%', '| eventId:', id);
     }
 
     function fireScrollDeep() {
         var scroll = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
         var t      = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
         var id = fireCustomFBEvent('ScrollDeep', 'scrolldeep_fired', 'scrolldeep_event_id', scroll, t);
-        if (id) console.log('%c[SD] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| scroll:', scroll + '%', '| time:', t + 's', '| eventId:', id);
     }
 
     function fireVideoEngaged() {
         var scroll = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
         var t      = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
         var id = fireCustomFBEvent('VideoEngaged', 'video_fired', 'video_event_id', scroll, t);
-        if (id) console.log('%c[VID] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| time:', t + 's', '| eventId:', id);
     }
 
     // Expose the three fire functions on window.__shaver for manual debugging:
@@ -1280,10 +1229,8 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // ViewContent has fired (whichever first), then self-terminates.
     function setupViewContentTimer() {
         if (!IS_WEIGHTLOSS_DOMAIN) {
-            console.log('[VC/EV] engagement timer NOT started — domain not whitelisted');
             return;
         }
-        console.log('[VC/EV] engagement timer started — VC at 15s, EV at 60s');
         var poll = setInterval(function() {
             if (!window.__behaviorTracking) return;
             var elapsed = Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000);
@@ -1294,15 +1241,12 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
             } catch (e) {}
 
             if (elapsed > 0 && elapsed % 10 === 0) {
-                console.log('[VC/EV] heartbeat — elapsed:', elapsed + 's', '| vc:', vcDone, '| ev:', evDone, '| scroll:', (window.__behaviorTracking.maxScrollDepth || 0) + '%');
             }
 
             if (!vcDone && elapsed >= 15) {
-                console.log('[VC] 15s threshold hit, firing…');
                 fireViewContent();
             }
             if (!evDone && elapsed >= 60) {
-                console.log('[EV] 60s threshold hit, firing…');
                 fireEngagedVisitor();
             }
 
@@ -1343,12 +1287,10 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
 
                     // FB ViewContent trigger — first time scroll crosses 30%
                     if (scrollDepth >= 30) {
-                        console.log('[VC] scroll trigger — depth:', scrollDepth + '%, calling fireViewContent()');
                         fireViewContent();
                     }
                     // FB ScrollDeep custom event — first time scroll crosses 75%
                     if (scrollDepth >= 75) {
-                        console.log('[SD] scroll trigger — depth:', scrollDepth + '%, calling fireScrollDeep()');
                         fireScrollDeep();
                     }
                 }
@@ -1657,7 +1599,6 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
             if (!video) return;
 
             clearInterval(videoCheckInterval);
-            console.log('[Shaver] Vidalytics video detected, tracking watch time');
 
             video.addEventListener('timeupdate', function() {
                 var ct = Math.floor(video.currentTime);
