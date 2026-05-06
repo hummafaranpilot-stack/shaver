@@ -1269,18 +1269,22 @@ function updateSessionMetrics($pdo) {
                 $sentEventId = $vcEventId !== '' ? $vcEventId : null;
 
                 $resp = sendCAPIEvent('ViewContent', [
-                    'domain_id'    => (int)$row['domain_id'],
-                    'page_url'     => $pageUrlFromJS !== '' ? $pageUrlFromJS : $row['page_url'],
-                    'ip_address'   => $row['ip_address'],
-                    'user_agent'   => $row['user_agent'],
-                    'session_uuid' => $row['session_uuid'],
-                    'fbc'          => $row['fbc'],
-                    'fbp'          => $row['fbp'],
-                    'country'      => $row['country_code'],
-                    'event_id'     => $sentEventId,
-                    'event_time'   => time(),
-                    'value'        => 0,
-                    'currency'     => 'USD',
+                    'domain_id'         => (int)$row['domain_id'],
+                    'page_url'          => $pageUrlFromJS !== '' ? $pageUrlFromJS : $row['page_url'],
+                    'ip_address'        => $row['ip_address'],
+                    'user_agent'        => $row['user_agent'],
+                    'session_uuid'      => $row['session_uuid'],
+                    'fbc'               => $row['fbc'],
+                    'fbp'               => $row['fbp'],
+                    'country'           => $row['country_code'],
+                    'event_id'          => $sentEventId,
+                    'event_time'        => time(),
+                    'value'             => 0,
+                    'currency'          => 'USD',
+                    // Engagement-context custom params — match what the browser
+                    // pixel ViewContent sends, so dedupe sees identical events.
+                    'scroll_percentage' => $maxScrollDepth,
+                    'time_spent'        => $sessionDuration,
                 ]);
 
                 if (!empty($resp['ok'])) {

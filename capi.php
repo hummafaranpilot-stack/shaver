@@ -108,11 +108,21 @@ function sendCAPIEvent(string $eventName, array $data): array {
         'user_data'         => $userData,
     ];
 
-    // Custom data (Purchase, AddToCart, etc.)
+    // Custom data (Purchase / AddToCart / engagement context)
     $custom = [];
-    if (isset($data['value']))    $custom['value']    = (float)$data['value'];
-    if (isset($data['currency'])) $custom['currency'] = (string)$data['currency'];
-    if (isset($data['order_id'])) $custom['order_id'] = (string)$data['order_id'];
+    if (isset($data['value']))             $custom['value']             = (float)$data['value'];
+    if (isset($data['currency']))          $custom['currency']          = (string)$data['currency'];
+    if (isset($data['order_id']))          $custom['order_id']          = (string)$data['order_id'];
+    if (isset($data['scroll_percentage'])) $custom['scroll_percentage'] = (int)$data['scroll_percentage'];
+    if (isset($data['time_spent']))        $custom['time_spent']        = (int)$data['time_spent'];
+    if (isset($data['content_name']))      $custom['content_name']      = (string)$data['content_name'];
+    if (isset($data['content_ids']))       $custom['content_ids']       = $data['content_ids'];
+    if (isset($data['content_type']))      $custom['content_type']      = (string)$data['content_type'];
+    // Catch-all: any other 'custom' key (array) merges in for forward
+    // compatibility — caller can pass arbitrary FB-recognized fields.
+    if (isset($data['custom']) && is_array($data['custom'])) {
+        $custom = array_merge($custom, $data['custom']);
+    }
     if (!empty($custom)) $event['custom_data'] = $custom;
 
     $payload = ['data' => [$event]];
