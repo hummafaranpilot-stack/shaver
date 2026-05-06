@@ -1263,6 +1263,19 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         if (id) console.log('%c[VID] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| time:', t + 's', '| eventId:', id);
     }
 
+    // Expose the three fire functions on window.__shaver for manual debugging:
+    //   __shaver.fireVideoEngaged()  ← call from DevTools console to test
+    try {
+        if (window.__shaver) {
+            window.__shaver.fireViewContent     = fireViewContent;
+            window.__shaver.fireEngagedVisitor  = fireEngagedVisitor;
+            window.__shaver.fireScrollDeep      = fireScrollDeep;
+            window.__shaver.fireVideoEngaged    = fireVideoEngaged;
+            window.__shaver.fireInitiateCheckout = fireInitiateCheckout;
+            window.__shaver.fireBrowserPurchase = fireBrowserPurchase;
+        }
+    } catch (e) {}
+
     // Time-based trigger — runs every 1s until 15s threshold is reached or
     // ViewContent has fired (whichever first), then self-terminates.
     function setupViewContentTimer() {
@@ -1470,33 +1483,53 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // Video play tracking — counts user-initiated plays on .mv-player videos
     function setupVideoTracking() {
         var tracked = {};
-        document.querySelectorAll('.mv-player video').forEach(function(video) {
+        // Helper — emit the video-play behavior event AND fire VideoEngaged
+        // pixel/CAPI. Wrapped so all triggers (HTML5 <video> play, .mv-player
+        // thumbnail click, etc.) share one code path.
+        function emitVideoPlay(videoId) {
+            if (tracked[videoId]) return;
+            tracked[videoId] = true;
+            window.__behaviorTracking.videoPlays++;
+            fireVideoEngaged();
+            var videoEventId = '';
+            try { videoEventId = sessionStorage.getItem('video_event_id') || ''; } catch (e) {}
+            logBehaviorEvent('video_play', {
+                videoId: videoId,
+                timeFromLanding: Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000),
+                video_event_id: videoEventId,
+                page_url: window.location.href
+            });
+        }
+
+        // Trigger 1 — HTML5 <video> play event. Broadened from `.mv-player video`
+        // to ALL <video> elements so non-Vidalytics players also fire.
+        document.querySelectorAll('video').forEach(function(video) {
             video.addEventListener('play', function() {
                 // Skip autoplay (muted autoplay doesn't count)
                 if (video.muted && !video.dataset.userPlayed) return;
-                var videoId = (video.closest('.mv-player') || {}).dataset ? video.closest('.mv-player').dataset.videoId || 'unknown' : 'unknown';
-                window.__behaviorTracking.videoPlays++;
-                if (!tracked[videoId]) {
-                    tracked[videoId] = true;
-                    // Browser pixel: VideoEngaged custom event (first user-played video)
-                    fireVideoEngaged();
-                    // Server-side trigger: include event_id so api.php logBehaviorEvent
-                    // fires the CAPI VideoEngaged with the same dedupe id.
-                    var videoEventId = '';
-                    try { videoEventId = sessionStorage.getItem('video_event_id') || ''; } catch (e) {}
-                    logBehaviorEvent('video_play', {
-                        videoId: videoId,
-                        timeFromLanding: Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000),
-                        video_event_id: videoEventId,
-                        page_url: window.location.href
-                    });
-                }
+                var container = video.closest('.mv-player');
+                var videoId = (container && container.dataset) ? (container.dataset.videoId || 'unknown') : (video.id || 'video-' + Math.random().toString(36).substr(2, 6));
+                emitVideoPlay(videoId);
             });
             // Mark user-initiated unmute as user-played
             video.addEventListener('volumechange', function() {
                 if (!video.muted) video.dataset.userPlayed = '1';
             });
         });
+
+        // Trigger 2 — Vidalytics thumbnail-click pattern. Many Vidalytics setups
+        // render a poster image and only mount the <video> AFTER the user clicks
+        // the thumbnail. So firing on the thumbnail click is more reliable than
+        // waiting for a `play` event that may never bind to a not-yet-existing
+        // <video>. Uses event delegation in case .mv-player is added late.
+        document.addEventListener('click', function(e) {
+            var t = e.target;
+            // Walk up to find a Vidalytics container or any common video-thumb
+            var container = t.closest && t.closest('.mv-player, .vidalytics-container, [class*="video-thumb"], [class*="play-button"]');
+            if (!container) return;
+            var videoId = (container.dataset && container.dataset.videoId) || container.id || 'thumb-click';
+            emitVideoPlay(videoId);
+        }, true);
         // Also track clicks on play overlays (unmute buttons trigger user play)
         document.querySelectorAll('.mv-unmute-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
