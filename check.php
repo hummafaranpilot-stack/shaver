@@ -537,7 +537,11 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
             viewport_height: window.innerHeight,
             is_bot: window.__behaviorTracking ? window.__behaviorTracking.isBot : 0,
             bot_flags: window.__behaviorTracking ? window.__behaviorTracking.botFlags : null,
-            is_iframe: window.__behaviorTracking ? window.__behaviorTracking.isIframe : 0
+            is_iframe: window.__behaviorTracking ? window.__behaviorTracking.isIframe : 0,
+            // Facebook Pixel cookies — server-side CAPI uses these for browser↔server
+            // dedupe and to bump Event Match Quality (EMQ). Sent raw, not hashed.
+            fbc: ReadCookie('_fbc') || null,
+            fbp: ReadCookie('_fbp') || null
         });
 
         var xhr = new XMLHttpRequest();
@@ -1783,7 +1787,10 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
             is_bot: window.__behaviorTracking ? window.__behaviorTracking.isBot : 0,
             bot_flags: window.__behaviorTracking ? window.__behaviorTracking.botFlags : null,
             is_iframe: window.__behaviorTracking ? window.__behaviorTracking.isIframe : 0,
-            cb_params: Object.keys(cbExtraParams).length > 0 ? cbExtraParams : null
+            cb_params: Object.keys(cbExtraParams).length > 0 ? cbExtraParams : null,
+            // FB Pixel cookies — see logTraffic() helper for rationale
+            fbc: ReadCookie('_fbc') || null,
+            fbp: ReadCookie('_fbp') || null
         });
 
         var cbXhr = new XMLHttpRequest();

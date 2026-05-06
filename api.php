@@ -6,6 +6,7 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/capi.php';
 
 $pdo = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -1000,6 +1001,32 @@ function logTraffic($pdo) {
     if ($geoInfo['country'] !== 'Unknown' || $geoInfo['countryCode'] !== 'XX') {
         $geoStmt = $pdo->prepare("UPDATE affiliate_traffic SET country = ?, country_code = ? WHERE id = ?");
         $geoStmt->execute([$geoInfo['country'], $geoInfo['countryCode'], $trafficId]);
+    }
+
+    // ── Facebook CAPI (PageView) ────────────────────────────────────────
+    // Fires AFTER the response is flushed so visitor doesn't wait. Filters:
+    // bots and iframe loads are skipped (they pollute attribution); fraud
+    // score is NOT checked here because IPQS hasn't run yet at log_traffic
+    // time — fraud filtering happens on later high-intent events (Purchase
+    // / Lead) where the score is already populated.
+    if (defined('FB_ACCESS_TOKEN') && FB_ACCESS_TOKEN !== ''
+        && !($isBot ? 1 : 0) && !($isIframe ? 1 : 0)
+        && fbIsWhitelistedDomain((int)$domainId)) {
+        try {
+            sendCAPIEvent('PageView', [
+                'domain_id'    => $domainId,
+                'page_url'     => $pageUrl,
+                'ip_address'   => $ip,
+                'user_agent'   => $userAgent,
+                'session_uuid' => $sessionUUID,
+                'fbc'          => $data['fbc'] ?? null,
+                'fbp'          => $data['fbp'] ?? null,
+                'country'      => $geoInfo['countryCode'] ?? null,
+                'event_time'   => time(),
+            ]);
+        } catch (Exception $e) {
+            // CAPI errors must never block tracking; just swallow
+        }
     }
 
     // RTT is now measured BROWSER-SIDE (visitor's browser times the log_traffic

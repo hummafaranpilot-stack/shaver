@@ -48,6 +48,23 @@ define('SMTP_FROM_EMAIL', 'contact@trustednutraproduct.com');
 define('SMTP_FROM_NAME', 'Trusted Nutra Products');
 
 // ================================================================
+// FACEBOOK CONVERSIONS API (CAPI)
+// ================================================================
+define('FB_PIXEL_ID',         '2461255981056616');
+define('FB_ACCESS_TOKEN',     file_exists(__DIR__ . '/.fb_token') ? trim(file_get_contents(__DIR__ . '/.fb_token')) : '');
+define('FB_TEST_EVENT_CODE',  'TEST12345'); // set to '' (empty string) in production
+
+// Whitelist by domain LABEL (case-insensitive). CAPI only fires for these.
+// Match by label so adding a new branded domain doesn't require knowing its
+// auto-increment ID — just add the label here.
+define('FB_WEIGHTLOSS_DOMAINS', [
+    'MetaTrim v2',
+    'MetaTrim v3',
+    'KetoWater',
+    'KetoFlow',
+]);
+
+// ================================================================
 // TIMEZONE
 // ================================================================
 date_default_timezone_set('Asia/Karachi');
