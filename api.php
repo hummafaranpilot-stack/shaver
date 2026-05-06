@@ -1133,7 +1133,7 @@ function logBehaviorEvent($pdo) {
         return;
     }
 
-    $validEvents = ['page_view', 'scroll', 'click', 'hover', 'checkout_reached', 'tab_hidden', 'tab_visible'];
+    $validEvents = ['page_view', 'scroll', 'click', 'hover', 'checkout_reached', 'tab_hidden', 'tab_visible', 'buynow_click'];
     if (!in_array($eventType, $validEvents)) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid event type']);
@@ -1145,8 +1145,63 @@ function logBehaviorEvent($pdo) {
         VALUES (?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([$trafficId, $domainId, $sessionUUID, $eventType, json_encode($eventData), $timestamp]);
+    $insertId = $pdo->lastInsertId();
 
-    echo json_encode(['success' => true, 'event_id' => $pdo->lastInsertId()]);
+    // ── Facebook CAPI InitiateCheckout ─────────────────────────────────
+    // Fires when a real BuyNow pricing-card click is reported (event_type
+    // 'buynow_click' — frontend only emits this on classifyClick==='buynow',
+    // not on CTA-bar buttons). At-most-once per visit. Same dedupe pattern
+    // as ViewContent: ic_event_id from the browser's sessionStorage is
+    // forwarded with the event and reused as the CAPI event_id.
+    if ($eventType === 'buynow_click'
+        && defined('FB_ACCESS_TOKEN') && FB_ACCESS_TOKEN !== '') {
+        try {
+            $rowStmt = $pdo->prepare("
+                SELECT id, domain_id, ip_address, user_agent, session_uuid, fbc, fbp,
+                       country_code, page_url, max_scroll_depth, session_duration,
+                       initiatecheckout_fired, is_bot, is_iframe
+                FROM affiliate_traffic WHERE id = ? LIMIT 1
+            ");
+            $rowStmt->execute([$trafficId]);
+            $row = $rowStmt->fetch();
+
+            if ($row
+                && (int)$row['initiatecheckout_fired'] === 0
+                && (int)$row['is_bot'] !== 1
+                && (int)$row['is_iframe'] !== 1
+                && fbIsWhitelistedDomain((int)$row['domain_id'])) {
+
+                $icEventId = isset($eventData['ic_event_id']) ? trim((string)$eventData['ic_event_id']) : '';
+                $pageUrlFromJS = isset($eventData['page_url']) ? trim((string)$eventData['page_url']) : '';
+
+                $resp = sendCAPIEvent('InitiateCheckout', [
+                    'domain_id'         => (int)$row['domain_id'],
+                    'page_url'          => $pageUrlFromJS !== '' ? $pageUrlFromJS : $row['page_url'],
+                    'ip_address'        => $row['ip_address'],
+                    'user_agent'        => $row['user_agent'],
+                    'session_uuid'      => $row['session_uuid'],
+                    'fbc'               => $row['fbc'],
+                    'fbp'               => $row['fbp'],
+                    'country'           => $row['country_code'],
+                    'event_id'          => $icEventId !== '' ? $icEventId : null,
+                    'event_time'        => time(),
+                    'value'             => 0,
+                    'currency'          => 'USD',
+                    'scroll_percentage' => (int)($row['max_scroll_depth'] ?? 0),
+                    'time_spent'        => (int)($row['session_duration'] ?? 0),
+                ]);
+
+                if (!empty($resp['ok'])) {
+                    $pdo->prepare("UPDATE affiliate_traffic SET initiatecheckout_fired = 1 WHERE id = ?")
+                        ->execute([$trafficId]);
+                }
+            }
+        } catch (Exception $e) {
+            // CAPI failures must never block tracking
+        }
+    }
+
+    echo json_encode(['success' => true, 'event_id' => $insertId]);
 }
 
 function updateSessionMetrics($pdo) {

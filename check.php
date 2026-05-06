@@ -1039,9 +1039,21 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     if (clickType === 'redirect') window.__behaviorTracking.redirectClicks++;
                     else if (clickType === 'buynow') {
                         window.__behaviorTracking.buynowClicks++;
-                        // FB Pixel InitiateCheckout — only on real pricing-card BuyNow
-                        // clicks (not CTA-bar buttons; those just scroll to pricing).
+                        // Browser-side FB Pixel InitiateCheckout (saves ic_event_id)
                         fireInitiateCheckout();
+                        // Server-side trigger: dedicated event_type so api.php's
+                        // logBehaviorEvent handler fires CAPI InitiateCheckout
+                        // exactly on real BuyNow pricing-card clicks. Forwards
+                        // ic_event_id (set above) so server reuses the same id.
+                        var icEventId = '';
+                        try { icEventId = sessionStorage.getItem('ic_event_id') || ''; } catch (e) {}
+                        logBehaviorEvent('buynow_click', {
+                            ic_event_id: icEventId,
+                            page_url: window.location.href,
+                            buttonText: (target.textContent || '').trim().substring(0, 100),
+                            targetUrl: (target.href || '').substring(0, 200),
+                            timeFromLanding: Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000)
+                        });
                     }
                     else if (clickType === 'ctabar') window.__behaviorTracking.ctaBarClicks++;
                     else if (clickType === 'vsl') window.__behaviorTracking.vslClicks++;
