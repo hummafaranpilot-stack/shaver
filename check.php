@@ -814,16 +814,24 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     function updateSessionMetrics() {
         if (!window.__behaviorTracking.trafficId) return;
         var sessionDuration = Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000);
-        // Read vc_event_id from sessionStorage (set by fireViewContent in this
-        // tab earlier). Server uses this exact id when firing CAPI ViewContent
-        // so Facebook dedupes the pixel hit and the CAPI hit as one event.
-        var vcEventId = '';
-        try { vcEventId = sessionStorage.getItem('vc_event_id') || ''; } catch (e) {}
+        // Read event_ids from sessionStorage (set by browser-pixel fire functions
+        // in this tab earlier). Server reuses these as event_id on the matching
+        // CAPI calls so Facebook dedupes browser + server hits.
+        var vcEventId         = '';
+        var engagedEventId    = '';
+        var scrolldeepEventId = '';
+        try {
+            vcEventId         = sessionStorage.getItem('vc_event_id')         || '';
+            engagedEventId    = sessionStorage.getItem('engaged_event_id')    || '';
+            scrolldeepEventId = sessionStorage.getItem('scrolldeep_event_id') || '';
+        } catch (e) {}
         var payload = {
             action: 'update_session_metrics',
             traffic_id: window.__behaviorTracking.trafficId,
             page_url: window.location.href,
             vc_event_id: vcEventId,
+            engaged_event_id: engagedEventId,
+            scrolldeep_event_id: scrolldeepEventId,
             session_duration: sessionDuration,
             max_scroll_depth: window.__behaviorTracking.maxScrollDepth,
             total_clicks: window.__behaviorTracking.clickCount,
@@ -1199,29 +1207,100 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         try { sessionStorage.setItem(alreadyFiredKey, '1'); } catch (e) {}
     }
 
+    // ============================================================
+    // FB PIXEL — Custom engagement events
+    //   EngagedVisitor   → session_duration >= 60s
+    //   ScrollDeep       → max_scroll_depth >= 75
+    //   VideoEngaged     → first video play (thumbnail / video element)
+    // All fired via fbq('trackCustom', ...) since they aren't in FB's
+    // standard event vocabulary. Same once-per-session + domain
+    // whitelist + sessionStorage event_id pattern as ViewContent
+    // (server-side CAPI mirrors these via the same event_id for dedupe).
+    // ============================================================
+    function fireCustomFBEvent(name, flagKey, idKey, scrollDepth, timeSpent) {
+        try {
+            if (sessionStorage.getItem(flagKey) === '1') return false;
+        } catch (e) {}
+        if (!IS_WEIGHTLOSS_DOMAIN) return false;
+        if (typeof fbq === 'undefined') {
+            console.log('[' + name + '] SKIP — fbq is undefined (Weight Loss Snippet not loaded on this page)');
+            return false;
+        }
+        var sessionUUID = window.__behaviorTracking ? window.__behaviorTracking.sessionUUID : '';
+        var eventId = name + '_' + sessionUUID + '_' + Date.now();
+        try {
+            fbq('trackCustom', name, {
+                scroll_percentage: scrollDepth,
+                time_spent: timeSpent,
+                page_url: window.location.href
+            }, { eventID: eventId });
+        } catch (e) { console.error('[' + name + '] fbq error', e); return false; }
+        try {
+            sessionStorage.setItem(flagKey, '1');
+            sessionStorage.setItem(idKey, eventId);
+        } catch (e) {}
+        return eventId;
+    }
+
+    function fireEngagedVisitor() {
+        var scroll = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
+        var t      = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
+        var id = fireCustomFBEvent('EngagedVisitor', 'engaged_fired', 'engaged_event_id', scroll, t);
+        if (id) console.log('%c[EV] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| time:', t + 's', '| scroll:', scroll + '%', '| eventId:', id);
+    }
+
+    function fireScrollDeep() {
+        var scroll = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
+        var t      = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
+        var id = fireCustomFBEvent('ScrollDeep', 'scrolldeep_fired', 'scrolldeep_event_id', scroll, t);
+        if (id) console.log('%c[SD] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| scroll:', scroll + '%', '| time:', t + 's', '| eventId:', id);
+    }
+
+    function fireVideoEngaged() {
+        var scroll = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
+        var t      = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
+        var id = fireCustomFBEvent('VideoEngaged', 'video_fired', 'video_event_id', scroll, t);
+        if (id) console.log('%c[VID] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| time:', t + 's', '| eventId:', id);
+    }
+
     // Time-based trigger — runs every 1s until 15s threshold is reached or
     // ViewContent has fired (whichever first), then self-terminates.
     function setupViewContentTimer() {
         if (!IS_WEIGHTLOSS_DOMAIN) {
-            console.log('[VC] timer NOT started — domain not whitelisted (IS_WEIGHTLOSS_DOMAIN=false)');
+            console.log('[VC/EV] engagement timer NOT started — domain not whitelisted');
             return;
         }
-        console.log('[VC] timer started — will fire at 15s OR scroll>=30%, whichever first');
+        console.log('[VC/EV] engagement timer started — VC at 15s, EV at 60s');
         var poll = setInterval(function() {
-            try {
-                if (sessionStorage.getItem('vc_fired') === '1') { clearInterval(poll); return; }
-            } catch (e) {}
             if (!window.__behaviorTracking) return;
             var elapsed = Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000);
-            // Heartbeat every 5s so user can see timer is alive
-            if (elapsed > 0 && elapsed % 5 === 0) {
-                console.log('[VC] timer heartbeat — elapsed:', elapsed + 's', '| fbq:', typeof fbq, '| scroll:', (window.__behaviorTracking.maxScrollDepth || 0) + '%');
+            var vcDone = false, evDone = false;
+            try {
+                vcDone = sessionStorage.getItem('vc_fired') === '1';
+                evDone = sessionStorage.getItem('engaged_fired') === '1';
+            } catch (e) {}
+
+            if (elapsed > 0 && elapsed % 10 === 0) {
+                console.log('[VC/EV] heartbeat — elapsed:', elapsed + 's', '| vc:', vcDone, '| ev:', evDone, '| scroll:', (window.__behaviorTracking.maxScrollDepth || 0) + '%');
             }
-            if (elapsed >= 15) {
+
+            if (!vcDone && elapsed >= 15) {
                 console.log('[VC] 15s threshold hit, firing…');
                 fireViewContent();
-                clearInterval(poll);
             }
+            if (!evDone && elapsed >= 60) {
+                console.log('[EV] 60s threshold hit, firing…');
+                fireEngagedVisitor();
+            }
+
+            // Self-terminate when both have fired or at 5-minute safety cap
+            try {
+                if (sessionStorage.getItem('vc_fired') === '1' && sessionStorage.getItem('engaged_fired') === '1') {
+                    clearInterval(poll);
+                    return;
+                }
+            } catch (e) {}
+            if (elapsed > 300) clearInterval(poll);
         }, 1000);
     }
     setupViewContentTimer();
@@ -1253,6 +1332,11 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     if (scrollDepth >= 30) {
                         console.log('[VC] scroll trigger — depth:', scrollDepth + '%, calling fireViewContent()');
                         fireViewContent();
+                    }
+                    // FB ScrollDeep custom event — first time scroll crosses 75%
+                    if (scrollDepth >= 75) {
+                        console.log('[SD] scroll trigger — depth:', scrollDepth + '%, calling fireScrollDeep()');
+                        fireScrollDeep();
                     }
                 }
             }, 300);
@@ -1394,7 +1478,18 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                 window.__behaviorTracking.videoPlays++;
                 if (!tracked[videoId]) {
                     tracked[videoId] = true;
-                    logBehaviorEvent('video_play', { videoId: videoId, timeFromLanding: Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) });
+                    // Browser pixel: VideoEngaged custom event (first user-played video)
+                    fireVideoEngaged();
+                    // Server-side trigger: include event_id so api.php logBehaviorEvent
+                    // fires the CAPI VideoEngaged with the same dedupe id.
+                    var videoEventId = '';
+                    try { videoEventId = sessionStorage.getItem('video_event_id') || ''; } catch (e) {}
+                    logBehaviorEvent('video_play', {
+                        videoId: videoId,
+                        timeFromLanding: Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000),
+                        video_event_id: videoEventId,
+                        page_url: window.location.href
+                    });
                 }
             });
             // Mark user-initiated unmute as user-played

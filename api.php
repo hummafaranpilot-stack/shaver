@@ -1147,6 +1147,58 @@ function logBehaviorEvent($pdo) {
     $stmt->execute([$trafficId, $domainId, $sessionUUID, $eventType, json_encode($eventData), $timestamp]);
     $insertId = $pdo->lastInsertId();
 
+    // ── Facebook CAPI VideoEngaged ─────────────────────────────────────
+    // Mirror of fbq('trackCustom','VideoEngaged') fired when the visitor
+    // first plays a video. video_event_id from sessionStorage rides along
+    // in event_data so server uses the same id and FB dedupes.
+    if ($eventType === 'video_play'
+        && defined('FB_ACCESS_TOKEN') && FB_ACCESS_TOKEN !== '') {
+        try {
+            $rowStmt = $pdo->prepare("
+                SELECT domain_id, ip_address, user_agent, session_uuid, fbc, fbp,
+                       country_code, page_url, max_scroll_depth, session_duration,
+                       videoengaged_fired, is_bot, is_iframe
+                FROM affiliate_traffic WHERE id = ? LIMIT 1
+            ");
+            $rowStmt->execute([$trafficId]);
+            $row = $rowStmt->fetch();
+
+            if ($row
+                && (int)$row['videoengaged_fired'] === 0
+                && (int)$row['is_bot']    !== 1
+                && (int)$row['is_iframe'] !== 1
+                && fbIsWhitelistedDomain((int)$row['domain_id'])) {
+
+                $videoEventId  = isset($eventData['video_event_id']) ? trim((string)$eventData['video_event_id']) : '';
+                $pageUrlFromJS = isset($eventData['page_url'])       ? trim((string)$eventData['page_url'])       : '';
+
+                $resp = sendCAPIEvent('VideoEngaged', [
+                    'domain_id'         => (int)$row['domain_id'],
+                    'page_url'          => $pageUrlFromJS !== '' ? $pageUrlFromJS : $row['page_url'],
+                    'ip_address'        => $row['ip_address'],
+                    'user_agent'        => $row['user_agent'],
+                    'session_uuid'      => $row['session_uuid'],
+                    'fbc'               => $row['fbc'],
+                    'fbp'               => $row['fbp'],
+                    'country'           => $row['country_code'],
+                    'event_id'          => $videoEventId !== '' ? $videoEventId : null,
+                    'event_time'        => time(),
+                    'value'             => 0,
+                    'currency'          => 'USD',
+                    'scroll_percentage' => (int)($row['max_scroll_depth'] ?? 0),
+                    'time_spent'        => (int)($row['session_duration'] ?? 0),
+                ]);
+
+                if (!empty($resp['ok'])) {
+                    $pdo->prepare("UPDATE affiliate_traffic SET videoengaged_fired = 1 WHERE id = ?")
+                        ->execute([$trafficId]);
+                }
+            }
+        } catch (Exception $e) {
+            // CAPI failures must never block tracking
+        }
+    }
+
     // ── Facebook CAPI InitiateCheckout ─────────────────────────────────
     // Fires when a real BuyNow pricing-card click is reported (event_type
     // 'buynow_click' — frontend only emits this on classifyClick==='buynow',
@@ -1292,38 +1344,41 @@ function updateSessionMetrics($pdo) {
         $trafficId
     ]);
 
-    // ── Facebook CAPI ViewContent ───────────────────────────────────────
-    // Mirror of the browser-side fbq('track','ViewContent') for redundancy
-    // when the pixel is blocked. Same event_id (vc_event_id, generated in
-    // browser sessionStorage) is reused so FB dedupes both hits as one.
-    // Fires at-most-once per visit (viewcontent_fired guard).
+    // ── Facebook CAPI: ViewContent / EngagedVisitor / ScrollDeep ───────
+    // All three mirror their browser-pixel counterparts, dedupe via the
+    // event_id forwarded from sessionStorage. At-most-once per visit each
+    // (one column per event as a fired-guard).
     try {
-        $sessionDuration = (int)($data['session_duration'] ?? 0);
-        $maxScrollDepth  = (int)($data['max_scroll_depth'] ?? 0);
-        $vcEventId       = trim((string)($data['vc_event_id'] ?? ''));
-        $pageUrlFromJS   = trim((string)($data['page_url'] ?? ''));
+        $sessionDuration   = (int)($data['session_duration'] ?? 0);
+        $maxScrollDepth    = (int)($data['max_scroll_depth'] ?? 0);
+        $vcEventId         = trim((string)($data['vc_event_id']         ?? ''));
+        $engagedEventId    = trim((string)($data['engaged_event_id']    ?? ''));
+        $scrolldeepEventId = trim((string)($data['scrolldeep_event_id'] ?? ''));
+        $pageUrlFromJS     = trim((string)($data['page_url'] ?? ''));
 
-        if (defined('FB_ACCESS_TOKEN') && FB_ACCESS_TOKEN !== ''
-            && ($sessionDuration >= 15 || $maxScrollDepth >= 30)) {
+        $thresholdsAny = ($sessionDuration >= 15 || $maxScrollDepth >= 30
+                       || $sessionDuration >= 60 || $maxScrollDepth >= 75);
 
-            // Pull row metadata we need for the CAPI call (and the guard)
+        if (defined('FB_ACCESS_TOKEN') && FB_ACCESS_TOKEN !== '' && $thresholdsAny) {
+
             $rowStmt = $pdo->prepare("
                 SELECT domain_id, ip_address, user_agent, session_uuid, fbc, fbp,
-                       country_code, page_url, viewcontent_fired, is_bot, is_iframe
+                       country_code, page_url,
+                       viewcontent_fired, engagedvisitor_fired, scrolldeep_fired,
+                       is_bot, is_iframe
                 FROM affiliate_traffic WHERE id = ? LIMIT 1
             ");
             $rowStmt->execute([$trafficId]);
             $row = $rowStmt->fetch();
 
-            if ($row
-                && (int)$row['viewcontent_fired'] === 0
-                && (int)$row['is_bot'] !== 1
+            $eligible = $row
+                && (int)$row['is_bot']    !== 1
                 && (int)$row['is_iframe'] !== 1
-                && fbIsWhitelistedDomain((int)$row['domain_id'])) {
+                && fbIsWhitelistedDomain((int)$row['domain_id']);
 
-                $sentEventId = $vcEventId !== '' ? $vcEventId : null;
-
-                $resp = sendCAPIEvent('ViewContent', [
+            if ($eligible) {
+                // Shared user_data / event_source_url for all 3 events
+                $base = [
                     'domain_id'         => (int)$row['domain_id'],
                     'page_url'          => $pageUrlFromJS !== '' ? $pageUrlFromJS : $row['page_url'],
                     'ip_address'        => $row['ip_address'],
@@ -1332,19 +1387,45 @@ function updateSessionMetrics($pdo) {
                     'fbc'               => $row['fbc'],
                     'fbp'               => $row['fbp'],
                     'country'           => $row['country_code'],
-                    'event_id'          => $sentEventId,
                     'event_time'        => time(),
                     'value'             => 0,
                     'currency'          => 'USD',
-                    // Engagement-context custom params — match what the browser
-                    // pixel ViewContent sends, so dedupe sees identical events.
                     'scroll_percentage' => $maxScrollDepth,
                     'time_spent'        => $sessionDuration,
-                ]);
+                ];
 
-                if (!empty($resp['ok'])) {
-                    $pdo->prepare("UPDATE affiliate_traffic SET viewcontent_fired = 1 WHERE id = ?")
-                        ->execute([$trafficId]);
+                // 1) ViewContent — 15s OR 30% scroll
+                if ((int)$row['viewcontent_fired'] === 0
+                    && ($sessionDuration >= 15 || $maxScrollDepth >= 30)) {
+                    $r = sendCAPIEvent('ViewContent', array_merge($base, [
+                        'event_id' => $vcEventId !== '' ? $vcEventId : null,
+                    ]));
+                    if (!empty($r['ok'])) {
+                        $pdo->prepare("UPDATE affiliate_traffic SET viewcontent_fired = 1 WHERE id = ?")
+                            ->execute([$trafficId]);
+                    }
+                }
+
+                // 2) EngagedVisitor — 60s threshold
+                if ((int)$row['engagedvisitor_fired'] === 0 && $sessionDuration >= 60) {
+                    $r = sendCAPIEvent('EngagedVisitor', array_merge($base, [
+                        'event_id' => $engagedEventId !== '' ? $engagedEventId : null,
+                    ]));
+                    if (!empty($r['ok'])) {
+                        $pdo->prepare("UPDATE affiliate_traffic SET engagedvisitor_fired = 1 WHERE id = ?")
+                            ->execute([$trafficId]);
+                    }
+                }
+
+                // 3) ScrollDeep — 75% threshold
+                if ((int)$row['scrolldeep_fired'] === 0 && $maxScrollDepth >= 75) {
+                    $r = sendCAPIEvent('ScrollDeep', array_merge($base, [
+                        'event_id' => $scrolldeepEventId !== '' ? $scrolldeepEventId : null,
+                    ]));
+                    if (!empty($r['ok'])) {
+                        $pdo->prepare("UPDATE affiliate_traffic SET scrolldeep_fired = 1 WHERE id = ?")
+                            ->execute([$trafficId]);
+                    }
                 }
             }
         }
