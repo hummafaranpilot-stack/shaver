@@ -100,6 +100,12 @@ try {
 
 // Prepare data for JavaScript
 $domainId = (int)$domain['id'];
+
+// FB CAPI whitelist flag — exposed to JS so the browser-side ViewContent /
+// other Pixel events can short-circuit on non-weight-loss domains. Single
+// source of truth = FB_WEIGHTLOSS_DOMAINS in config.php (label match).
+require_once __DIR__ . '/capi.php';
+$isWeightLossDomain = function_exists('fbIsWhitelistedDomain') && fbIsWhitelistedDomain($domainId);
 $sessionsJson = json_encode(array_map(function($s) {
     return [
         'id' => $s['id'],
@@ -153,6 +159,10 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     var PLATFORM = '<?php echo $platform; ?>';
     var DS24_PRODUCT_ID = '<?php echo $ds24ProductId; ?>';
     var CB_VENDOR = '<?php echo $cbVendor; ?>';
+    // FB Pixel whitelist — true only for the 4 weight-loss domains listed in
+    // FB_WEIGHTLOSS_DOMAINS (config.php). Browser-side FB events short-circuit
+    // when this is false, so unrelated domains never call fbq().
+    var IS_WEIGHTLOSS_DOMAIN = <?php echo $isWeightLossDomain ? 'true' : 'false'; ?>;
 
     // Silent mode — suppress all console output (enable via URL ?_shaver_debug=1)
     var _DEBUG = (window.location.search.indexOf('_shaver_debug=1') !== -1);
@@ -818,6 +828,63 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         xhr.send(JSON.stringify(payload));
     }
 
+    // ============================================================
+    // FB PIXEL — ViewContent event
+    // Fires once per session when EITHER of these hits first:
+    //   - max_scroll_depth >= 30%
+    //   - session_duration >= 15s
+    // Only on the 4 weight-loss domains (whitelist via IS_WEIGHTLOSS_DOMAIN).
+    // event_id is saved to sessionStorage so the server-side CAPI ViewContent
+    // (added in a later phase) can use the SAME id and FB will dedupe both
+    // hits as one event.
+    // ============================================================
+    function fireViewContent() {
+        if (!IS_WEIGHTLOSS_DOMAIN) return;
+        try {
+            if (sessionStorage.getItem('vc_fired') === '1') return;
+        } catch (e) {}
+        if (typeof fbq === 'undefined') return;
+
+        var sessionUUID = window.__behaviorTracking ? window.__behaviorTracking.sessionUUID : '';
+        var scrollDepth = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
+        var timeSpent   = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
+        var eventId     = 'ViewContent_' + sessionUUID + '_' + Date.now();
+
+        try {
+            fbq('track', 'ViewContent', {
+                scroll_percentage: scrollDepth,
+                time_spent: timeSpent,
+                page_url: window.location.href,
+                currency: 'USD',
+                value: 0
+            }, { eventID: eventId });
+            _log('%c[Shaver] FB ViewContent fired', 'color:#1877f2;font-weight:bold', '| scroll:', scrollDepth, '| time:', timeSpent + 's');
+        } catch (e) { _log('[Shaver] fbq ViewContent error', e); }
+
+        try {
+            sessionStorage.setItem('vc_fired', '1');
+            sessionStorage.setItem('vc_event_id', eventId);
+        } catch (e) {}
+    }
+
+    // Time-based trigger — runs every 1s until 15s threshold is reached or
+    // ViewContent has fired (whichever first), then self-terminates.
+    function setupViewContentTimer() {
+        if (!IS_WEIGHTLOSS_DOMAIN) return;
+        var poll = setInterval(function() {
+            try {
+                if (sessionStorage.getItem('vc_fired') === '1') { clearInterval(poll); return; }
+            } catch (e) {}
+            if (!window.__behaviorTracking) return;
+            var elapsed = Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000);
+            if (elapsed >= 15) {
+                fireViewContent();
+                clearInterval(poll);
+            }
+        }, 1000);
+    }
+    setupViewContentTimer();
+
     // Scroll tracking
     function setupScrollTracking() {
         var scrollTimeout, lastDepth = 0;
@@ -835,6 +902,9 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     else if (scrollDepth >= 75 && lastDepth < 75) logBehaviorEvent('scroll', {scrollDepth: 75, milestone: true});
                     else if (scrollDepth >= 90 && lastDepth < 90) logBehaviorEvent('scroll', {scrollDepth: 90, milestone: true});
                     lastDepth = scrollDepth;
+
+                    // FB ViewContent trigger — first time scroll crosses 30%
+                    if (scrollDepth >= 30) fireViewContent();
                 }
             }, 300);
         });
