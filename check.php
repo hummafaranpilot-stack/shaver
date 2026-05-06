@@ -167,6 +167,27 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // Matching (email/name/etc) when firing the Purchase event on upsell/thankyou.
     var FB_PIXEL_ID = '<?php echo defined('FB_PIXEL_ID') ? addslashes(FB_PIXEL_ID) : ''; ?>';
 
+    // Debug: expose key config to window.__shaver so DevTools Console can
+    // inspect them (the IIFE wrapper hides locals from global scope). Type
+    // `__shaver` in the console to see the whole bag — handy for diagnosing
+    // why a Pixel event didn't fire.
+    try {
+        window.__shaver = window.__shaver || {};
+        window.__shaver.DOMAIN_ID            = DOMAIN_ID;
+        window.__shaver.DOMAIN_KEY           = DOMAIN_KEY;
+        window.__shaver.PLATFORM             = PLATFORM;
+        window.__shaver.IS_WEIGHTLOSS_DOMAIN = IS_WEIGHTLOSS_DOMAIN;
+        window.__shaver.FB_PIXEL_ID          = FB_PIXEL_ID;
+    } catch (e) {}
+    // Visible "tracker is alive on this page" beacon — unconditional so users
+    // can confirm t.js is actually loaded on upsell/thankyou pages without
+    // having to flip ?_t_debug=1.
+    console.log('%c[Shaver] tracker active', 'color:#7c3aed;font-weight:bold;background:#f3e8ff;padding:2px 6px;border-radius:3px;',
+        '| path:', window.location.pathname,
+        '| domain_key:', DOMAIN_KEY,
+        '| weightloss:', IS_WEIGHTLOSS_DOMAIN,
+        '| pixel_id:', FB_PIXEL_ID || '(none)');
+
     // Silent mode — suppress all console output (enable via URL ?_shaver_debug=1)
     var _DEBUG = (window.location.search.indexOf('_shaver_debug=1') !== -1);
     var _log = _DEBUG ? console.log.bind(console) : function(){};
@@ -270,8 +291,9 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         return 'landing';
     }
     var PAGE_TYPE = detectPageType();
+    try { if (window.__shaver) window.__shaver.PAGE_TYPE = PAGE_TYPE; } catch (e) {}
     if (PAGE_TYPE !== 'landing') {
-        _log('%c[Shaver] Page Type: ' + PAGE_TYPE.toUpperCase(), 'color:#2ecc71;font-weight:bold;font-size:12px');
+        console.log('%c[Shaver] PAGE_TYPE = ' + PAGE_TYPE.toUpperCase(), 'color:#2ecc71;font-weight:bold;');
     }
 
     // ============================================================
@@ -997,12 +1019,24 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     // would break matching (double-hash mismatch with FB's pipeline).
     // ============================================================
     function fireBrowserPurchase() {
-        if (!IS_WEIGHTLOSS_DOMAIN) return;
-        if (typeof fbq === 'undefined') {
-            console.log('[PURCHASE] SKIP — fbq is undefined (Weight Loss Snippet not on this page)');
+        console.log('[PURCHASE] called', {
+            IS_WEIGHTLOSS_DOMAIN: IS_WEIGHTLOSS_DOMAIN,
+            PAGE_TYPE: PAGE_TYPE,
+            fbq_typeof: typeof fbq,
+            url_search: window.location.search.substring(0, 200)
+        });
+        if (!IS_WEIGHTLOSS_DOMAIN) {
+            console.log('[PURCHASE] SKIP — IS_WEIGHTLOSS_DOMAIN=false. Domain label in DB does not match FB_WEIGHTLOSS_DOMAINS in config.php.');
             return;
         }
-        if (PAGE_TYPE !== 'upsell' && PAGE_TYPE !== 'thankyou') return;
+        if (PAGE_TYPE !== 'upsell' && PAGE_TYPE !== 'thankyou') {
+            console.log('[PURCHASE] SKIP — not upsell/thankyou page (PAGE_TYPE=' + PAGE_TYPE + ')');
+            return;
+        }
+        if (typeof fbq === 'undefined') {
+            console.log('[PURCHASE] SKIP — fbq is undefined. Paste the Weight Loss Snippet on this page (h.js?v=e6246c71447b in <head>).');
+            return;
+        }
 
         var sp;
         try { sp = new URLSearchParams(window.location.search); } catch (e) { return; }
