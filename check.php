@@ -891,6 +891,53 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
         } catch (e) {}
     }
 
+    // ============================================================
+    // FB PIXEL — InitiateCheckout event
+    // Fires once per session when the visitor clicks a real BuyNow
+    // pricing-card image (clickType === 'buynow' in classifyClick()).
+    // Does NOT fire on CTA-bar buttons (those just scroll/redirect to
+    // pricing — NOT a checkout intent). Same dedupe pattern as
+    // ViewContent: ic_event_id saved to sessionStorage so the future
+    // server-side CAPI InitiateCheckout reuses it.
+    // ============================================================
+    function fireInitiateCheckout() {
+        try {
+            if (sessionStorage.getItem('ic_fired') === '1') {
+                console.log('[IC] SKIP — already fired in this session');
+                return;
+            }
+        } catch (e) {}
+        if (!IS_WEIGHTLOSS_DOMAIN) {
+            console.log('[IC] SKIP — domain not whitelisted');
+            return;
+        }
+        if (typeof fbq === 'undefined') {
+            console.log('[IC] SKIP — fbq is undefined (FB Pixel not loaded)');
+            return;
+        }
+
+        var sessionUUID = window.__behaviorTracking ? window.__behaviorTracking.sessionUUID : '';
+        var scrollDepth = window.__behaviorTracking ? window.__behaviorTracking.maxScrollDepth : 0;
+        var timeSpent   = window.__behaviorTracking ? Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000) : 0;
+        var eventId     = 'InitiateCheckout_' + sessionUUID + '_' + Date.now();
+
+        try {
+            fbq('track', 'InitiateCheckout', {
+                currency: 'USD',
+                value: 0,
+                scroll_percentage: scrollDepth,
+                time_spent: timeSpent,
+                page_url: window.location.href
+            }, { eventID: eventId });
+            console.log('%c[IC] FIRED ✓', 'color:#1877f2;font-weight:bold;background:#e7f3ff;padding:2px 6px;border-radius:3px;', '| scroll:', scrollDepth + '%', '| time:', timeSpent + 's', '| eventId:', eventId);
+        } catch (e) { console.error('[IC] fbq InitiateCheckout error', e); }
+
+        try {
+            sessionStorage.setItem('ic_fired', '1');
+            sessionStorage.setItem('ic_event_id', eventId);
+        } catch (e) {}
+    }
+
     // Time-based trigger — runs every 1s until 15s threshold is reached or
     // ViewContent has fired (whichever first), then self-terminates.
     function setupViewContentTimer() {
@@ -990,7 +1037,12 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
                     var clickType = classifyClick(target);
                     window.__behaviorTracking.clickCount++;
                     if (clickType === 'redirect') window.__behaviorTracking.redirectClicks++;
-                    else if (clickType === 'buynow') window.__behaviorTracking.buynowClicks++;
+                    else if (clickType === 'buynow') {
+                        window.__behaviorTracking.buynowClicks++;
+                        // FB Pixel InitiateCheckout — only on real pricing-card BuyNow
+                        // clicks (not CTA-bar buttons; those just scroll to pricing).
+                        fireInitiateCheckout();
+                    }
                     else if (clickType === 'ctabar') window.__behaviorTracking.ctaBarClicks++;
                     else if (clickType === 'vsl') window.__behaviorTracking.vslClicks++;
                     if (!window.__behaviorTracking.firstClickTime) window.__behaviorTracking.firstClickTime = Date.now();
