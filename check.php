@@ -989,21 +989,93 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
             }
             if (!card) return;
 
-            var matches = (card.textContent || '').match(/\$(\d+(?:\.\d+)?)/g);
-            if (!matches || !matches.length) return;
-            var amounts = [];
-            for (var i = 0; i < matches.length; i++) {
-                amounts.push(parseFloat(matches[i].replace('$', '')));
+            // Strikethrough detector — checks the element itself and its
+            // ancestors up to the card for <s>/<del>/<strike> tags or the
+            // CSS text-decoration: line-through rule. The OLD discount-
+            // marketing price is almost always struck through, so we skip
+            // it; what's left is the real current total.
+            function isStrikethrough(el) {
+                for (var p = el; p && p !== card.parentElement; p = p.parentElement) {
+                    if (!p) return false;
+                    var tag = (p.tagName || '').toLowerCase();
+                    if (tag === 's' || tag === 'del' || tag === 'strike') return true;
+                    try {
+                        var s = window.getComputedStyle(p);
+                        var td = (s.textDecorationLine || s.textDecoration || '');
+                        if (td.indexOf('line-through') !== -1) return true;
+                    } catch (e) {}
+                }
+                return false;
             }
-            var largest = Math.max.apply(null, amounts);
-            if (!largest || largest <= 0) return;
+
+            // STRATEGY A — find element(s) whose textContent contains both
+            // "total" and a $-amount, then take the last non-strikethrough $
+            // inside. Handles "Was $534 Now $245", "Total: $245",
+            // "Items $245 + Ship $9.99 = Total $254.99" all cleanly.
+            var allEls = card.querySelectorAll('*');
+            var totalAmounts = [];
+            for (var i = 0; i < allEls.length; i++) {
+                var el = allEls[i];
+                var elTxt = (el.textContent || '').trim();
+                if (!elTxt || elTxt.length > 250) continue;
+                if (!/total/i.test(elTxt) || !/\$\d/.test(elTxt)) continue;
+
+                var localPrices = [];
+                var localWalker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+                var nn;
+                while ((nn = localWalker.nextNode())) {
+                    var localMs = (nn.nodeValue || '').match(/\$(\d+(?:\.\d+)?)/g);
+                    if (!localMs) continue;
+                    if (isStrikethrough(nn.parentElement)) continue;
+                    for (var m = 0; m < localMs.length; m++) {
+                        var localAmt = parseFloat(localMs[m].replace('$', ''));
+                        if (localAmt > 0) localPrices.push(localAmt);
+                    }
+                }
+                if (localPrices.length) {
+                    // Last $ in this TOTAL-containing element = the actual total
+                    totalAmounts.push(localPrices[localPrices.length - 1]);
+                }
+            }
+
+            // STRATEGY B (fallback) — largest non-strikethrough $-amount
+            // anywhere in the card. Used when no "total" keyword is present.
+            // Filtering strikethroughs already handles the original bug
+            // (KetoWater $534 strike → $245 real).
+            var fallbackAmounts = [];
+            var walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            var tn;
+            while ((tn = walker.nextNode())) {
+                var ms = (tn.nodeValue || '').match(/\$(\d+(?:\.\d+)?)/g);
+                if (!ms) continue;
+                if (isStrikethrough(tn.parentElement)) continue;
+                for (var k = 0; k < ms.length; k++) {
+                    var amt = parseFloat(ms[k].replace('$', ''));
+                    if (amt > 0) fallbackAmounts.push(amt);
+                }
+            }
+
+            var chosen, strategy;
+            if (totalAmounts.length) {
+                // Prefer the LAST TOTAL-tagged amount (deepest / most specific
+                // in document order — usually the final per-card total).
+                chosen = totalAmounts[totalAmounts.length - 1];
+                strategy = 'TOTAL keyword';
+            } else if (fallbackAmounts.length) {
+                chosen = Math.max.apply(null, fallbackAmounts);
+                strategy = 'largest non-strikethrough';
+            } else {
+                return;
+            }
+
+            if (!chosen || chosen <= 0) return;
 
             try {
-                localStorage.setItem('last_purchase_value', String(largest));
+                localStorage.setItem('last_purchase_value', String(chosen));
                 localStorage.setItem('last_purchase_currency', 'USD');
                 localStorage.setItem('last_purchase_timestamp', String(Date.now()));
             } catch (e) {}
-            console.log('[Purchase capture] saved $' + largest + ' for later Purchase event');
+            console.log('[Purchase capture] saved $' + chosen + ' via ' + strategy);
         } catch (e) { console.error('[Purchase capture] error', e); }
     }
 
