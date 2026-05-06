@@ -957,13 +957,19 @@ function logTraffic($pdo) {
     $ip = getClientIP();
     $browserInfo = parseBrowserInfo($userAgent);
 
+    // FB Pixel cookies — persisted so later events (CAPI ViewContent / Lead /
+    // Purchase) can re-use them for high Event Match Quality without
+    // requiring the visitor's browser to resend them on every call.
+    $fbc = isset($data['fbc']) && $data['fbc'] !== '' ? substr((string)$data['fbc'], 0, 255) : null;
+    $fbp = isset($data['fbp']) && $data['fbp'] !== '' ? substr((string)$data['fbp'], 0, 255) : null;
+
     // INSERT immediately WITHOUT GeoIP to return traffic_id fast
     $stmt = $pdo->prepare("
         INSERT INTO affiliate_traffic
         (domain_id, aff_id, sub_id, page_url, page_type, sessid2, cb_params, referrer, user_agent, browser, device, ip_address,
          was_shaved, smart_skipped, shaving_session_id, session_uuid, screen_width, screen_height, viewport_width, viewport_height,
-         is_bot, bot_flags, is_iframe)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         is_bot, bot_flags, is_iframe, fbc, fbp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
         $domainId, $affId, $subId, $pageUrl, $pageType, $sessid2,
@@ -973,7 +979,8 @@ function logTraffic($pdo) {
         $ip,
         $wasShaved ? 1 : 0, $smartSkipped ? 1 : 0, $shavingSessionId, $sessionUUID,
         $screenWidth, $screenHeight, $viewportWidth, $viewportHeight,
-        $isBot ? 1 : 0, $botFlags, $isIframe ? 1 : 0
+        $isBot ? 1 : 0, $botFlags, $isIframe ? 1 : 0,
+        $fbc, $fbp
     ]);
 
     $trafficId = $pdo->lastInsertId();
@@ -1229,6 +1236,62 @@ function updateSessionMetrics($pdo) {
         $jsErrors,
         $trafficId
     ]);
+
+    // ── Facebook CAPI ViewContent ───────────────────────────────────────
+    // Mirror of the browser-side fbq('track','ViewContent') for redundancy
+    // when the pixel is blocked. Same event_id (vc_event_id, generated in
+    // browser sessionStorage) is reused so FB dedupes both hits as one.
+    // Fires at-most-once per visit (viewcontent_fired guard).
+    try {
+        $sessionDuration = (int)($data['session_duration'] ?? 0);
+        $maxScrollDepth  = (int)($data['max_scroll_depth'] ?? 0);
+        $vcEventId       = trim((string)($data['vc_event_id'] ?? ''));
+        $pageUrlFromJS   = trim((string)($data['page_url'] ?? ''));
+
+        if (defined('FB_ACCESS_TOKEN') && FB_ACCESS_TOKEN !== ''
+            && ($sessionDuration >= 15 || $maxScrollDepth >= 30)) {
+
+            // Pull row metadata we need for the CAPI call (and the guard)
+            $rowStmt = $pdo->prepare("
+                SELECT domain_id, ip_address, user_agent, session_uuid, fbc, fbp,
+                       country_code, page_url, viewcontent_fired, is_bot, is_iframe
+                FROM affiliate_traffic WHERE id = ? LIMIT 1
+            ");
+            $rowStmt->execute([$trafficId]);
+            $row = $rowStmt->fetch();
+
+            if ($row
+                && (int)$row['viewcontent_fired'] === 0
+                && (int)$row['is_bot'] !== 1
+                && (int)$row['is_iframe'] !== 1
+                && fbIsWhitelistedDomain((int)$row['domain_id'])) {
+
+                $sentEventId = $vcEventId !== '' ? $vcEventId : null;
+
+                $resp = sendCAPIEvent('ViewContent', [
+                    'domain_id'    => (int)$row['domain_id'],
+                    'page_url'     => $pageUrlFromJS !== '' ? $pageUrlFromJS : $row['page_url'],
+                    'ip_address'   => $row['ip_address'],
+                    'user_agent'   => $row['user_agent'],
+                    'session_uuid' => $row['session_uuid'],
+                    'fbc'          => $row['fbc'],
+                    'fbp'          => $row['fbp'],
+                    'country'      => $row['country_code'],
+                    'event_id'     => $sentEventId,
+                    'event_time'   => time(),
+                    'value'        => 0,
+                    'currency'     => 'USD',
+                ]);
+
+                if (!empty($resp['ok'])) {
+                    $pdo->prepare("UPDATE affiliate_traffic SET viewcontent_fired = 1 WHERE id = ?")
+                        ->execute([$trafficId]);
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // CAPI failures must never block tracking
+    }
 
     echo json_encode(['success' => true]);
 }

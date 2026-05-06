@@ -789,9 +789,16 @@ $apiUrl = $protocol . '://' . $host . $path . '/api.php';
     function updateSessionMetrics() {
         if (!window.__behaviorTracking.trafficId) return;
         var sessionDuration = Math.floor((Date.now() - window.__behaviorTracking.landedAt) / 1000);
+        // Read vc_event_id from sessionStorage (set by fireViewContent in this
+        // tab earlier). Server uses this exact id when firing CAPI ViewContent
+        // so Facebook dedupes the pixel hit and the CAPI hit as one event.
+        var vcEventId = '';
+        try { vcEventId = sessionStorage.getItem('vc_event_id') || ''; } catch (e) {}
         var payload = {
             action: 'update_session_metrics',
             traffic_id: window.__behaviorTracking.trafficId,
+            page_url: window.location.href,
+            vc_event_id: vcEventId,
             session_duration: sessionDuration,
             max_scroll_depth: window.__behaviorTracking.maxScrollDepth,
             total_clicks: window.__behaviorTracking.clickCount,
