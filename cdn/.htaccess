@@ -1,7 +1,8 @@
-# Rewrite t.js to the PHP proxy
+# Rewrite *.js shortcuts to their PHP proxies
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^t\.js$ t.js.php [L,QSA]
+    RewriteRule ^h\.js$ h.js.php [L,QSA]
 </IfModule>
 
 # Prevent caching
