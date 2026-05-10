@@ -1,5 +1,4 @@
 # FB Traffic Detector — /traffic .htaccess
-# Force HTTPS within /traffic and protect sensitive files
 
 RewriteEngine On
 RewriteCond %{HTTPS} !=on
@@ -10,12 +9,7 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
     Header set Referrer-Policy "no-referrer-when-downgrade"
 </IfModule>
 
-# Block direct access to the domain registry + raw log JSON files
-<FilesMatch "^(domains\.json|.*\.log|\.rate_.*|\.ipqs_.*)$">
-    Require all denied
-</FilesMatch>
-
-# Allow snippet.js to be requested cross-origin (lander on different domain)
+# CORS for snippet.js — landers on different domains pull this asset
 <IfModule mod_headers.c>
     <FilesMatch "^snippet\.js$">
         Header set Access-Control-Allow-Origin "*"
@@ -23,8 +17,5 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
     </FilesMatch>
 </IfModule>
 
-# Default file
-DirectoryIndex index.php
-
-# Disable directory listing
+DirectoryIndex index.html
 Options -Indexes

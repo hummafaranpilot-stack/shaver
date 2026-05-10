@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://cdn3d.iconscout.com/3d/premium/thumb/danger-3d-icon-png-download-7924114.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FB Traffic Detector - Shaver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/custom.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #e8f5e9; color: #1a1a2e; }
+
+        /* Sidebar */
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #fff; color: #1a1a2e;
+            overflow-y: auto; z-index: 1000; transition: width 0.3s ease; border-radius: 0 24px 24px 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.04); padding: 4px 0; }
+        .sidebar-header { padding: 16px 20px 10px; position: relative; }
+        .sidebar-header h2 { font-size: 1.25rem; margin-bottom: 2px; font-weight: 700; color: #1a1a2e;
+            display: flex; align-items: center; gap: 10px; }
+        .sidebar-header h2 .logo-icon { width: 38px; height: 38px; background: linear-gradient(135deg, #6c63ff, #48c6ef);
+            border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+        .sidebar-header p { font-size: 0.78rem; color: #999; margin-left: 48px; }
+        .sidebar-toggle { position: absolute; top: 28px; right: 14px; width: 28px; height: 28px;
+            background: #f0f0ff; border: none; border-radius: 8px; color: #6c63ff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; z-index: 10; }
+        .sidebar-toggle:hover { background: #e0e0ff; }
+        .nav-section { padding: 2px 0; }
+        .nav-section-title { padding: 8px 20px 2px; font-size: 0.64rem; font-weight: 600;
+            text-transform: uppercase; color: #b0b0c0; letter-spacing: 0.8px; transition: opacity 0.2s; }
+        .nav-item { display: flex; align-items: center; padding: 8px 18px; margin: 1px 10px; color: #7b7b8e;
+            text-decoration: none; transition: all 0.3s ease; font-size: 0.84rem; font-weight: 500; border-radius: 12px; }
+        .nav-item:hover { background: #f0f0ff; color: #6c63ff; padding-left: 20px; }
+        .nav-item.active { background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3); }
+        .nav-item i { width: 22px; margin-right: 12px; font-size: 15px; text-align: center; }
+        .nav-item span { transition: opacity 0.2s; white-space: nowrap; }
+        .main-content { margin-left: 240px; padding: 24px; transition: margin-left 0.3s ease; }
+        body.sidebar-collapsed .sidebar { width: 68px; overflow: hidden; border-radius: 0 20px 20px 0; }
+        body.sidebar-collapsed .sidebar-header h2 span,
+        body.sidebar-collapsed .sidebar-header p { opacity: 0; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-header { padding: 24px 12px 20px; }
+        body.sidebar-collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; margin: 2px 8px; }
+        body.sidebar-collapsed .nav-item span { opacity: 0; width: 0; overflow: hidden; position: absolute; }
+        body.sidebar-collapsed .nav-item i { margin-right: 0; width: auto; font-size: 1.1rem; }
+        body.sidebar-collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+        body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
+        body.sidebar-collapsed .main-content { margin-left: 68px; }
+
+        /* Header */
+        .header { background: #fff; padding: 22px 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px;
+            display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .header-left h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 3px; font-weight: 700; }
+        .header-left h1 i { color: #6c63ff; }
+        .header-left p { color: #999; font-size: 0.85rem; }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 22px; }
+        .stat-card { padding: 22px 24px; border-radius: 16px; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .stat-card h3 { font-size: 0.82rem; font-weight: 500; opacity: 0.92; margin-bottom: 8px; }
+        .stat-card .value { font-size: 1.85rem; font-weight: 700; }
+        .stat-card .sub { font-size: 0.72rem; opacity: 0.85; margin-top: 4px; }
+        .stat-blue { background: linear-gradient(135deg, #6c63ff, #48c6ef); }
+        .stat-green { background: linear-gradient(135deg, #27ae60, #219a52); }
+        .stat-amber { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .stat-red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+        /* Card */
+        .card { background: white; padding: 28px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 22px; }
+        .card h2 { font-size: 1.1rem; color: #1a1a2e; margin-bottom: 18px; font-weight: 600;
+            display: flex; align-items: center; gap: 10px; }
+        .card h2 i { color: #6c63ff; }
+
+        /* Form */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+        .form-row.single { grid-template-columns: 1fr; }
+        .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+        .form-group label .help { color: #999; font-weight: 400; font-size: 0.78rem; }
+        .form-group input[type=text], .form-group input[type=url], .form-group textarea {
+            width: 100%; padding: 10px 14px; border: 1.5px solid #eaeaea; border-radius: 10px;
+            font: inherit; font-size: 0.88rem; transition: border-color 0.2s; background: #fff; }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none; border-color: #6c63ff; }
+        .form-group textarea { min-height: 80px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.82rem; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; border: none;
+            border-radius: 10px; font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+            text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 12px rgba(108,99,255,0.25); }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(108,99,255,0.35); }
+        .btn-secondary { background: #f5f5f7; color: #555; box-shadow: none; }
+        .btn-secondary:hover { background: #ebebef; box-shadow: none; transform: none; }
+        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 4px 12px rgba(231,76,60,0.25); }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); box-shadow: 0 4px 12px rgba(243,156,18,0.25); }
+        .btn-sm { padding: 6px 14px; font-size: 0.74rem; border-radius: 8px; }
+
+        /* Messages */
+        .msg { padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-size: 0.86rem;
+            display: flex; align-items: center; gap: 10px; }
+        .msg.ok  { background: #d4edda; color: #155724; border-left: 4px solid #27ae60; }
+        .msg.err { background: #f8d7da; color: #721c24; border-left: 4px solid #e74c3c; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 14px; background: #f8f9fa; color: #666; font-size: 0.72rem;
+            font-weight: 600; text-transform: uppercase; border-bottom: 2px solid #eee; letter-spacing: 0.04em; }
+        td { padding: 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; vertical-align: top; }
+        tr:hover td { background: #fafbfc; }
+        .actions-cell { white-space: nowrap; }
+        .actions-cell .btn-sm { margin-right: 4px; }
+
+        /* Badges / tags */
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-disabled { background: #f8d7da; color: #721c24; }
+
+        /* Snippet box */
+        .snippet { background: #1a1a2e; color: #d1d9e0; padding: 14px 90px 14px 16px; border-radius: 10px;
+            font: 0.78rem/1.6 ui-monospace, Menlo, Consolas, monospace; word-break: break-all;
+            position: relative; white-space: pre-wrap; }
+        .snippet .copy-btn { position: absolute; top: 8px; right: 8px; padding: 6px 14px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff; border: none;
+            border-radius: 6px; font: inherit; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+        .snippet .copy-btn:hover { opacity: 0.9; }
+
+        .muted { color: #999; }
+        .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.78rem; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #95a5a6; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; color: #6c63ff; opacity: 0.4; }
+
+        /* Mobile */
+        .mobile-menu-toggle { display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
+            padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(108,99,255,0.3); }
+        .sidebar.mobile-open { transform: translateX(0) !important; }
+        .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+        .mobile-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            .mobile-menu-toggle { display: block; }
+            .sidebar-toggle { display: none !important; }
+            .sidebar { transform: translateX(-240px); transition: transform 0.3s ease; width: 240px !important; }
+            .main-content { margin-left: 0; padding: 70px 15px 15px; width: 100%; }
+            .header { padding: 18px 15px; flex-direction: column; gap: 12px; align-items: flex-start; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .form-row { grid-template-columns: 1fr; }
+            .card { padding: 20px 15px; }
+            table { font-size: 0.78rem; }
+            th, td { padding: 10px 8px; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .header-left h1 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('sidebarCollapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><span class="logo-icon"><i class="fas fa-cut"></i></span> <span>Shaver</span></h2>
+            <p>Multi-Tenant Dashboard</p>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="../index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Domain Management</div>
+            <a href="../setup.html" class="nav-item"><i class="fas fa-globe"></i><span>Setup / Domains</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Traffic Detector</div>
+            <a href="index.html" class="nav-item active"><i class="fas fa-shield-halved"></i><span>Domain Registry</span></a>
+            <a href="view.html" class="nav-item"><i class="fas fa-list-check"></i><span>All Visits</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Shaving</div>
+            <a href="../sessions.html" class="nav-item"><i class="fas fa-scissors"></i><span>Active Sessions</span></a>
+            <a href="../history.html" class="nav-item"><i class="fas fa-history"></i><span>Session History</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Analytics</div>
+            <a href="../analytics.html" class="nav-item"><i class="fas fa-chart-bar"></i><span>Traffic Analytics</span></a>
+            <a href="../affiliate-report.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Affiliate Report</span></a>
+            <a href="../flowchart.html" class="nav-item"><i class="fas fa-exchange-alt"></i><span>FlowChart</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Orders</div>
+            <a href="../orders.html" class="nav-item"><i class="fas fa-file-upload"></i><span>Orders Upload</span></a>
+            <a href="../customers.html" class="nav-item"><i class="fas fa-users"></i><span>Customers</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Tools</div>
+            <a href="../vsl-shuffle.html" class="nav-item"><i class="fas fa-random"></i><span>VSL Shuffle</span></a>
+            <a href="../shipping.html" class="nav-item"><i class="fas fa-truck"></i><span>Shipping</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">ClickBank</div>
+            <a href="../clickbank.html" class="nav-item"><i class="fas fa-shopping-cart"></i><span>ClickBank API Data</span></a>
+            <a href="../checkout-links.html" class="nav-item"><i class="fas fa-link"></i><span>Checkout Links</span></a>
+            <a href="../cb-conversions.html" class="nav-item"><i class="fas fa-bolt"></i><span>IPN Receiver</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a href="../api.html" class="nav-item"><i class="fas fa-code"></i><span>API Access</span></a>
+            <a href="../header-snippets.html" class="nav-item"><i class="fas fa-tags"></i><span>Header Snippets</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-shield-halved"></i> FB Traffic Detector</h1>
+                <p>Visitor fingerprinting &amp; bot detection for FB ad landers</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card stat-blue">
+                <h3>Registered Domains</h3>
+                <div class="value" id="statDomains">0</div>
+                <div class="sub" id="statDomainsActive">— active</div>
+            </div>
+            <div class="stat-card stat-green">
+                <h3>Total Visits</h3>
+                <div class="value" id="statTotalVisits">0</div>
+                <div class="sub" id="statVisitsToday">— today</div>
+            </div>
+            <div class="stat-card stat-amber">
+                <h3>Suspicious Today</h3>
+                <div class="value" id="statSuspicious">0</div>
+                <div class="sub">manual review</div>
+            </div>
+            <div class="stat-card stat-red">
+                <h3>Failed Today</h3>
+                <div class="value" id="statFailed">0</div>
+                <div class="sub">spoof / bot</div>
+            </div>
+        </div>
+
+        <div id="messages"></div>
+
+        <!-- Generated snippet (hidden until register success) -->
+        <div class="card" id="snippetCard" style="display:none;">
+            <h2><i class="fas fa-code"></i> Snippet for <em id="snippetLabel"></em></h2>
+            <div class="snippet" id="snippetBox"></div>
+            <p class="muted" style="margin-top:12px; font-size:0.82rem;">
+                Paste in the <code>&lt;head&gt;</code> or before <code>&lt;/body&gt;</code> on every page you want tracked.
+                Add <code>?debug=1</code> to a lander URL to see a Copy-JSON button after 30 sec.
+            </p>
+        </div>
+
+        <!-- Register form -->
+        <div class="card">
+            <h2 id="formTitle"><i class="fas fa-plus-circle"></i> Register a Domain</h2>
+            <form id="registerForm" autocomplete="off">
+                <input type="hidden" id="editId" value="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Label</label>
+                        <input type="text" id="fLabel" required maxlength="200" placeholder="e.g. Meta Trim Lander 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Domain URL</label>
+                        <input type="url" id="fDomainUrl" required maxlength="500" placeholder="https://your-lander-domain.com">
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>Pages <span class="help">(optional, one URL or path per line — informational only)</span></label>
+                        <textarea id="fPages" placeholder="/landing-page&#10;/checkout&#10;https://other-domain.com/special"></textarea>
+                    </div>
+                </div>
+                <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+                    <button type="submit" class="btn" id="submitBtn"><i class="fas fa-save"></i> <span id="submitLabel">Generate Snippet</span></button>
+                    <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Domains table -->
+        <div class="card">
+            <h2><i class="fas fa-globe"></i> Registered Domains</h2>
+            <div id="domainsContainer">
+                <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/config.js?v=2.7.0"></script>
+    <script>
+    // /traffic/ is one level below shaver root
+    API_URL = '../api.php';
+
+    function toggleSidebar() {
+        document.body.classList.toggle('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+    }
+    function toggleMobileMenu() {
+        document.querySelector('.sidebar').classList.add('mobile-open');
+        document.querySelector('.mobile-overlay').classList.add('active');
+    }
+    function closeMobileMenu() {
+        document.querySelector('.sidebar').classList.remove('mobile-open');
+        document.querySelector('.mobile-overlay').classList.remove('active');
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function showMessage(text, kind) {
+        var box = document.getElementById('messages');
+        var icon = kind === 'ok' ? 'fa-circle-check' : 'fa-circle-exclamation';
+        box.innerHTML = '<div class="msg ' + kind + '"><i class="fas ' + icon + '"></i> ' + escapeHtml(text) + '</div>';
+        setTimeout(function () { box.innerHTML = ''; }, 5000);
+    }
+
+    var SNIPPET_BASE = window.location.origin + '/traffic';
+
+    function buildSnippetTag(key) {
+        return '<script src="' + SNIPPET_BASE + '/snippet.js?d=' + key + '" async><\/script>';
+    }
+
+    function showSnippet(label, key) {
+        document.getElementById('snippetLabel').textContent = label;
+        var tag = buildSnippetTag(key);
+        document.getElementById('snippetBox').innerHTML =
+            escapeHtml(tag) +
+            '<button class="copy-btn" type="button" onclick="copySnippet(\'' + key + '\', this)"><i class="fas fa-copy"></i> Copy</button>';
+        document.getElementById('snippetCard').style.display = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function copySnippet(key, btn) {
+        var tag = buildSnippetTag(key);
+        navigator.clipboard.writeText(tag).then(function () {
+            var orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied';
+            setTimeout(function () { btn.innerHTML = orig; }, 1500);
+        });
+    }
+
+    function copyForRow(key) {
+        var tag = buildSnippetTag(key);
+        navigator.clipboard.writeText(tag).then(function () {
+            showMessage('Snippet copied to clipboard.', 'ok');
+        });
+    }
+
+    async function loadStats() {
+        var r = await apiRequest(API_URL, 'traffic_dashboard_stats');
+        if (!r.success) return;
+        var s = r.stats;
+        document.getElementById('statDomains').textContent = formatNumber(s.total_domains);
+        document.getElementById('statDomainsActive').textContent = formatNumber(s.active_domains) + ' active';
+        document.getElementById('statTotalVisits').textContent = formatNumber(s.total_visits);
+        document.getElementById('statVisitsToday').textContent = formatNumber(s.today_visits) + ' today';
+        document.getElementById('statSuspicious').textContent = formatNumber(s.today_suspicious);
+        document.getElementById('statFailed').textContent = formatNumber(s.today_fail);
+    }
+
+    async function loadDomains() {
+        var c = document.getElementById('domainsContainer');
+        var r = await apiRequest(API_URL, 'traffic_get_domains');
+        if (!r.success) {
+            c.innerHTML = '<div class="empty-state"><i class="fas fa-circle-exclamation"></i>Failed to load: ' + escapeHtml(r.error || 'unknown error') + '</div>';
+            return;
+        }
+        if (!r.domains.length) {
+            c.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i>No domains registered yet — add one above.</div>';
+            return;
+        }
+        var rows = r.domains.map(function (d) {
+            var pageCount = (d.pages || '').split(/\r\n|\r|\n/).filter(function (s) { return s.trim() !== ''; }).length;
+            return '' +
+                '<tr>' +
+                  '<td><strong>' + escapeHtml(d.label) + '</strong><br>' +
+                    '<span class="muted mono" style="font-size:0.7rem;">key: ' + escapeHtml(d.domain_key) + '</span></td>' +
+                  '<td><a href="' + escapeHtml(d.domain_url) + '" target="_blank" rel="noopener">' + escapeHtml(d.domain_url) + '</a>' +
+                    (pageCount ? '<br><span class="muted" style="font-size:0.72rem;">' + pageCount + ' page' + (pageCount === 1 ? '' : 's') + '</span>' : '') + '</td>' +
+                  '<td><span class="badge badge-' + escapeHtml(d.status) + '">' + escapeHtml(d.status) + '</span></td>' +
+                  '<td>' + formatNumber(d.visit_count || 0) + '</td>' +
+                  '<td>' + (d.last_visit_at ? formatTimeAgo(d.last_visit_at) : '<span class="muted">—</span>') + '</td>' +
+                  '<td class="actions-cell">' +
+                    '<a href="view.html?d=' + escapeHtml(d.domain_key) + '" class="btn btn-secondary btn-sm"><i class="fas fa-list"></i> Logs</a>' +
+                    '<button class="btn btn-secondary btn-sm" type="button" onclick="copyForRow(\'' + escapeHtml(d.domain_key) + '\')"><i class="fas fa-copy"></i> Copy</button>' +
+                    '<button class="btn btn-secondary btn-sm" type="button" onclick="editDomain(' + d.id + ')"><i class="fas fa-pen"></i> Edit</button>' +
+                    '<button class="btn btn-warning btn-sm" type="button" onclick="toggleDomain(' + d.id + ')"><i class="fas fa-power-off"></i> ' + (d.status === 'active' ? 'Disable' : 'Enable') + '</button>' +
+                    '<button class="btn btn-danger btn-sm" type="button" onclick="deleteDomain(' + d.id + ', \'' + escapeHtml(d.label).replace(/'/g, '&#39;') + '\')"><i class="fas fa-trash"></i> Delete</button>' +
+                  '</td>' +
+                '</tr>';
+        }).join('');
+        c.innerHTML =
+            '<div style="overflow-x:auto;"><table>' +
+              '<thead><tr>' +
+                '<th>Label</th><th>Domain</th><th>Status</th><th>Visits</th><th>Last</th><th>Actions</th>' +
+              '</tr></thead>' +
+              '<tbody>' + rows + '</tbody>' +
+            '</table></div>';
+    }
+
+    var DOMAINS_CACHE = [];
+
+    async function refreshAll() {
+        await loadStats();
+        var r = await apiRequest(API_URL, 'traffic_get_domains');
+        DOMAINS_CACHE = (r.success ? r.domains : []) || [];
+        await loadDomains();
+    }
+
+    function editDomain(id) {
+        var d = DOMAINS_CACHE.find(function (x) { return x.id === id; });
+        if (!d) return;
+        document.getElementById('editId').value = d.id;
+        document.getElementById('fLabel').value = d.label || '';
+        document.getElementById('fDomainUrl').value = d.domain_url || '';
+        document.getElementById('fPages').value = d.pages || '';
+        document.getElementById('formTitle').innerHTML = '<i class="fas fa-pen"></i> Edit Domain';
+        document.getElementById('submitLabel').textContent = 'Save Changes';
+        document.getElementById('cancelEditBtn').style.display = '';
+        document.getElementById('fLabel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function cancelEdit() {
+        document.getElementById('editId').value = '';
+        document.getElementById('registerForm').reset();
+        document.getElementById('formTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Register a Domain';
+        document.getElementById('submitLabel').textContent = 'Generate Snippet';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    async function toggleDomain(id) {
+        var r = await apiRequest(API_URL, 'traffic_toggle_domain', { id: id });
+        if (r.success) { showMessage('Domain status updated.', 'ok'); refreshAll(); }
+        else showMessage(r.error || 'Failed to toggle domain', 'err');
+    }
+
+    async function deleteDomain(id, label) {
+        if (!confirm('Delete "' + label + '"? All captured visits for this domain will also be deleted.')) return;
+        var r = await apiRequest(API_URL, 'traffic_delete_domain', { id: id });
+        if (r.success) { showMessage('Domain deleted.', 'ok'); refreshAll(); }
+        else showMessage(r.error || 'Failed to delete', 'err');
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var id = document.getElementById('editId').value;
+        var payload = {
+            label: document.getElementById('fLabel').value.trim(),
+            domain_url: document.getElementById('fDomainUrl').value.trim(),
+            pages: document.getElementById('fPages').value,
+        };
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        var r;
+        if (id) {
+            payload.id = parseInt(id, 10);
+            r = await apiRequest(API_URL, 'traffic_update_domain', payload);
+        } else {
+            r = await apiRequest(API_URL, 'traffic_register_domain', payload);
+        }
+        btn.disabled = false;
+        if (!r.success) {
+            showMessage(r.error || 'Save failed', 'err');
+            return;
+        }
+        if (id) {
+            showMessage('Domain updated.', 'ok');
+            cancelEdit();
+        } else {
+            showMessage('Domain registered. Snippet ready below — copy and paste on your pages.', 'ok');
+            showSnippet(r.label, r.domain_key);
+            this.reset();
+        }
+        refreshAll();
+    });
+
+    refreshAll();
+    </script>
+</body>
+</html>

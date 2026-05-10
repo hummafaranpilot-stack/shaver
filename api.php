@@ -187,6 +187,16 @@ try {
         case 'revoke_api_key':  revokeApiKey($pdo); break;
         case 'delete_api_key':  deleteApiKey($pdo); break;
 
+        // FB Traffic Detector (/traffic tool)
+        case 'traffic_register_domain': trafficRegisterDomain($pdo); break;
+        case 'traffic_get_domains':     trafficGetDomains($pdo); break;
+        case 'traffic_update_domain':   trafficUpdateDomain($pdo); break;
+        case 'traffic_toggle_domain':   trafficToggleDomain($pdo); break;
+        case 'traffic_delete_domain':   trafficDeleteDomain($pdo); break;
+        case 'traffic_get_visits':      trafficGetVisits($pdo); break;
+        case 'traffic_get_visit':       trafficGetVisit($pdo); break;
+        case 'traffic_dashboard_stats': trafficDashboardStats($pdo); break;
+
         default:
             http_response_code(404);
             echo json_encode(['error' => 'Invalid endpoint: ' . $request]);
@@ -8699,5 +8709,195 @@ function pingHostTcpInline(string $ip): int {
         }
     }
     return $best;
+}
+
+// =====================================================================
+// FB TRAFFIC DETECTOR — endpoints used by /traffic UI
+// =====================================================================
+
+function trafficRegisterDomain($pdo) {
+    $data = getPostData();
+    $label = trim($data['label'] ?? '');
+    $url   = trim($data['domain_url'] ?? '');
+    $pages = trim($data['pages'] ?? '');
+
+    if ($label === '' || $url === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Label and Domain URL are required']);
+        return;
+    }
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Domain URL is not a valid URL']);
+        return;
+    }
+
+    // Generate unique 12-char domain_key
+    $check = $pdo->prepare("SELECT 1 FROM traffic_domains WHERE domain_key = ?");
+    do {
+        $key = bin2hex(random_bytes(6));
+        $check->execute([$key]);
+    } while ($check->fetch());
+
+    $stmt = $pdo->prepare("INSERT INTO traffic_domains (domain_key, label, domain_url, pages, status) VALUES (?, ?, ?, ?, 'active')");
+    $stmt->execute([$key, $label, $url, $pages]);
+
+    echo json_encode([
+        'success'    => true,
+        'id'         => (int)$pdo->lastInsertId(),
+        'domain_key' => $key,
+        'label'      => $label,
+    ]);
+}
+
+function trafficGetDomains($pdo) {
+    $stmt = $pdo->query("
+        SELECT d.id, d.domain_key, d.label, d.domain_url, d.pages, d.status,
+               d.created_at, d.updated_at,
+               (SELECT COUNT(*)         FROM traffic_visits v WHERE v.traffic_domain_id = d.id) AS visit_count,
+               (SELECT MAX(captured_at) FROM traffic_visits v WHERE v.traffic_domain_id = d.id) AS last_visit_at
+        FROM traffic_domains d
+        ORDER BY d.created_at DESC
+    ");
+    echo json_encode(['success' => true, 'domains' => $stmt->fetchAll()]);
+}
+
+function trafficUpdateDomain($pdo) {
+    $data = getPostData();
+    $id    = (int)($data['id'] ?? 0);
+    $label = trim($data['label'] ?? '');
+    $url   = trim($data['domain_url'] ?? '');
+    $pages = trim($data['pages'] ?? '');
+
+    if (!$id || $label === '' || $url === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'id, label, domain_url required']);
+        return;
+    }
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Domain URL is not a valid URL']);
+        return;
+    }
+    $stmt = $pdo->prepare("UPDATE traffic_domains SET label = ?, domain_url = ?, pages = ? WHERE id = ?");
+    $stmt->execute([$label, $url, $pages, $id]);
+    echo json_encode(['success' => true]);
+}
+
+function trafficToggleDomain($pdo) {
+    $data = getPostData();
+    $id   = (int)($data['id'] ?? 0);
+    if (!$id) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'id required']); return; }
+    $stmt = $pdo->prepare("UPDATE traffic_domains SET status = IF(status = 'active', 'disabled', 'active') WHERE id = ?");
+    $stmt->execute([$id]);
+    echo json_encode(['success' => true]);
+}
+
+function trafficDeleteDomain($pdo) {
+    $data = getPostData();
+    $id   = (int)($data['id'] ?? 0);
+    if (!$id) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'id required']); return; }
+    $stmt = $pdo->prepare("DELETE FROM traffic_domains WHERE id = ?");
+    $stmt->execute([$id]);
+    echo json_encode(['success' => true]);
+}
+
+function trafficGetVisits($pdo) {
+    $data      = getPostData();
+    $domainId  = (int)($data['traffic_domain_id'] ?? 0);
+    $verdict   = $data['verdict'] ?? '';
+    $limit     = max(1, min((int)($data['limit'] ?? 50), 200));
+    $offset    = max(0, (int)($data['offset'] ?? 0));
+    $period    = $data['period'] ?? '';
+
+    $where = ['1=1'];
+    $params = [];
+    if ($domainId) { $where[] = 'traffic_domain_id = ?'; $params[] = $domainId; }
+    if (in_array($verdict, ['PASS', 'SUSPICIOUS', 'FAIL'], true)) {
+        $where[] = 'verdict = ?'; $params[] = $verdict;
+    }
+    if ($period === 'today')         $where[] = "DATE(captured_at) = CURDATE()";
+    elseif ($period === 'yesterday') $where[] = "DATE(captured_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+    elseif ($period === '7d')        $where[] = "captured_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+    elseif ($period === '30d')       $where[] = "captured_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+
+    $whereSql = implode(' AND ', $where);
+    $sql = "SELECT id, traffic_domain_id, domain_key, captured_at, ip_address, country_code, country, city, region, isp,
+                   fraud_score, is_proxy, is_vpn, is_tor, is_datacenter, is_mobile_ip,
+                   os_name, os_version, browser_name, browser_version, device_model,
+                   fbclid, utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+                   referer_domain, is_facebook_referrer,
+                   time_on_page_s, max_scroll_depth_pct,
+                   verdict, verdict_label, risk_score, points_earned, points_possible, checks_passed, checks_total,
+                   is_partial
+            FROM traffic_visits
+            WHERE $whereSql
+            ORDER BY captured_at DESC
+            LIMIT $limit OFFSET $offset";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+
+    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM traffic_visits WHERE $whereSql");
+    $countStmt->execute($params);
+    $total = (int)$countStmt->fetchColumn();
+
+    echo json_encode([
+        'success' => true,
+        'visits'  => $rows,
+        'total'   => $total,
+        'limit'   => $limit,
+        'offset'  => $offset,
+    ]);
+}
+
+function trafficGetVisit($pdo) {
+    $data = getPostData();
+    $id   = (int)($data['id'] ?? 0);
+    if (!$id) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'id required']); return; }
+    $stmt = $pdo->prepare("SELECT * FROM traffic_visits WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) { http_response_code(404); echo json_encode(['success' => false, 'error' => 'Not found']); return; }
+    if (isset($row['full_data']) && is_string($row['full_data'])) {
+        $row['full_data'] = json_decode($row['full_data'], true);
+    }
+    echo json_encode(['success' => true, 'visit' => $row]);
+}
+
+function trafficDashboardStats($pdo) {
+    $data     = getPostData();
+    $domainId = (int)($data['traffic_domain_id'] ?? 0);
+    $where    = $domainId ? "WHERE traffic_domain_id = $domainId" : '';
+
+    $totalDomains  = (int)$pdo->query("SELECT COUNT(*) FROM traffic_domains")->fetchColumn();
+    $activeDomains = (int)$pdo->query("SELECT COUNT(*) FROM traffic_domains WHERE status = 'active'")->fetchColumn();
+    $totalVisits   = (int)$pdo->query("SELECT COUNT(*) FROM traffic_visits $where")->fetchColumn();
+    $todayWhere    = $where ? "$where AND DATE(captured_at) = CURDATE()" : "WHERE DATE(captured_at) = CURDATE()";
+    $todayVisits   = (int)$pdo->query("SELECT COUNT(*) FROM traffic_visits $todayWhere")->fetchColumn();
+
+    $verdictRows = $pdo->query("
+        SELECT verdict, COUNT(*) AS c
+        FROM traffic_visits
+        $todayWhere
+        GROUP BY verdict
+    ")->fetchAll();
+    $byVerdict = ['PASS' => 0, 'SUSPICIOUS' => 0, 'FAIL' => 0];
+    foreach ($verdictRows as $r) {
+        if (isset($byVerdict[$r['verdict']])) $byVerdict[$r['verdict']] = (int)$r['c'];
+    }
+
+    echo json_encode([
+        'success' => true,
+        'stats' => [
+            'total_domains'    => $totalDomains,
+            'active_domains'   => $activeDomains,
+            'total_visits'     => $totalVisits,
+            'today_visits'     => $todayVisits,
+            'today_pass'       => $byVerdict['PASS'],
+            'today_suspicious' => $byVerdict['SUSPICIOUS'],
+            'today_fail'       => $byVerdict['FAIL'],
+        ],
+    ]);
 }
 ?>

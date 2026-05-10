@@ -1,6 +1,0 @@
-# Block ALL direct access to log files
-Require all denied
-<IfModule !mod_authz_core.c>
-    Order Deny,Allow
-    Deny from all
-</IfModule>
