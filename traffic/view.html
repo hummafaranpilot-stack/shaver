@@ -119,6 +119,26 @@
             border-radius: 8px; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .modal-btn-secondary { background: #f5f5f7; color: #555; }
 
+        /* Multi-select bulk-copy */
+        .sel-cell { width: 36px; text-align: center; padding: 12px 4px !important; }
+        .sel-cell input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #6c63ff; vertical-align: middle; }
+        tr.row.selected td { background: #f0f0ff !important; }
+        .selection-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: #1a1a2e; color: #fff; padding: 12px 18px; border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35); display: none;
+            gap: 12px; align-items: center; z-index: 1500;
+            opacity: 0; transition: opacity 0.18s, transform 0.18s; }
+        .selection-bar.active { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
+        .selection-bar .sel-count { font-size: 0.84rem; font-weight: 600; margin-right: 4px;
+            background: linear-gradient(135deg, #6c63ff, #48c6ef); padding: 4px 12px; border-radius: 20px; }
+        .selection-bar .bar-btn { padding: 8px 14px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: #fff;
+            border: none; border-radius: 8px; font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px; }
+        .selection-bar .bar-btn:hover:not(:disabled) { opacity: 0.92; }
+        .selection-bar .bar-btn:disabled { opacity: 0.6; cursor: wait; }
+        .selection-bar .bar-btn-secondary { background: rgba(255,255,255,0.12); }
+        .selection-bar .bar-btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
         /* Mobile */
         .mobile-menu-toggle { display: none; position: fixed; top: 15px; left: 15px; z-index: 1100;
             padding: 10px 15px; background: linear-gradient(135deg, #6c63ff, #48c6ef); color: white; border: none;
@@ -240,6 +260,13 @@
         </div>
     </div>
 
+    <!-- Selection bar (bulk-copy) -->
+    <div class="selection-bar" id="selectionBar">
+        <span class="sel-count" id="selectionCount">0 selected</span>
+        <button class="bar-btn" type="button" id="copyAllBtn" onclick="copyAllSelected()"><i class="fas fa-copy"></i> Copy All JSON</button>
+        <button class="bar-btn bar-btn-secondary" type="button" onclick="clearSelection()"><i class="fas fa-times"></i> Clear</button>
+    </div>
+
     <!-- Modal -->
     <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
         <div class="modal-box">
@@ -286,6 +313,101 @@
         perPage: 50,
         total: 0,
     };
+
+    // ===== Multi-select state (persists across pagination) =====
+    var SELECTED = new Set();
+
+    function toggleSelect(id, on, cb) {
+        id = parseInt(id, 10);
+        if (on) SELECTED.add(id); else SELECTED.delete(id);
+        var tr = cb && cb.closest ? cb.closest('tr') : null;
+        if (tr) tr.classList.toggle('selected', on);
+        updateBar();
+    }
+
+    function selectAllVisible(on) {
+        var cbs = document.querySelectorAll('.row-cb');
+        cbs.forEach(function (cb) {
+            cb.checked = on;
+            var id = parseInt(cb.dataset.id, 10);
+            if (on) SELECTED.add(id); else SELECTED.delete(id);
+            var tr = cb.closest('tr');
+            if (tr) tr.classList.toggle('selected', on);
+        });
+        updateBar();
+    }
+
+    function clearSelection() {
+        SELECTED.clear();
+        document.querySelectorAll('.row-cb').forEach(function (cb) { cb.checked = false; });
+        document.querySelectorAll('tr.row.selected').forEach(function (tr) { tr.classList.remove('selected'); });
+        var sa = document.getElementById('selectAllCb');
+        if (sa) { sa.checked = false; sa.indeterminate = false; }
+        updateBar();
+    }
+
+    function updateBar() {
+        var bar = document.getElementById('selectionBar');
+        var count = document.getElementById('selectionCount');
+        if (SELECTED.size > 0) {
+            bar.classList.add('active');
+            count.textContent = SELECTED.size + ' selected';
+        } else {
+            bar.classList.remove('active');
+        }
+        // Sync header "select all" tri-state for current page
+        var headerCb = document.getElementById('selectAllCb');
+        if (headerCb) {
+            var rowCbs = document.querySelectorAll('.row-cb');
+            var checkedCbs = document.querySelectorAll('.row-cb:checked');
+            if (rowCbs.length === 0) {
+                headerCb.checked = false; headerCb.indeterminate = false;
+            } else if (checkedCbs.length === rowCbs.length) {
+                headerCb.checked = true; headerCb.indeterminate = false;
+            } else if (checkedCbs.length === 0) {
+                headerCb.checked = false; headerCb.indeterminate = false;
+            } else {
+                headerCb.checked = false; headerCb.indeterminate = true;
+            }
+        }
+    }
+
+    async function copyAllSelected() {
+        if (SELECTED.size === 0) return;
+        var btn = document.getElementById('copyAllBtn');
+        var orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading ' + SELECTED.size + '…';
+
+        var ids = Array.from(SELECTED);
+        var results = await Promise.all(ids.map(function (id) {
+            return apiRequest(API_URL, 'traffic_get_visit', { id: id });
+        }));
+
+        var visits = results
+            .filter(function (r) { return r.success && r.visit; })
+            .map(function (r) { return r.visit.full_data || r.visit; });
+
+        var payload = {
+            exported_at: new Date().toISOString(),
+            count: visits.length,
+            visits: visits,
+        };
+        var combined = JSON.stringify(payload, null, 2);
+
+        try {
+            await navigator.clipboard.writeText(combined);
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied ' + visits.length + ' visit' + (visits.length === 1 ? '' : 's');
+        } catch (e) {
+            // Fallback: textarea + execCommand
+            var ta = document.createElement('textarea');
+            ta.value = combined; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); btn.innerHTML = '<i class="fas fa-check"></i> Copied ' + visits.length; }
+            catch (_) { btn.innerHTML = '<i class="fas fa-circle-exclamation"></i> Copy failed'; }
+            ta.remove();
+        }
+        setTimeout(function () { btn.innerHTML = orig; btn.disabled = false; }, 2200);
+    }
 
     function getQueryParam(name) {
         var m = window.location.search.match(new RegExp('[?&]' + name + '=([^&]+)'));
@@ -374,8 +496,12 @@
               + '<br><span class="muted" style="font-size:0.7rem;">risk ' + escapeHtml(v.risk_score) + '</span>'
             : '<span class="muted">—</span>';
 
+        var isSel = SELECTED.has(v.id);
         return '' +
-            '<tr class="row" onclick="openDetail(' + v.id + ')">' +
+            '<tr class="row' + (isSel ? ' selected' : '') + '" data-id="' + v.id + '" onclick="openDetail(' + v.id + ')">' +
+              '<td class="sel-cell" onclick="event.stopPropagation()">' +
+                '<input type="checkbox" class="row-cb" data-id="' + v.id + '"' + (isSel ? ' checked' : '') +
+                  ' onchange="toggleSelect(this.dataset.id, this.checked, this)"></td>' +
               '<td><span class="muted">' + escapeHtml(formatTimeAgo(v.captured_at)) + '</span><br>' +
                 '<span class="muted mono" style="font-size:0.7rem;">' + escapeHtml((v.captured_at || '').substring(0,19)) + '</span></td>' +
               '<td>' + verdictBadge + (v.verdict_label ? '<br><span class="muted" style="font-size:0.7rem;">' + escapeHtml(v.verdict_label) + '</span>' : '') + '</td>' +
@@ -423,10 +549,13 @@
         c.innerHTML =
             '<div style="overflow-x:auto;"><table>' +
               '<thead><tr>' +
+                '<th class="sel-cell"><input type="checkbox" id="selectAllCb" onclick="selectAllVisible(this.checked)" title="Select all on this page"></th>' +
                 '<th>Time</th><th>Verdict</th><th>Score</th><th>IP / Geo</th><th>UA</th><th>Source</th><th>fbclid</th><th>TOS</th>' +
               '</tr></thead>' +
               '<tbody>' + rows + '</tbody>' +
             '</table></div>' + pager;
+        // Refresh header tri-state + bar visibility for the newly-rendered page
+        updateBar();
     }
 
     function prevPage() { if (STATE.page > 1) { STATE.page--; loadVisits(); window.scrollTo(0, 0); } }
