@@ -17,5 +17,10 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
     </FilesMatch>
 </IfModule>
 
+# Block direct access to the auxiliary log files (blocked_ips.json, cross_origin.log)
+<FilesMatch "^(blocked_ips\.json|cross_origin\.log)$">
+    Require all denied
+</FilesMatch>
+
 DirectoryIndex index.html
 Options -Indexes

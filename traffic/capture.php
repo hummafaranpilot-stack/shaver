@@ -13,8 +13,14 @@ require_once __DIR__ . '/../ipqs.php';
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Expose-Headers: X-Fraud-Verdict');
 header('Access-Control-Max-Age: 600');
 header('Content-Type: application/json');
+
+// Logs directory for auxiliary append-only files (blocked_ips.json, cross_origin.log).
+// Visit data lives in MySQL — these are just security/audit trails.
+$AUX_LOGS = __DIR__ . '/logs/';
+if (!is_dir($AUX_LOGS)) @mkdir($AUX_LOGS, 0755, true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204); exit;
@@ -72,6 +78,23 @@ $section9_server = build_section9_server($section2, $section3);
 $s8 = array_merge($payload['section8_facebook_client'] ?? [], $section8_server);
 $s9 = array_merge($payload['section9_bot_checks_client'] ?? [], $section9_server);
 
+// Cross-origin sanity log (informational only — does not block):
+// expected: capture.php is hosted on the detector subdomain, but section1._page_url
+// is the lander on a different domain — that's fine, snippet is cross-origin by design.
+// Anomaly: host header is something OTHER than the detector subdomain (could mean
+// the snippet is being called from an unexpected proxy / mirror).
+$expectedHosts = ['shaver.trustednutraproduct.com'];
+$incomingHost  = strtolower($section2['host'] ?? '');
+if ($incomingHost !== '' && !in_array($incomingHost, $expectedHosts, true)) {
+    $pageUrl = $payload['section1_url_params']['_page_url'] ?? '';
+    @file_put_contents(
+        $AUX_LOGS . 'cross_origin.log',
+        '[' . date('Y-m-d H:i:s') . '] host=' . $incomingHost
+        . ' page=' . $pageUrl . ' ip=' . $ip . ' key=' . $domainKey . "\n",
+        FILE_APPEND | LOCK_EX
+    );
+}
+
 $verdict = compute_verdict(
     $payload['section1_url_params']    ?? [],
     $section2,
@@ -82,6 +105,25 @@ $verdict = compute_verdict(
     $payload['section7_behavioral']     ?? [],
     $s8, $s9, $domainKey, $pdo
 );
+
+// Auto-block plumbing: when the verdict tips into critical fraud, signal the
+// snippet via response header + append an audit line to blocked_ips.json (JSONL).
+if (!empty($verdict['block_recommended'])) {
+    header('X-Fraud-Verdict: BLOCK');
+    @file_put_contents(
+        $AUX_LOGS . 'blocked_ips.json',
+        json_encode([
+            'timestamp'      => date('c'),
+            'ip'             => $ip,
+            'domain_key'     => $domainKey,
+            'points_earned'  => $verdict['points_earned'] ?? null,
+            'risk_score'     => $verdict['risk_score'] ?? null,
+            'negative_flags' => $verdict['negative_flags'] ?? [],
+            'user_agent'     => $section2['user_agent'] ?? null,
+        ], JSON_UNESCAPED_SLASHES) . "\n",
+        FILE_APPEND | LOCK_EX
+    );
+}
 
 $record = [
     'meta' => [
@@ -156,7 +198,12 @@ $ins->execute([
     !empty($s8['referer_is_facebook']) ? 1 : 0,
     is_numeric($s7['time_on_page_s'] ?? null) ? (float)$s7['time_on_page_s'] : null,
     is_numeric($s7['max_scroll_depth_pct'] ?? null) ? (int)$s7['max_scroll_depth_pct'] : null,
-    $verdict['result'] ?? null, $verdict['label'] ?? null,
+    // verdict column is ENUM('PASS','SUSPICIOUS','FAIL'); CRITICAL_FRAUD maps to FAIL
+    // for the indexed column. Full result preserved in full_data JSON.
+    in_array($verdict['result'] ?? null, ['PASS','SUSPICIOUS','FAIL'], true)
+        ? $verdict['result']
+        : (($verdict['result'] ?? null) === 'CRITICAL_FRAUD' ? 'FAIL' : null),
+    $verdict['label'] ?? null,
     $verdict['risk_score'] ?? null, $verdict['points_earned'] ?? null, $verdict['points_possible'] ?? null,
     $verdict['checks_passed'] ?? null, $verdict['checks_total'] ?? null,
     !empty($payload['partial']) ? 1 : 0,
@@ -362,44 +409,79 @@ function build_section9_server(array $s2, array $s3): array {
 function compute_verdict(array $s1, array $s2, array $s3, array $s4, array $s5, array $s6, array $s7, array $s8, array $s9, string $domainKey, PDO $pdo): array {
     $checks = [];
     $points = 0;
-    $total  = 125;
+    $total  = 125;     // max attainable from positive checks
 
-    $add = function (string $name, int $pts, bool $pass) use (&$checks, &$points) {
-        $checks[] = ['name' => $name, 'points' => $pts, 'pass' => $pass];
-        if ($pass) $points += $pts;
+    // $type: 'positive' (points awarded on triggered=true) | 'negative' (points subtracted on triggered=true)
+    $add = function (string $name, int $pts, bool $triggered, string $type = 'positive') use (&$checks, &$points) {
+        $checks[] = [
+            'name'      => $name,
+            'points'    => $pts,
+            'triggered' => $triggered,
+            'pass'      => ($type === 'positive') ? $triggered : !$triggered, // legacy "pass" semantics
+            'type'      => $type,
+        ];
+        if ($triggered) $points += $pts;
     };
 
+    // ===== Existing 16 positive checks =====
     $add('ua_facebook_app', 10, !empty($s8['ua_has_fban_fbios']) || !empty($s8['ua_has_fb4a']));
     $add('sec_ch_consistency', 5, ($s9['ios_webkit_consistency'] ?? '') === 'PASS' && ($s9['sec_ch_ua_consistency'] ?? 'PASS') === 'PASS');
     $refOk = !empty($s8['referer_is_facebook']) || empty($s2['referer']) || $s2['referer'] === 'absent';
     $add('referer_facebook', 10, $refOk);
     $add('fbclid_format', 10, !empty($s8['fbclid_format_valid']));
-    $cleanIp = !($s4['is_proxy'] || $s4['is_vpn'] || $s4['is_tor'] || $s4['is_datacenter']);
-    $add('ip_clean', 15, $cleanIp);
 
+    // Check 5: ip_clean (positive) — split into pos / neg paths
+    $isProxy      = !empty($s4['is_proxy']);
+    $isVpn        = !empty($s4['is_vpn']);
+    $isTor        = !empty($s4['is_tor']);
+    $isDc         = !empty($s4['is_datacenter']);
+    $fraud        = is_numeric($s4['fraud_score'] ?? null) ? (int)$s4['fraud_score'] : null;
+    $highFraud    = ($fraud !== null && $fraud >= 75);
+    $cleanIp      = !($isProxy || $isVpn || $isTor || $isDc);
+    $dirtyIp      = ($isProxy || $isVpn || $isDc || $highFraud);
+    $add('ip_clean', 15, $cleanIp);
+    $add('ip_dirty', -25, $dirtyIp, 'negative');
+    $add('recent_abuse', -15, !empty($s4['recent_abuse']), 'negative');
+
+    // Check 6: country match — split into pos / neg paths
     $geo = $s8['campaign_geo_target'] ?? null;
     $cc  = $s4['country_code'] ?? null;
-    $add('country_matches_campaign', 15, $geo && $cc && strtoupper($geo) === strtoupper($cc));
+    $countryMatch    = ($geo && $cc && strtoupper($geo) === strtoupper($cc));
+    $countryMismatch = ($geo && $cc && strtoupper($geo) !== strtoupper($cc) && strtoupper($cc) !== 'LOCAL');
+    $tier1Targets     = ['US','GB','UK','CA','AU'];
+    $highFraudRegions = ['PK','IN','BD','NG','RU','VN','ID','PH'];
+    $tier1HighFraud   = ($geo && $cc &&
+        in_array(strtoupper($geo), $tier1Targets, true) &&
+        in_array(strtoupper($cc),  $highFraudRegions, true));
+    $add('country_matches_campaign', 15, $countryMatch);
+    $add('country_mismatch', -20, $countryMismatch && !$tier1HighFraud, 'negative');
+    $add('country_high_fraud_region', -30, $tier1HighFraud, 'negative');
 
+    // Check 7: timezone — only score if country didn't already disagree
     $tzClient = $s5['timezone'] ?? '';
     $tzIp     = $s4['timezone_from_ip'] ?? '';
-    $add('timezone_matches_ip', 10, $tzClient && $tzIp && $tzClient === $tzIp);
+    if (!$countryMismatch) {
+        $add('timezone_matches_ip', 10, $tzClient && $tzIp && $tzClient === $tzIp);
+    } else {
+        $add('timezone_matches_ip', 0, false); // recorded but neutral
+    }
 
     $expectLang = $geo ? geo_to_lang_prefix($geo) : '';
     $fblc = strtolower($s3['fblc'] ?? '');
-    $add('fblc_matches_target', 10, $fblc && $expectLang && strpos($fblc, $expectLang) === 0);
+    $add('fblc_matches_target', 10, (bool)($fblc && $expectLang && strpos($fblc, $expectLang) === 0));
 
     $navLang = strtolower($s5['navigator_language'] ?? '');
-    $add('nav_lang_matches_target', 5, $navLang && $expectLang && strpos($navLang, $expectLang) === 0);
+    $add('nav_lang_matches_target', 5, (bool)($navLang && $expectLang && strpos($navLang, $expectLang) === 0));
 
     $add('webdriver_undefined', 5, ($s5['navigator_webdriver'] ?? null) === 'undefined' || ($s5['navigator_webdriver'] ?? null) === false);
 
-    $isMobile = ($s3['os_name'] === 'iOS' || $s3['os_name'] === 'iPadOS' || $s3['os_name'] === 'Android');
+    $osName    = $s3['os_name'] ?? '';
+    $isMobileOS = ($osName === 'iOS' || $osName === 'iPadOS' || $osName === 'Android');
     $mtp = (int)($s5['navigator_max_touch_points'] ?? 0);
-    $add('touch_points_match', 5, $isMobile ? $mtp >= 1 : $mtp === 0);
+    $add('touch_points_match', 5, $isMobileOS ? $mtp >= 1 : $mtp === 0);
 
-    $rend = strtolower(($s6['webgl_unmasked_renderer'] ?? '') . ' ' . ($s6['webgl_renderer'] ?? ''));
-    $realGpu = trim($rend) !== '' && !preg_match('/swiftshader|llvmpipe|mesa offscreen|software/i', $rend);
+    $rendCombined = strtolower(($s6['webgl_unmasked_renderer'] ?? '') . ' ' . ($s6['webgl_renderer'] ?? ''));
+    $realGpu = trim($rendCombined) !== '' && !preg_match('/swiftshader|llvmpipe|mesa offscreen|software/i', $rendCombined);
     $add('webgl_real_gpu', 5, $realGpu);
 
     $tos = (float)($s7['time_on_page_s'] ?? 0);
@@ -409,30 +491,167 @@ function compute_verdict(array $s1, array $s2, array $s3, array $s4, array $s5, 
            || (($s7['total_touch_events'] ?? 0) > 1);
     $add('behavior_natural', 10, $tos >= 30 && $sd >= 20 && $varied);
 
-    $add('multi_finger_mobile', 3, $isMobile ? ($s7['multi_finger_events_count'] ?? 0) > 0 : true);
+    $add('multi_finger_mobile', 3, $isMobileOS ? ($s7['multi_finger_events_count'] ?? 0) > 0 : true);
 
     $add('fbclid_unique', 2, fbclid_unique_in_db($s1['fbclid'] ?? '', $domainKey, $pdo));
 
-    $fs = $s4['fraud_score'];
-    $add('fraud_score_low', 5, is_numeric($fs) && $fs < 25);
+    $add('fraud_score_low', 5, $fraud !== null && $fraud < 25);
 
-    $passed = count(array_filter($checks, function ($c) { return $c['pass']; }));
-    $flags  = array_values(array_map(function ($c) { return $c['name']; }, array_filter($checks, function ($c) { return !$c['pass']; })));
+    // ===== 16 NEW negative cross-checks (A-P) — UA-spoof detection =====
+    $ua          = $s2['user_agent'] ?? '';
+    $isFBIOS     = stripos($ua, 'FBIOS') !== false;
+    $isFB4A      = stripos($ua, 'FB4A')  !== false;
+    $isiPhoneUA  = stripos($ua, 'iPhone') !== false;
+    $isFBOrPhone = $isFBIOS || $isiPhoneUA;
+    $isMobileUA  = $isFBOrPhone || stripos($ua, 'Mobile') !== false || stripos($ua, 'Android') !== false;
 
-    if ($points >= 95)     { $result = 'PASS';       $label = label_for_pass($s3, $s8); }
-    elseif ($points >= 60) { $result = 'SUSPICIOUS'; $label = 'NEEDS MANUAL REVIEW'; }
-    else                   { $result = 'FAIL';       $label = 'LIKELY SPOOFED OR BOT'; }
+    // A. iOS UA but Sec-Ch-Ua headers present (real iOS WebKit never sends these)
+    $add('IOS_UA_WITH_DESKTOP_HEADERS', -30,
+        $isFBOrPhone && ($s2['sec_ch_ua'] ?? 'absent') !== 'absent' && ($s2['sec_ch_ua'] ?? '') !== '',
+        'negative');
+
+    // B. iOS UA but Sec-Ch-Ua-Platform says Windows — smoking gun
+    $add('IOS_UA_WITH_WINDOWS_PLATFORM', -30,
+        $isFBOrPhone && stripos($s2['sec_ch_ua_platform'] ?? '', 'Windows') !== false,
+        'negative');
+
+    // C. iOS UA but Sec-Ch-Ua-Mobile says ?0 (desktop)
+    $secChMobile = trim((string)($s2['sec_ch_ua_mobile'] ?? ''), '"');
+    $add('IOS_UA_WITH_DESKTOP_MOBILE_FLAG', -25,
+        $isFBOrPhone && $secChMobile === '?0',
+        'negative');
+
+    // D. iPhone UA but navigator.platform != "iPhone"
+    $navPlatform = $s5['navigator_platform'] ?? '';
+    $add('NAVIGATOR_PLATFORM_MISMATCH', -25,
+        $isiPhoneUA && $navPlatform !== '' && $navPlatform !== 'iPhone',
+        'negative');
+
+    // E. FBIOS UA but navigator.vendor != "Apple Computer, Inc."
+    $navVendor = $s5['navigator_vendor'] ?? '';
+    $add('NAVIGATOR_VENDOR_MISMATCH', -25,
+        $isFBIOS && $navVendor !== '' && $navVendor !== 'Apple Computer, Inc.',
+        'negative');
+
+    // F. iPhone UA but screen width too wide for any iPhone (max ~430)
+    $screenW = (int)($s5['screen_width'] ?? 0);
+    $add('DESKTOP_RESOLUTION_ON_MOBILE_UA', -20,
+        $isiPhoneUA && $screenW > 500,
+        'negative');
+
+    // G. iPhone UA but pixel ratio < 2 (real iPhones are 2 or 3)
+    $dpr = $s5['window_device_pixel_ratio'] ?? null;
+    $add('NON_RETINA_PIXEL_RATIO_ON_IPHONE', -15,
+        $isiPhoneUA && is_numeric($dpr) && (float)$dpr < 2,
+        'negative');
+
+    // H. iPhone UA but color depth != 30 (iOS uses 30-bit P3)
+    $colorDepth = $s5['screen_color_depth'] ?? null;
+    $add('NON_IOS_COLOR_DEPTH', -10,
+        $isiPhoneUA && is_numeric($colorDepth) && (int)$colorDepth !== 30,
+        'negative');
+
+    // I. Mobile UA but no touch events + many mouse moves (real phones have no mouse)
+    $totalTouches = (int)($s7['total_touch_events'] ?? 0);
+    $totalMoves   = (int)($s7['total_mouse_move_events'] ?? 0);
+    $add('NO_TOUCH_ON_MOBILE_UA', -25,
+        $isMobileUA && $totalTouches === 0 && $totalMoves > 10,
+        'negative');
+
+    // J. iPhone UA but WebGL vendor != Apple
+    $glVendor = $s6['webgl_unmasked_vendor'] ?? null;
+    $add('GPU_VENDOR_MISMATCH', -20,
+        $isiPhoneUA && $glVendor !== null && $glVendor !== '' && stripos($glVendor, 'Apple') === false,
+        'negative');
+
+    // K. iPhone UA but renderer is desktop GPU
+    $glRenderer = $s6['webgl_unmasked_renderer'] ?? '';
+    $isDesktopGPU = $glRenderer !== '' && (
+        stripos($glRenderer, 'Intel')    !== false ||
+        stripos($glRenderer, 'NVIDIA')   !== false ||
+        stripos($glRenderer, 'AMD')      !== false ||
+        stripos($glRenderer, 'Direct3D') !== false ||
+        stripos($glRenderer, 'ANGLE')    !== false
+    );
+    $add('DESKTOP_GPU_ON_MOBILE_UA', -20, $isiPhoneUA && $isDesktopGPU, 'negative');
+
+    // L. iPhone UA but Windows-only fonts present
+    $winFonts = ['Calibri','Cambria','Consolas','Segoe UI','Segoe Print','MS Gothic','SimSun','Microsoft Sans Serif'];
+    $availFonts = is_array($s6['available_fonts'] ?? null) ? $s6['available_fonts'] : [];
+    $hasWinFont = (bool)array_intersect($winFonts, $availFonts);
+    $add('WINDOWS_FONTS_ON_IPHONE', -15, $isiPhoneUA && $hasWinFont, 'negative');
+
+    // M. iPhone UA but pdfViewerEnabled=true (iOS Safari doesn't have this)
+    $add('PDF_VIEWER_ENABLED_ON_IOS', -10,
+        $isiPhoneUA && !empty($s5['navigator_pdf_viewer_enabled']),
+        'negative');
+
+    // N. iPhone UA but navigator.deviceMemory exposed (iOS hides this)
+    $devMem = $s5['navigator_device_memory'] ?? null;
+    $devMemExposed = ($devMem !== null && $devMem !== '' && $devMem !== 'undefined');
+    $add('DEVICEMEMORY_EXPOSED_ON_IOS', -10, $isiPhoneUA && $devMemExposed, 'negative');
+
+    // O. >20 mouse moves in linear path (bot-pattern)
+    $add('LINEAR_MOUSE_PATH_BOT_PATTERN', -10,
+        $totalMoves > 20 && ($s7['mouse_path_curvature'] ?? '') === 'linear',
+        'negative');
+
+    // P. iOS UA but Chrome-style PDF plugins present
+    $chromePlugins = ['Chrome PDF Viewer','Chromium PDF Viewer','Microsoft Edge PDF Viewer'];
+    $pluginsList   = is_array($s5['plugins_list'] ?? null) ? $s5['plugins_list'] : [];
+    $hasChromePlugin = (bool)array_intersect($chromePlugins, $pluginsList);
+    $add('CHROME_PLUGINS_ON_IOS', -15, $isFBOrPhone && $hasChromePlugin, 'negative');
+
+    // ===== Summary =====
+    $smokingGun     = false;
+    $negativeFlags  = [];
+    $positiveFlags  = []; // positive checks that did NOT pass — legacy `flags`
+    $passedCount    = 0;
+    foreach ($checks as $c) {
+        if ($c['triggered'] && $c['type'] === 'negative') $negativeFlags[] = $c['name'];
+        if (!$c['triggered'] && $c['type'] === 'positive' && $c['points'] > 0) $positiveFlags[] = $c['name'];
+        if ($c['triggered'] && $c['type'] === 'positive') $passedCount++;
+        if ($c['triggered'] && $c['points'] <= -25) $smokingGun = true;
+    }
+
+    if ($points < 0) {
+        $result = 'CRITICAL_FRAUD';
+        $label  = 'AUTO-BLOCK — multiple fraud signals detected';
+    } elseif ($smokingGun) {
+        // Smoking gun forces minimum FAIL even if points cross PASS threshold
+        $result = 'FAIL';
+        $label  = 'SMOKING GUN — ' . ($negativeFlags[0] ?? 'spoofed UA');
+    } elseif ($points >= 90) {
+        $result = 'PASS';
+        $label  = label_for_pass($s3, $s8);
+    } elseif ($points >= 50) {
+        $result = 'SUSPICIOUS';
+        $label  = 'NEEDS MANUAL REVIEW';
+    } else {
+        $result = 'FAIL';
+        $label  = 'LIKELY SPOOFED OR BOT';
+    }
+
+    $blockRecommended = ($result === 'CRITICAL_FRAUD');
+
+    // Risk score: 100 if any negative net, otherwise inverse of points/total
+    $riskScore = ($points <= 0)
+        ? 100
+        : max(0, 100 - (int)round(($points / $total) * 100));
 
     return [
-        'result'          => $result,
-        'label'           => $label,
-        'risk_score'      => max(0, 100 - (int)round(($points / $total) * 100)),
-        'checks_passed'   => $passed,
-        'checks_total'    => count($checks),
-        'points_earned'   => $points,
-        'points_possible' => $total,
-        'flags'           => $flags,
-        'checks'          => $checks,
+        'result'                 => $result,
+        'label'                  => $label,
+        'risk_score'             => $riskScore,
+        'checks_passed'          => $passedCount,
+        'checks_total'           => count($checks),
+        'points_earned'          => $points,
+        'points_possible'        => $total,
+        'smoking_gun_triggered'  => $smokingGun,
+        'block_recommended'      => $blockRecommended,
+        'flags'                  => $positiveFlags,
+        'negative_flags'         => $negativeFlags,
+        'checks'                 => $checks,
     ];
 }
 

@@ -16,6 +16,7 @@ Thumbs.db
 # Claude Code local settings
 .claude/
 
-# FB Traffic Detector — leftover dev artifacts only (data lives in MySQL now)
-traffic/logs/
+# FB Traffic Detector — runtime audit logs (visit data itself lives in MySQL)
+traffic/logs/blocked_ips.json
+traffic/logs/cross_origin.log
 traffic/domains.json
