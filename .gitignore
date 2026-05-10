@@ -15,3 +15,11 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
+
+# FB Traffic Detector — runtime data only, code is committed
+traffic/logs/*.json
+traffic/logs/**/*.json
+traffic/logs/.rate_*
+traffic/logs/.ipqs_*
+traffic/logs/error.log
+traffic/domains.json
