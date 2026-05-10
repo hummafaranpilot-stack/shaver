@@ -55,17 +55,45 @@ Indexable fields (verdict, country, fbclid, IP, captured_at, etc.) live as colum
 
 ---
 
-## Verdict scoring
+## Verdict scoring (Everflow philosophy)
 
-16 weighted checks (max 125 pts):
+This tracker thinks like Everflow / Voluum / RedTrack: **technical signals only**.
+We verify what the visitor's *device and network* show us — not what their
+ad URL's *labels* say.
 
-| Threshold       | Result           |
-|-----------------|------------------|
-| ≥ 95 pts        | **PASS** — real traffic |
-| 60 – 94 pts     | **SUSPICIOUS** — manual review |
-| < 60 pts        | **FAIL** — likely spoofed/bot |
+**What we DO check:**
+- IP fraud (proxy / VPN / datacenter / Tor / IPQS fraud_score / recent_abuse)
+- Device fingerprint authenticity (UA spoof detection — claimed iOS vs actual signals)
+- URL parameter format (fbclid regex, campaign_id digit count, placement value in known list)
+- Click uniqueness (fbclid recency)
+- Behavioral validity (time on page, scroll depth, real-human interactions)
+- Bot markers (webdriver, headless markers)
 
-The verdict object includes `risk_score`, `flags` (failed check names), and per-check breakdown — all visible in the detail modal.
+**What we DO NOT check:**
+- ❌ utm_campaign label semantics (no `_XX_` geo extraction, no audience naming, no compliance keywords)
+- ❌ utm_content / utm_term reading as data
+- ❌ FB locale vs campaign target (FBLC matching)
+- ❌ navigator.language vs campaign label
+
+These fields are still **logged** in `section1_url_params` for reporting — they
+just don't influence the verdict. Affiliates can write whatever they want
+in URL labels; that's their copy, not a fraud signal.
+
+**Thresholds (max 100 positive points):**
+
+| Points | Result |
+|---|---|
+| `< 0` | **BLOCK** — auto-block recommended (`X-Fraud-Verdict: BLOCK` header) |
+| smoking gun | **FAIL** (forced) |
+| `≥ 80` | **PASS** |
+| `50–79` | **SUSPICIOUS** |
+| `0–49` | **FAIL** |
+
+The verdict object includes `points_earned`, `risk_score`, `smoking_gun_triggered`,
+`block_recommended`, `flags` (failed positives), `negative_flags` (triggered
+fraud signals), and a per-check breakdown — all visible in the detail modal.
+
+See [`CHANGELOG.md`](CHANGELOG.md) for the full check list with weights.
 
 ---
 
