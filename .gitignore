@@ -11,6 +11,10 @@
 .cb_key
 .fb_token
 
+# Local staging area for files we manually upload to Hostinger
+# (never push these — they contain live credentials)
+hostinger-upload/
+
 # OS files
 .DS_Store
 Thumbs.db
