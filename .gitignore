@@ -6,6 +6,8 @@
 
 # Sensitive runtime key files (written by UI, not source code)
 .smtp_key
+.smtp_host
+.smtp_user
 .cb_key
 .fb_token
 

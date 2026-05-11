@@ -38,12 +38,26 @@ unset($_cbKeyFile, $_cbKeyDefault, $_cbKeyValue);
 define('CB_ACCOUNT', 'tnproduct');
 
 // ================================================================
-// SMTP EMAIL (SendGrid)
+// SMTP EMAIL (provider-agnostic — defaults to SendGrid)
+//
+// Override host/user by creating .smtp_host and .smtp_user files next
+// to this config (both gitignored). Lets us swap providers (Brevo,
+// Mailgun, SES, etc.) without a code deploy — just FTP-edit 3 files:
+//   .smtp_host   ← smtp-relay.brevo.com  (or smtp.mailgun.org, etc.)
+//   .smtp_user   ← your-login@example.com  (or 'apikey' for SendGrid)
+//   .smtp_key    ← SMTP password / API key
 // ================================================================
-define('SMTP_HOST', 'smtp.sendgrid.net');
+$_smtpHostFile = __DIR__ . '/.smtp_host';
+$_smtpUserFile = __DIR__ . '/.smtp_user';
+define('SMTP_HOST', (is_file($_smtpHostFile) && is_readable($_smtpHostFile))
+    ? trim(file_get_contents($_smtpHostFile))
+    : 'smtp.sendgrid.net');
 define('SMTP_PORT', 587);
-define('SMTP_USER', 'apikey');
+define('SMTP_USER', (is_file($_smtpUserFile) && is_readable($_smtpUserFile))
+    ? trim(file_get_contents($_smtpUserFile))
+    : 'apikey');
 define('SMTP_PASS', trim(file_get_contents(__DIR__ . '/.smtp_key')));
+unset($_smtpHostFile, $_smtpUserFile);
 define('SMTP_FROM_EMAIL', 'contact@trustednutraproduct.com');
 define('SMTP_FROM_NAME', 'Trusted Nutra Products');
 
